@@ -10,8 +10,7 @@ const PORT = process.env.PORT || 4000;
 const cookieParser = require("cookie-parser");
 
 const app = express();
-
-// Use the cookie-parser middleware
+// Use the cookie-parser middlewconare
 app.use(cookieParser());
 
 app.use(compression());
