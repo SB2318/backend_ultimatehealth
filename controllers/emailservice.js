@@ -6,7 +6,7 @@ const UnverifiedUser = require("../models/UnverifiedUserModel");
 const User = require("../models/UserModel");
 const cache = require('memory-cache');
 
-const cooldownTime = 3600; 
+const cooldownTime = 3600;
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -19,11 +19,12 @@ const transporter = nodemailer.createTransport({
 const sendVerificationEmail = (email, token) => {
 
     const url = `${process.env.BASE_URL}/api/user/verifyEmail?token=${token}`;
+    console.log("URL", url);
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
         subject: 'Email Verification',
-        html: `<h3>Please verify your email by clicking the link below:</h3><a href="${url}">Verify Email</a>`,
+        html: `<h3>Please verify your email by clicking the link below:</h3><a href="${url}">${url}</a>`,
     };
 
     transporter.sendMail(mailOptions, (err, info) => {
@@ -69,7 +70,6 @@ const Sendverifymail = async (req, res) => {
 
     res.status(200).json({ message: 'Verification email sent' });
 };
-
 const resendVerificationEmail = async (req, res) => {
     const { email } = req.body;
 
@@ -180,7 +180,7 @@ const verifyEmail=async (req, res) => {
             text-decoration: none;
             font-size: 16px;
             cursor: pointer;
-        }
+              }
     </style>
 </head>
 <body>
