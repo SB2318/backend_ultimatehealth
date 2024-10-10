@@ -5,6 +5,7 @@ const compression = require('compression');
 const userRoutes = require("./routes/usersRoutes");
 const specializationRoutes = require("./routes/SpecializationsRoutes");
 const articleRoutes = require("./routes/articleRoutes");
+require('dotenv').config();
 const PORT = process.env.PORT || 4000;
 const cookieParser = require("cookie-parser");
 
