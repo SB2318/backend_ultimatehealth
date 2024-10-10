@@ -56,9 +56,9 @@ const Sendverifymail = async (req, res) => {
 
     const cooldownKey = `verification-email:${email}`;
 
-    if (cache.get(cooldownKey)) {
-        return res.status(429).json({ message: 'Verification email already sent' });
-    }
+    //if (cache.get(cooldownKey)) {
+       // return res.status(429).json({ message: 'Verification email already sent' });
+    //}
 
     cache.put(cooldownKey, 'true', cooldownTime * 1000); // store for 1 hour
 
