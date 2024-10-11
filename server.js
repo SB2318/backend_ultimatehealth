@@ -8,6 +8,7 @@ const articleRoutes = require("./routes/articleRoutes");
 require('dotenv').config();
 const PORT = process.env.PORT || 4000;
 const cookieParser = require("cookie-parser");
+const uploadRoute = require('./routes/uploadRoute');
 
 const app = express();
 // Use the cookie-parser middlewconare
@@ -36,6 +37,7 @@ app.get("/hello", (req, res) => {
 app.use("/api", userRoutes);
 app.use("/api", specializationRoutes);
 app.use("/api",articleRoutes );
+app.use("/api", uploadRoute);
 
 
 

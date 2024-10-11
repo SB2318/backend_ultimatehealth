@@ -9,8 +9,6 @@ const Article = require("../models/Articles");
 const adminModel = require('../models/adminModel');
 require('dotenv').config();
 
-const { sendVerificationEmail } = require('./emailservice');
-
 module.exports.register = async (req, res) => {
   try {
     const { user_name, user_handle, email, isDoctor, Profile_image, password, qualification, specialization, Years_of_experience, contact_detail } = req.body;
@@ -84,8 +82,7 @@ module.exports.register = async (req, res) => {
   }
 };
 
-
-  const transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: 465,
     secure: true,
@@ -93,15 +90,15 @@ module.exports.register = async (req, res) => {
       user: process.env.EMAIL,
       pass: process.env.PASSWORD,
     },
-  });
+});
 
-  function generateOTP() {
-    return Math.floor(1000 + Math.random() * 9000).toString();
-  }
+function generateOTP() {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
 
-  module.exports.getprofile = async (req, res) => {
+module.exports.getprofile = async (req, res) => {
     
-    try {
+  try {
       const user = await User.findOne({ _id: req.user.userId });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
