@@ -1,15 +1,19 @@
 const AWS = require('aws-sdk');
 const fs = require('fs');
 const sharp = require('sharp');
+const path = require('path');
+require('dotenv').config();
 
-const s3 = new AWS.S3({
-    endpoint: process.env.ENDPOINT_URL,
-    accessKeyId: process.env.VULTR_ACCESS_KEY,
-    secretAccessKey: process.env.VULTR_SECRET_KEY,
-    region: 'ap-south-1', 
-    s3ForcePathStyle: true,
-   // s3ForcePathStyle: true,
-});
+
+AWS.config.update({
+    region: 'del1',
+    accessKeyId: 'MDHC0VVKO8C1O80Y832T',
+    hostname:"del1.vultrobjects.com",
+    secretAccessKey: 'Aa3NYfeyhBW5zTbY7AwjSgFDOzRLaud58SSbY5ny',
+    endpoint: 'https://del1.vultrobjects.com',
+  });
+
+const s3 = new AWS.S3();
 // upload file
 const uploadFile = async (req, res) => {
 
@@ -30,14 +34,15 @@ const uploadFile = async (req, res) => {
                         return res.status(500).send('Error processing image: ' + err.message);
                     }
 
+                    const fileNameWithoutExt = path.basename(file.originalname, path.extname(file.originalname));
                     const params = {
-                        Bucket: process.env.BUCKET_NAME,
-                        Key: `${file.originalname}.webp`, // replace operation needed
+                        Bucket: 'ultimatehealthtest',
+                        Key: `${fileNameWithoutExt}.webp`, // replace operation needed
                         Body: buffer,
                         ContentType: 'image/webp',
                     };
 
-                    s3.upload(params, (err, data) => {
+                    s3.putObject(params, (err, data) => {
                         // Delete the temporary file after upload
                         fs.unlink(file.path, (err) => {
                             if (err) console.error('Unlink error', err);
@@ -48,19 +53,19 @@ const uploadFile = async (req, res) => {
                             return res.status(500).json({ message: 'Error uploading file to S3: ' + err.message });
 
                         }
-                        res.status(200).send({ message: 'Image uploaded successfully', data });
+                        res.status(200).send({ message: 'Image uploaded successfully', key: `${fileNameWithoutExt}.webp` });
                     });
                 });
         } else if (file.mimetype === 'text/html') {
             // Handle html file upload
             const params = {
-                Bucket: process.env.BUCKET_NAME,
+                Bucket: 'ultimatehealthtest',
                 Key: `${Date.now()}_${file.originalname}`, // Keep original extension, unique file name needed
                 Body: fs.createReadStream(file.path), // Use stream for larger files
                 ContentType: 'text/html',
             };
 
-            s3.upload(params, (err, data) => {
+            s3.putObject(params, (err, data) => {
                 // Delete the temporary file after upload
                 fs.unlink(file.path, (err) => {
                     if (err) console.error('Unlink error', err);
@@ -70,7 +75,7 @@ const uploadFile = async (req, res) => {
                     return res.status(500).json({ message: 'Error uploading file to S3: ' + err.message });
 
                 }
-                res.status(200).send({ message: 'Image uploaded successfully', data });
+                res.status(200).send({ message: 'Image uploaded successfully', key:`${Date.now()}_${file.originalname}` });
             });
 
         }
@@ -87,7 +92,7 @@ const uploadFile = async (req, res) => {
 // get file
 const getFile = async(req, res)=>{
     const params = {
-        Bucket: process.env.BUCKET_NAME,
+        Bucket: 'ultimatehealthtest',
         Key: req.params.key,
     };
 
@@ -104,7 +109,7 @@ const getFile = async(req, res)=>{
 // We will  not usually remove anything from bucket, we only remove it from our dataase
 const deleteFile = async (req, res) => {
     const params = {
-        Bucket: process.env.BUCKET_NAME,
+        Bucket: 'ultimatehealthtest',
         Key: req.params.key,
     };
 
