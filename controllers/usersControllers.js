@@ -555,3 +555,33 @@ module.exports.collectMonthlyRecordsForWriting = async (req, res) => {
     res.status(500).json({ error: 'Error fetching writing records', details: error.message });
   }
 };
+
+module.exports.updateProfileImage = async (req, res) => {
+  try {
+    const { profileImageUrl } = req.body;
+
+    if (!profileImageUrl) {
+       res.status(400).json({ error: "User ID and profile image URL are required." });
+       return;
+    }
+
+    // Find the user in the User collection
+    let user = await User.findById(req.user.userId);
+
+    if (!user) {
+        return res.status(404).json({ error: "User not found." });
+    }
+    
+    // Update the profile image URL
+    user.Profile_image = profileImageUrl;
+    // Save the updated user document
+    await user.save();
+
+    res.status(200).json({ message: "Profile image updated successfully.", Profile_image: profileImageUrl });
+  } catch (error) {
+    console.error('Error updating profile image:', error);
+    // Handle general server errors
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+

@@ -13,7 +13,8 @@ const {
     collectMonthlyRecordsForReading,
     collectMonthlyRecordsForWriting,
     checkOtp,
-    refreshToken
+    refreshToken,
+    updateProfileImage
 } = require("../controllers/usersControllers");
 
 const { verifyEmail, sendVerificationEmail, Sendverifymail,resendVerificationEmail } = require('../controllers/emailservice');
@@ -68,5 +69,6 @@ router.get('/user/articles', authenticateToken, getUserWithArticles);
 router.get('/user/liked-saved-articles', authenticateToken, getUserLikeAndSaveArticles);
 
 router.post("/user/logout", logout);
+router.post("/user/update-profile-image", authenticateToken,updateProfileImage);
 
 module.exports = router;
