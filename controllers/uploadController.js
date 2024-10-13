@@ -7,9 +7,9 @@ require('dotenv').config();
 
 AWS.config.update({
     region: 'del1',
-    accessKeyId: 'MDHC0VVKO8C1O80Y832T',
+    accessKeyId: 'FJWJS1WXCD91BCLVVMOV',
     hostname:"del1.vultrobjects.com",
-    secretAccessKey: 'Aa3NYfeyhBW5zTbY7AwjSgFDOzRLaud58SSbY5ny',
+    secretAccessKey: 'nKqJPa4wm0S3COWpLSCq6BngLruPOGgKCPhJH5So',
     endpoint: 'https://del1.vultrobjects.com',
   });
 
@@ -36,7 +36,7 @@ const uploadFile = async (req, res) => {
 
                     const fileNameWithoutExt = path.basename(file.originalname, path.extname(file.originalname));
                     const params = {
-                        Bucket: 'ultimatehealthtest',
+                        Bucket: 'ultimatehealth',
                         Key: `${fileNameWithoutExt}.webp`, // replace operation needed
                         Body: buffer,
                         ContentType: 'image/webp',
@@ -59,8 +59,8 @@ const uploadFile = async (req, res) => {
         } else if (file.mimetype === 'text/html') {
             // Handle html file upload
             const params = {
-                Bucket: 'ultimatehealthtest',
-                Key: `${Date.now()}_${file.originalname}`, // Keep original extension, unique file name needed
+                Bucket: 'ultimatehealth',
+                Key: `${file.originalname}`, // Keep original extension, unique file name needed
                 Body: fs.createReadStream(file.path), // Use stream for larger files
                 ContentType: 'text/html',
             };
@@ -92,7 +92,7 @@ const uploadFile = async (req, res) => {
 // get file
 const getFile = async(req, res)=>{
     const params = {
-        Bucket: 'ultimatehealthtest',
+        Bucket: 'ultimatehealth',
         Key: req.params.key,
     };
 
@@ -109,7 +109,7 @@ const getFile = async(req, res)=>{
 // We will  not usually remove anything from bucket, we only remove it from our dataase
 const deleteFile = async (req, res) => {
     const params = {
-        Bucket: 'ultimatehealthtest',
+        Bucket: 'ultimatehealth',
         Key: req.params.key,
     };
 
