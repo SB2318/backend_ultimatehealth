@@ -5,11 +5,11 @@ const User = require("../models/UserModel");
 // Create a new article
 module.exports.createArticle = async (req, res) => {
   try {
-    const { authorId,  title, authorName, content, tags,imageUtils } = req.body; // Destructure required fields from req.body
+    const { authorId, title, authorName, content, tags, imageUtils } = req.body; // Destructure required fields from req.body
 
     // Find the user by ID
     const user = await User.findById(authorId);
-    
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -28,8 +28,8 @@ module.exports.createArticle = async (req, res) => {
     await newArticle.save();
 
     // Update the user's articles field
-    user.articles.push(newArticle._id); 
- 
+    user.articles.push(newArticle._id);
+
     await user.save();
     // Respond with a success message and the new article
     res.status(201).json({ message: "Article created successfully", newArticle });
@@ -57,7 +57,9 @@ module.exports.getAllArticles = async (req, res) => {
 // Get an article by ID
 module.exports.getArticleById = async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id);
+    const article = await Article.findById(req.params.id)
+      .populate('tags') // This populates the tag data
+      .exec();
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
     }
@@ -74,11 +76,12 @@ module.exports.updateArticle = async (req, res) => {
   try {
     const article = await Article.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
-    });
+    }).populate('tags') // This populates the tag data
+      .exec();
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
     }
-   // await article.save();
+    // await article.save();
     res.status(200).json({ message: "Article updated successfully", article });
   } catch (error) {
     res
@@ -90,7 +93,9 @@ module.exports.updateArticle = async (req, res) => {
 // Delete an article by ID
 module.exports.deleteArticle = async (req, res) => {
   try {
-    const article = await Article.findByIdAndDelete(req.params.id);
+    const article = await Article.findByIdAndDelete(req.params.id)
+      .populate('tags') // This populates the tag data
+      .exec();
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
     }
@@ -107,11 +112,13 @@ module.exports.saveArticle = async (req, res) => {
   try {
     const { article_id } = req.body;
 
-    if(!article_id){
-      return res.status(400).json({ message: "User ID and Article ID are required"});
+    if (!article_id) {
+      return res.status(400).json({ message: "User ID and Article ID are required" });
     }
     const user = await User.findById(req.user.userId);
-    const  article = await Article.findById(article_id);
+    const article = await Article.findById(article_id)
+      .populate('tags') // This populates the tag data
+      .exec();
 
     if (!user || !article) {
       return res.status(404).json({ error: 'User or article not found' });
@@ -121,11 +128,11 @@ module.exports.saveArticle = async (req, res) => {
     //const isArticleSaved = user.savedArticles.includes(id => id === article_id);
     const savedArticlesSet = new Set(user.savedArticles);
     const isArticleSaved = savedArticlesSet.has(article_id);
-  
+
     if (isArticleSaved) {
-      
-       // unsave article
-       await Promise.all([
+
+      // unsave article
+      await Promise.all([
         Article.findByIdAndUpdate(article_id, {
           $pull: { savedUsers: req.user.userId } // Remove user from savedUsers
         }),
@@ -133,20 +140,20 @@ module.exports.saveArticle = async (req, res) => {
           $pull: { savedArticles: article_id } // Remove article from savedArticles
         })
       ]);
-      res.status(200).json({ message: 'Article unsaved'});
-    
-  }
-   else{
-    await Promise.all([
-      Article.findByIdAndUpdate(article_id, {
-        $addToSet: { savedUsers: req.user.userId } // Add user to savedUsers
-      }),
-      User.findByIdAndUpdate(req.user.userId, {
-        $addToSet: { savedArticles: article_id } // Add article to savedArticles
-      })
-    ]);
-    res.status(200).json({ message: 'Article saved successfully'});
-   }
+      res.status(200).json({ message: 'Article unsaved' });
+
+    }
+    else {
+      await Promise.all([
+        Article.findByIdAndUpdate(article_id, {
+          $addToSet: { savedUsers: req.user.userId } // Add user to savedUsers
+        }),
+        User.findByIdAndUpdate(req.user.userId, {
+          $addToSet: { savedArticles: article_id } // Add article to savedArticles
+        })
+      ]);
+      res.status(200).json({ message: 'Article saved successfully' });
+    }
   } catch (error) {
     res.status(500).json({ error: 'Error saving article', details: error.message });
   }
@@ -155,15 +162,17 @@ module.exports.saveArticle = async (req, res) => {
 // Like Articles
 module.exports.likeArticle = async (req, res) => {
   try {
-    const { article_id} = req.body;
+    const { article_id } = req.body;
 
-    if(!article_id){
-      return res.status(400).json({ message: "Article ID and User ID are required"});
+    if (!article_id) {
+      return res.status(400).json({ message: "Article ID and User ID are required" });
     }
 
     const user = await User.findById(req.user.userId);
-    
-    const articleDb = await Article.findById(article_id);
+
+    const articleDb = await Article.findById(article_id)
+      .populate('tags') // This populates the tag data
+      .exec();
 
     if (!user || !articleDb) {
       return res.status(404).json({ error: 'User or Article not found' });
@@ -173,11 +182,11 @@ module.exports.likeArticle = async (req, res) => {
     // Check if the article is already liked
     const likedArticlesSet = new Set(user.likedArticles);
     const isArticleLiked = likedArticlesSet.has(article_id);
-   //console.log("Article Id", article_id);
- 
-  // console.log('Liked Articles', user.likedArticles);
- //  console.log('Article Liked', isArticleLiked );
- //  console.log('Liked Users', articleDb.likedUsers);
+    //console.log("Article Id", article_id);
+
+    // console.log('Liked Articles', user.likedArticles);
+    //  console.log('Article Liked', isArticleLiked );
+    //  console.log('Liked Users', articleDb.likedUsers);
     if (isArticleLiked) {
 
       // Unlike It
@@ -194,8 +203,8 @@ module.exports.likeArticle = async (req, res) => {
       await articleDb.save();
 
       return res.status(200).json({ message: 'Article unliked successfully', articleDb });
-      
-    }else{
+
+    } else {
       await Promise.all([
         Article.findByIdAndUpdate(article_id, {
           $addToSet: { likedUsers: req.user.userId } // Add user to likedUsers
@@ -217,25 +226,27 @@ module.exports.likeArticle = async (req, res) => {
 };
 
 // Update View Count
-module.exports.updateViewCount = async(req, res)=>{
+module.exports.updateViewCount = async (req, res) => {
 
-  const {article_id} = req.body;
+  const { article_id } = req.body;
   const user = await User.findById(req.user.userId);
-    //console.log("user", req.user);
- try{
-  const articleDb = await Article.findById(article_id);
+  //console.log("user", req.user);
+  try {
+    const articleDb = await Article.findById(article_id)
+      .populate('tags') // This populates the tag data
+      .exec();
 
-  if (!user || !articleDb) {
-    return res.status(404).json({ error: 'User or Article not found' });
+    if (!user || !articleDb) {
+      return res.status(404).json({ error: 'User or Article not found' });
+    }
+    articleDb.viewCount += 1;
+    await articleDb.save();
+    res.status(200).json({ message: 'Article view count updated', article: articleDb });
+
+  } catch (err) {
+
+    res.status(500).json({ error: 'Error liking article', details: err.message });
   }
-  articleDb.viewCount +=1;
-  await articleDb.save();
-  res.status(200).json({ message: 'Article view count updated', article: articleDb});
-
- }catch(err){
-
-  res.status(500).json({ error: 'Error liking article', details: err.message });
- }
 
 }
 
