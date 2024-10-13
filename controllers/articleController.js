@@ -171,7 +171,7 @@ module.exports.likeArticle = async (req, res) => {
     const user = await User.findById(req.user.userId);
 
     const articleDb = await Article.findById(article_id)
-      .populate('tags') // This populates the tag data
+      .populate(['tags', 'likedUsers']) // This populates the tag data
       .exec();
 
     if (!user || !articleDb) {
@@ -233,7 +233,7 @@ module.exports.updateViewCount = async (req, res) => {
   //console.log("user", req.user);
   try {
     const articleDb = await Article.findById(article_id)
-      .populate('tags') // This populates the tag data
+    .populate(['tags', 'likedUsers']) // This populates the tag data
       .exec();
 
     if (!user || !articleDb) {
@@ -245,7 +245,7 @@ module.exports.updateViewCount = async (req, res) => {
 
   } catch (err) {
 
-    res.status(500).json({ error: 'Error liking article', details: err.message });
+    res.status(500).json({ error: 'Error updating view', details: err.message });
   }
 
 }
