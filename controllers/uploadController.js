@@ -75,7 +75,7 @@ const uploadFile = async (req, res) => {
                     return res.status(500).json({ message: 'Error uploading file to S3: ' + err.message });
 
                 }
-                res.status(200).send({ message: 'Image uploaded successfully', key:`${Date.now()}_${file.originalname}` });
+                res.status(200).send({ message: 'Image uploaded successfully', key:`${file.originalname}` });
             });
 
         }
