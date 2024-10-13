@@ -378,11 +378,11 @@ module.exports.follow = async (req, res) => {
     }
 
     // Find the user who is following
-    const user = await User.findOne({ user_id: req.user.user_id });
+    const user = await User.findOne({_id: req.user.user_id });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Find the user to be followed
-    const followUser = await User.findOne({ user_id: followUserId });
+    const followUser = await User.findOne({_id: followUserId });
     if (!followUser) return res.status(404).json({ message: "User to follow not found" });
 
     // Check if the user already follows the followUser
