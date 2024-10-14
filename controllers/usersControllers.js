@@ -100,7 +100,10 @@ function generateOTP() {
 module.exports.getprofile = async (req, res) => {
    
   try {
-    const user = await User.findOne({ _id: req.user.userId });
+    const user = await User.findOne({ _id: req.user.userId })
+                        .populate('articles')
+                        .populate('savedArticles')
+                        .exec();
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -118,7 +121,9 @@ module.exports.getprofile = async (req, res) => {
 module.exports.getUserProfile = async (req, res) => {
   try {
     const userId = req.params.id;
-    const user = await User.findById(userId);
+    const user = await User.findById(userId)
+                       .populate('articles')
+                      .exec();
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
