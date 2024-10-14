@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const jwt = require("jsonwebtoken");
 const User = require("../models/UserModel");
 const UnverifiedUser = require('../models/UnverifiedUserModel');
@@ -97,7 +98,7 @@ function generateOTP() {
 }
 
 module.exports.getprofile = async (req, res) => {
-
+   
   try {
     const user = await User.findOne({ _id: req.user.userId });
     if (!user) {
@@ -112,6 +113,25 @@ module.exports.getprofile = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 
+};
+
+module.exports.getUserProfile = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Exclude sensitive information
+    const { password, refreshToken, verificationToken, otp, otpExpires, ...publicProfile } = user._doc;
+
+    res.json({ status: true, profile: publicProfile });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
 module.exports.sendOTPForForgotPassword = async (req, res) => {
@@ -368,47 +388,53 @@ module.exports.deleteByAdmin = async (req, res) => {
 }
 // follow a user
 
+
 module.exports.follow = async (req, res) => {
   try {
     const { followUserId } = req.body;
 
     // Check if user is trying to follow themselves
-    if (req.user.user_id === followUserId) {
+    if (req.user.userId === followUserId) {
       return res.status(400).json({ message: "You cannot follow or unfollow yourself" });
     }
 
+    // Convert user IDs to ObjectId
+    const userId = new mongoose.Types.ObjectId(req.user.userId);
+    const followId = new mongoose.Types.ObjectId(followUserId);
+    
     // Find the user who is following
-    const user = await User.findOne({_id: req.user.user_id });
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Find the user to be followed
-    const followUser = await User.findOne({_id: followUserId });
-    if (!followUser) return res.status(404).json({ message: "User to follow not found" });
+    const userToFollow = await User.findById(followId);
+    if (!userToFollow) return res.status(404).json({ message: "User to follow not found" });
 
-    // Check if the user already follows the followUser
-    const followingUserset = new Set(user.followings);
+    // Filter out null values and convert to strings
+    const followerUserset = new Set(userToFollow.followers.filter(id => id).map(id => id.toString()));
+    const followingUserSet = new Set(user.followings.filter(id => id).map(id => id.toString()));
 
-    if (followingUserset.has(followUserId)) {
+    if (followerUserset.has(req.user.userId) || followingUserSet.has(followUserId)) {
       // Unfollow
-      user.followings = user.followings.filter(id => id !== followUserId);
+      user.followings = user.followings.filter(id => id && id.toString() !== followUserId);
       user.followingCount = Math.max(0, user.followingCount - 1);
       await user.save();
 
-      followUser.followers = followUser.followers.filter(id => id !== req.user.user_id);
-      followUser.followerCount = Math.max(0, followUser.followerCount - 1);
-      await followUser.save();
+      userToFollow.followers = userToFollow.followers.filter(id => id && id.toString() !== req.user.userId);
+      userToFollow.followerCount = Math.max(0, userToFollow.followerCount - 1);
+      await userToFollow.save();
+      res.json({ message: "Unfollow successfully" });
 
     } else {
-
+      // Follow
       user.followings.push(followUserId);
       user.followingCount += 1;
       await user.save();
 
-      followUser.followers.push(req.user.user_id);
-      followUser.followerCount += 1;
-      await followUser.save();
-      res.json({ message: "Followed successfully" });
-
+      userToFollow.followers.push(req.user.userId);
+      userToFollow.followerCount += 1;
+      await userToFollow.save();
+      res.json({ message: "Follow successfully" });
     }
 
   } catch (error) {

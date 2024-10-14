@@ -7,6 +7,7 @@ const {
     deleteByUser, deleteByAdmin,getprofile,
     follow,
     getFollowers,
+    getUserProfile,
     getUserWithArticles,
     getUserLikeAndSaveArticles,
     updateReadArticles,
@@ -35,7 +36,9 @@ router.post("/user/login", login);
 router.post("/user/refreshToken", refreshToken);
 
 // Get profile
-router.get('/user/getprofile',authenticateToken, getprofile)
+router.get('/user/getprofile/',authenticateToken, getprofile)
+// Get Other's Profile
+router.get('/user/getprofile/:id',authenticateToken, getUserProfile)
 // Follow and Unfollow Routes
 router.post('/user/follow',authenticateToken, follow);
 router.get('/user/:userId/followers', authenticateToken, getFollowers);
