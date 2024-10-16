@@ -470,6 +470,17 @@ module.exports.getFollowers = async (req, res) => {
 
 }
 
+module.exports.getProfileImage = async (req, res) => {
+  const userId = req.params.userId;
+  const author = await User.findById(userId);
+
+  if (!author) {
+    return res.status(404).json({ error: 'Author not found' });
+  }
+  return res.status(200).json({ profile_image: author.Profile_image });
+
+}
+
 // get User Articles,
 module.exports.getUserWithArticles = async (req, res) => {
   try {

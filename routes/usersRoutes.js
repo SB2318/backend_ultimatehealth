@@ -4,7 +4,7 @@ const router = express.Router();
 const {
     register, login, logout,
     sendOTPForForgotPassword, verifyOtpForForgotPassword,
-    deleteByUser, deleteByAdmin,getprofile,
+    deleteByUser, deleteByAdmin,getprofile, getProfileImage,
     follow,
     getFollowers,
     getUserProfile,
@@ -39,9 +39,14 @@ router.post("/user/refreshToken", refreshToken);
 router.get('/user/getprofile/',authenticateToken, getprofile)
 // Get Other's Profile
 router.get('/user/getprofile/:id',authenticateToken, getUserProfile)
+// Get profile image
+router.get('/user/getprofileimage/:userId',authenticateToken, getProfileImage);
+
 // Follow and Unfollow Routes
 router.post('/user/follow',authenticateToken, follow);
 router.get('/user/:userId/followers', authenticateToken, getFollowers);
+
+
 
 // Forget password
 router.post("/user/forgotpassword", sendOTPForForgotPassword);
