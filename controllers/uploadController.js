@@ -22,6 +22,8 @@ const uploadFile = async (req, res) => {
     if (!file) {
         return res.status(400).json({ message: 'No file uploaded.' });
     }
+    console.log("Here comessss", file);
+    
     try {
         // Handle Image file upload
         if (file.mimetype.startsWith('image/')) {
@@ -44,6 +46,7 @@ const uploadFile = async (req, res) => {
 
                     s3.putObject(params, (err, data) => {
                         // Delete the temporary file after upload
+                        console.log(data);
                         fs.unlink(file.path, (err) => {
                             if (err) console.error('Unlink error', err);
                         });
