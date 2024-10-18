@@ -10,6 +10,7 @@ const {
   deleteByUser,
   deleteByAdmin,
   getprofile,
+  getProfileImage,
   follow,
   getFollowers,
   getUserProfile,
@@ -52,6 +53,9 @@ router.post("/user/refreshToken", refreshToken);
 
 // Get profile
 router.get("/user/getprofile/", authenticateToken, getprofile);
+
+// Get profile image
+router.get('/user/getprofileimage/:userId',authenticateToken, getProfileImage);
 // Get Other's Profile
 router.get("/user/getprofile/:id", authenticateToken, getUserProfile);
 // Follow and Unfollow Routes
