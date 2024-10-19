@@ -322,7 +322,8 @@ module.exports.login = async (req, res) => {
 };
 
 module.exports.logout = async (req, res) => {
-  const { refreshToken } = req.cookies;
+  
+  const { refreshToken } = req.user.userId;
 
   if (!refreshToken) {
     return res.status(400).json({ error: "Refresh token required" });

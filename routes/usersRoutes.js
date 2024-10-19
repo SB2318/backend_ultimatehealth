@@ -100,7 +100,7 @@ router.get(
   getUserLikeAndSaveArticles
 );
 
-router.post("/user/logout", logout);
+router.post("/user/logout", authenticateToken, logout);
 router.post(
   "/user/update-profile-image",
   authenticateToken,
