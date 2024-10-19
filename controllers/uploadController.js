@@ -22,7 +22,7 @@ const uploadFile = async (req, res) => {
     if (!file) {
         return res.status(400).json({ message: 'No file uploaded.' });
     }
-    console.log("Here comessss", file);
+    //console.log("Here comessss", file);
     
     try {
         // Handle Image file upload
@@ -82,7 +82,26 @@ const uploadFile = async (req, res) => {
             });
 
         }
-        else {
+        else if (file.mimetype === 'audio/mpeg') {
+            // Handle MP3 file upload
+            const params = {
+                Bucket: 'ultimatehealth-01',
+                Key: `${file.originalname}`, // Keep original filename and extension
+                Body: fs.createReadStream(file.path),
+                ContentType: 'audio/mpeg',
+            };
+
+            s3.putObject(params, (err, data) => {
+                fs.unlink(file.path, (err) => {
+                    if (err) console.error('Unlink error', err);
+                });
+
+                if (err) {
+                    return res.status(500).json({ message: 'Error uploading MP3 file to S3: ' + err.message });
+                }
+                res.status(200).send({ message: 'MP3 file uploaded successfully', key: `${file.originalname}` });
+            });
+        } else {
             // Handle other file types (e.g., PDF, CSV, etc.), as of now not needed
             return res.status(400).json({ message: 'Unsupported file type.' });
         }
