@@ -323,15 +323,15 @@ module.exports.login = async (req, res) => {
 
 module.exports.logout = async (req, res) => {
   
-  const { refreshToken } = req.user.userId;
+ // const { refreshToken } = req.user.userId;
 
-  if (!refreshToken) {
-    return res.status(400).json({ error: "Refresh token required" });
-  }
+//  if (!refreshToken) {
+//    return res.status(400).json({ error: "Refresh token required" });
+ // }
 
   try {
     // Find the user and remove the refresh token
-    const user = await User.findOne({ refreshToken });
+    const user = await User.findById(req.user.userId);
     if (user) {
       user.refreshToken = null;
       await user.save();
