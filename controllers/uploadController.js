@@ -7,9 +7,9 @@ require('dotenv').config();
 
 AWS.config.update({
     region: 'del1',
-    accessKeyId: 'FJWJS1WXCD91BCLVVMOV',
+    accessKeyId: 'ML63B37UJQOADMJIXP80',
     hostname:"del1.vultrobjects.com",
-    secretAccessKey: 'nKqJPa4wm0S3COWpLSCq6BngLruPOGgKCPhJH5So',
+    secretAccessKey: 'VLJ7mrnzSZdSj3Cxvx4cWm8svhtgOQJGYngtQ57Z',
     endpoint: 'https://del1.vultrobjects.com',
   });
 
@@ -38,7 +38,7 @@ const uploadFile = async (req, res) => {
 
                     const fileNameWithoutExt = path.basename(file.originalname, path.extname(file.originalname));
                     const params = {
-                        Bucket: 'ultimatehealth',
+                        Bucket: 'ultimatehealth-01',
                         Key: `${fileNameWithoutExt}.webp`, // replace operation needed
                         Body: buffer,
                         ContentType: 'image/webp',
@@ -62,7 +62,7 @@ const uploadFile = async (req, res) => {
         } else if (file.mimetype === 'text/html') {
             // Handle html file upload
             const params = {
-                Bucket: 'ultimatehealth',
+                Bucket: 'ultimatehealth-01',
                 Key: `${file.originalname}`, // Keep original extension, unique file name needed
                 Body: fs.createReadStream(file.path), // Use stream for larger files
                 ContentType: 'text/html',
@@ -95,7 +95,7 @@ const uploadFile = async (req, res) => {
 // get file
 const getFile = async(req, res)=>{
     const params = {
-        Bucket: 'ultimatehealth',
+        Bucket: 'ultimatehealth-01',
         Key: req.params.key,
     };
 
@@ -112,7 +112,7 @@ const getFile = async(req, res)=>{
 // We will  not usually remove anything from bucket, we only remove it from our dataase
 const deleteFile = async (req, res) => {
     const params = {
-        Bucket: 'ultimatehealth',
+        Bucket: 'ultimatehealth-01',
         Key: req.params.key,
     };
 
