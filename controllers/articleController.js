@@ -228,38 +228,37 @@ module.exports.likeArticle = async (req, res) => {
 
 // Update View Count
 module.exports.updateViewCount = async (req, res) => {
-
   const { article_id } = req.body;
   const user = await User.findById(req.user.userId);
-  //console.log("user", req.user);
+
   try {
     const articleDb = await Article.findById(article_id)
-      .populate(['tags', 'likedUsers', 'viewUsers']) // This populates the tag data
+      .populate(['tags', 'likedUsers', 'viewUsers'])
       .exec();
 
     if (!user || !articleDb) {
       return res.status(404).json({ error: 'User or Article not found' });
     }
 
-   // const userId = new mongoose.Types.ObjectId(req.user.userId);
-    const viewUserSet = new Set(articleDb.viewUsers);
+    // Check if the user has already viewed the article
+    const hasViewed = articleDb.viewUsers.some(viewUser => viewUser.toString() === req.user.userId);
 
-    if (viewUserSet.has(req.user.userId)) {
-      return res.status(200).json({ message: 'Article already viewed by user', articleDb });
+    if (hasViewed) {
+      return res.status(200).json({ message: 'Article already viewed by user', article: articleDb });
     }
 
-    articleDb.viewCount += 1; 
-    articleDb.viewUsers.push(req.user.userId); 
+    // Increment view count and add user to viewUsers
+    articleDb.viewCount += 1;
+    articleDb.viewUsers.push(req.user.userId);
 
     await articleDb.save();
     res.status(200).json({ message: 'Article view count updated', article: articleDb });
 
   } catch (err) {
-
     res.status(500).json({ error: 'Error updating view', details: err.message });
   }
-
 }
+
 
 // Helper function to get the next id
 const getNextId = async () => {
