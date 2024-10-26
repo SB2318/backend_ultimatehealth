@@ -84,6 +84,11 @@ const articleSchema = new Schema({
     ref: 'User', // Reference to User
     default: []
   }],
+  viewUsers: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User', 
+    default: []
+  }]
 });
 
 // Apply the autoIncrement plugin to the schema
