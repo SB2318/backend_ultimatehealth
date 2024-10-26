@@ -234,18 +234,20 @@ module.exports.updateViewCount = async (req, res) => {
   //console.log("user", req.user);
   try {
     const articleDb = await Article.findById(article_id)
-    .populate(['tags', 'likedUsers','viewUsers']) // This populates the tag data
-    .exec();
+      .populate(['tags', 'likedUsers', 'viewUsers']) // This populates the tag data
+      .exec();
 
     if (!user || !articleDb) {
       return res.status(404).json({ error: 'User or Article not found' });
     }
 
-   if(articleDb.viewUsers.includes(req.user.userId)){
-    return res.status(200).json({ message: 'Article already viewed by user', articleDb});
-   }
+    if (articleDb.viewUsers.includes(req.user.userId)) {
+      return res.status(200).json({ message: 'Article already viewed by user', articleDb });
+    }
 
-    articleDb.viewCount += 1;
+    articleDb.viewCount += 1; 
+    articleDb.viewUsers.push(req.user.userId); 
+
     await articleDb.save();
     res.status(200).json({ message: 'Article view count updated', article: articleDb });
 
