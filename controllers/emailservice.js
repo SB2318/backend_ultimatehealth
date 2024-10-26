@@ -56,9 +56,9 @@ const Sendverifymail = async (req, res) => {
 
     const cooldownKey = `verification-email:${email}`;
 
-    //if (cache.get(cooldownKey)) {
-       // return res.status(429).json({ message: 'Verification email already sent' });
-    //}
+    if (cache.get(cooldownKey)) {
+        return res.status(429).json({ message: 'Verification email already sent' });
+    }
 
     cache.put(cooldownKey, 'true', cooldownTime * 1000); // store for 1 hour
 
@@ -167,8 +167,13 @@ const verifyEmail=async (req, res) => {
             color: #007BFF;
             margin-top: 0px;
         }
+
+        h4 {
+            font-size: 18px;
+            color: #666;
+        }
         p {
-            font-size: 16px;
+            font-size: 15px;
             color: #666;
         }
         .button {
@@ -187,8 +192,9 @@ const verifyEmail=async (req, res) => {
     <div class="container">
         <img src="https://imgur.com/I5lDXoI.png" alt="Logo" class="logo">
         <h1>Welcome ✅</h1>
-        <p>Your account has been verified successfully.</p>
-        <button onclick="openApp()">Open Your App</button>
+        <h4>Your account has been verified successfully.</h4>
+        <!-- <button onclick="openApp()">Open Your App</button> -->
+        <p>You can now close this page </p>
     </div>
 
     <script>

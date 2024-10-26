@@ -8,6 +8,7 @@ const nodemailer = require("nodemailer");
 const moment = require("moment");
 const Article = require("../models/Articles");
 const adminModel = require("../models/adminModel");
+const BlacklistedToken = require('../models/blackListedToken');
 require("dotenv").config();
 
 module.exports.register = async (req, res) => {
@@ -281,6 +282,12 @@ module.exports.login = async (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
+    // Blacklist the token
+    if(user.refreshToken != null){
+      const blacklistedToken = new BlacklistedToken({ token:  user.refreshToken });
+      await blacklistedToken.save();
+    }
+
     // Generate JWT Access Token
     const accessToken = jwt.sign(
       { userId: user._id, email: user.email },
@@ -332,7 +339,14 @@ module.exports.logout = async (req, res) => {
   try {
     // Find the user and remove the refresh token
     const user = await User.findById(req.user.userId);
+
+
     if (user) {
+
+      // BlackList the token first
+      const blacklistedToken = new BlacklistedToken({ token:  user.refreshToken });
+      await blacklistedToken.save();
+
       user.refreshToken = null;
       await user.save();
     }
