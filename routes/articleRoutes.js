@@ -20,6 +20,9 @@ router.delete('/articles/:id',authenticateToken, articleController.deleteArticle
 router.post('/articles/saveArticle', authenticateToken, articleController.saveArticle); // Save Article
 router.post('/articles/likeArticle', authenticateToken, articleController.likeArticle ); // For Like and Dislike
 router.post('/articles/updateViewCount', authenticateToken, articleController.updateViewCount ); // For Like and Dislike
+router.post('/article/readEvent', authenticateToken, articleController.updateReadEvents);
+router.get('/article/read-status', authenticateToken, articleController.getReadDataForGraphs);
+router.get('/article/write-status', authenticateToken, articleController.getWriteDataForGraphs );
 
 
 module.exports = router;

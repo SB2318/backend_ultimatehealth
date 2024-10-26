@@ -16,9 +16,9 @@ const {
   getUserProfile,
   getUserWithArticles,
   getUserLikeAndSaveArticles,
-  updateReadArticles,
-  collectMonthlyRecordsForReading,
-  collectMonthlyRecordsForWriting,
+  //updateReadArticles,
+ // collectMonthlyRecordsForReading,
+  //collectMonthlyRecordsForWriting,
   checkOtp,
   refreshToken,
   updateProfileImage,
@@ -76,19 +76,23 @@ router.post("/user/verifyEmail", Sendverifymail);
 router.post("/user/resend-verification-mail", resendVerificationEmail);
 
 // Update read articles
-router.post("/user/update-read-articles", updateReadArticles);
+//router.post("/user/update-read-articles", updateReadArticles);
 
 // Collect monthly records for reading
+/*
 router.get(
   "/user/collect-monthly-records-for-reading",
   collectMonthlyRecordsForReading
 );
+*/
 
 // Collect monthly records for writing
+/*
 router.get(
   "/user/collect-monthly-records-for-writing",
   collectMonthlyRecordsForWriting
 );
+*/
 
 // Get user with articles
 router.get("/user/articles", authenticateToken, getUserWithArticles);

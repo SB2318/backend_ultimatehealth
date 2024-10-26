@@ -600,6 +600,7 @@ module.exports.getUserLikeAndSaveArticles = async (req, res) => {
 };
 
 //update read article
+/*
 module.exports.updateReadArticles = async (req, res) => {
   try {
     const { userId, articleId } = req.body;
@@ -622,6 +623,10 @@ module.exports.updateReadArticles = async (req, res) => {
       .json({ error: "Error updating read articles", details: error.message });
   }
 };
+*/
+
+
+/*
 //This endpoint returns the number of articles read by the user daily for a given month.
 module.exports.collectMonthlyRecordsForReading = async (req, res) => {
   try {
@@ -704,7 +709,7 @@ module.exports.collectMonthlyRecordsForWriting = async (req, res) => {
     });
   }
 };
-
+*/
 module.exports.updateProfileImage = async (req, res) => {
   try {
     const { profileImageUrl } = req.body;

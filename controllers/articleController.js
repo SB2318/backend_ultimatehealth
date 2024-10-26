@@ -1,6 +1,9 @@
 const ArticleTag = require("../models/ArticleModel");
 const Article = require("../models/Articles");
 const User = require("../models/UserModel");
+const ReadAggregate = require("../models/events/readEventSchema");
+const WriteAggregate = require("../models/events/writeEventSchema");
+
 const mongoose = require('mongoose');
 // Create a new article
 module.exports.createArticle = async (req, res) => {
@@ -30,7 +33,10 @@ module.exports.createArticle = async (req, res) => {
     // Update the user's articles field
     user.articles.push(newArticle._id);
 
+    await updateWriteEvents(newArticle.id, user.id);
+
     await user.save();
+
     // Respond with a success message and the new article
     res.status(201).json({ message: "Article created successfully", newArticle });
   } catch (error) {
@@ -52,7 +58,6 @@ module.exports.getAllArticles = async (req, res) => {
       .json({ error: "Error fetching articles", details: error.message });
   }
 };
-
 
 // Get an article by ID
 module.exports.getArticleById = async (req, res) => {
@@ -243,8 +248,8 @@ module.exports.updateViewCount = async (req, res) => {
     // Check if the user has already viewed the article
     const userId = new mongoose.Types.ObjectId(req.user.userId);
     const hasViewed = articleDb.viewUsers.some(id => id.equals(userId));
-   // console.log('Has Viewed', hasViewed)
-   // console.log('Article View Users', articleDb.viewUsers);
+    // console.log('Has Viewed', hasViewed)
+    // console.log('Article View Users', articleDb.viewUsers);
 
     if (hasViewed) {
       return res.status(200).json({ message: 'Article already viewed by user', article: articleDb });
@@ -322,5 +327,283 @@ exports.deleteArticleTagByIds = async (req, res) => {
     res.status(200).json({ message: "Tag deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+// Read Event API
+// Update User Read Event
+exports.updateReadEvents = async (req, res) => {
+
+  const { article_id } = req.body;
+
+  if (!article_id) {
+    return res.status(400).json({ error: "Article ID is required" });
+  }
+
+  const now = new Date();
+  const today = new Date(now.setHours(0, 0, 0, 0));
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  try {
+    // New Read Event Entry
+    const newReadEvent = new ReadAggregate({ userId: req.user.userId, articleId: article_id });
+    await newReadEvent.save();
+
+    await ReadAggregate.findOneAndUpdate(
+      { userId: req.user.userId, date: today },
+      { $inc: { dailyReads: 1, monthlyReads: 1, yearlyReads: 1 } },
+      { upsert: true }
+    );
+
+    await ReadAggregate.findOneAndUpdate(
+      { userId: req.user.userId, date: startOfMonth },
+      { $inc: { monthlyReads: 1 } },
+      { upsert: true }
+    );
+
+    await ReadAggregate.findOneAndUpdate(
+      { userId: req.user.userId, date: startOfYear },
+      { $inc: { yearlyReads: 1 } },
+      { upsert: true }
+    );
+    res.status(201).json({ message: 'Read Event Saved' });
+  } catch (err) {
+    console.log('Article Read Event Update Error', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET ALL READ EVENTS STATUS DAILY, WEEKLY, MONTHLY
+exports.getReadDataForGraphs = async (req, res) => {
+
+  const { userId } = req.user.userId;
+
+  try {
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const yearStart = new Date(today.getFullYear(), 0, 1);
+
+    const dailyData = await ReadAggregate.find({ userId, date: today });
+    const monthlyData = await ReadAggregate.find({ userId, date: { $gte: monthStart } });
+    const yearlyData = await ReadAggregate.find({ userId, date: { $gte: yearStart } });
+
+    res.status(200).json({
+      dailyReads: {
+        date: today.toISOString().slice(0, 10), // Today's date
+        count: dailyData ? dailyData.dailyReads : 0 // Reads today
+    },
+    monthlyReads: monthlyData.map(entry => ({
+        date: entry.date.toISOString().slice(0, 10), // Date of the month
+        count: entry.monthlyReads // Reads on that day
+    })),
+    yearlyReads: yearlyData.map(entry => ({
+        month: entry.date.toISOString().slice(0, 7), // Month formatted as YYYY-MM
+        count: entry.yearlyReads // Reads for that month
+    })),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred while fetching read data' });
+  }
+};
+
+/**
+ * 
+ * 
+ * {
+    "userId": "60d21b4667d0d8992e610c85", 
+    "monthlyReads": [
+        {
+            "date": "2024-01-01T00:00:00.000Z",
+            "readCount": 3
+        },
+        {
+            "date": "2024-01-02T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-03T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-04T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-05T00:00:00.000Z",
+            "readCount": 2
+        },
+        {
+            "date": "2024-01-06T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-07T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-08T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-09T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-10T00:00:00.000Z",
+            "readCount": 1
+        },
+        {
+            "date": "2024-01-11T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-12T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-13T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-14T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-15T00:00:00.000Z",
+            "readCount": 4
+        },
+        {
+            "date": "2024-01-16T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-17T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-18T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-19T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-20T00:00:00.000Z",
+            "readCount": 5
+        },
+        {
+            "date": "2024-01-21T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-22T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-23T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-24T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-25T00:00:00.000Z",
+            "readCount": 2
+        },
+        {
+            "date": "2024-01-26T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-27T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-28T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-29T00:00:00.000Z",
+            "readCount": 0
+        },
+        {
+            "date": "2024-01-30T00:00:00.000Z",
+            "readCount": 3
+        },
+        {
+            "date": "2024-01-31T00:00:00.000Z",
+            "readCount": 0
+        }
+    ],
+    "totalReads": 15 
+}
+
+ */
+
+// Update Write Event Tasks 
+async function updateWriteEvents(articleId, userId){
+
+  const now = new Date();
+  const today = new Date(now.setHours(0, 0, 0, 0));
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  try {
+    // New Write Event Entry
+    const newWriteEvent = new WriteAggregate({ userId: userId, articleId: articleId });
+    await newWriteEvent.save();
+
+    await WriteAggregate.findOneAndUpdate(
+      { userId: userId, date: today },
+      { $inc: { dailyWrites: 1, monthlyWrites: 1, yearlyWrites: 1 } },
+      { upsert: true }
+    );
+
+    await WriteAggregate.findOneAndUpdate(
+      { userId: userId, date: startOfMonth },
+      { $inc: { monthlyWrites: 1 } },
+      { upsert: true }
+    );
+
+    await WriteAggregate.findOneAndUpdate(
+      { userId: userId, date: startOfYear },
+      { $inc: { yearlyWrites: 1 } },
+      { upsert: true }
+    );
+  } catch (err) {
+    console.log('Article Write Event Update Error', err);
+  }
+}
+// GET ALL Write EVENTS STATUS DAILY, WEEKLY, MONTHLY
+exports.getWriteDataForGraphs = async (req, res) => {
+
+  const { userId } = req.user.userId;
+
+  try {
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const yearStart = new Date(today.getFullYear(), 0, 1);
+
+    const dailyData = await WriteAggregate.find({ userId, date: today });
+    const monthlyData = await WriteAggregate.find({ userId, date: { $gte: monthStart } });
+    const yearlyData = await WriteAggregate.find({ userId, date: { $gte: yearStart } });
+
+    res.status(200).json({
+      dailyWrites: {
+        date: today.toISOString().slice(0, 10), // Today's date
+        count: dailyData ? dailyData.dailyWrites : 0 // Writes today
+    },
+    monthlyWrites: monthlyData.map(entry => ({
+        date: entry.date.toISOString().slice(0, 10), // Date of the month
+        count: entry.monthlyWrites // Writes on that day
+    })),
+    yearlyWrites: yearlyData.map(entry => ({
+        month: entry.date.toISOString().slice(0, 7), // Month formatted as YYYY-MM
+        count: entry.yearlyWrites // Writes for that month
+    })),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred while fetching read data' });
   }
 };

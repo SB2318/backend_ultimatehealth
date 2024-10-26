@@ -130,6 +130,7 @@ const userSchema = new mongoose.Schema({
        // required: true,
         default: 0,
     },
+    /*
     readArticles: [{
         articleId: {
             type: Number,
@@ -141,6 +142,7 @@ const userSchema = new mongoose.Schema({
             default: Date.now,
         },
     }],
+    */
     
 });
 
