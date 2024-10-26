@@ -1,7 +1,7 @@
 const ArticleTag = require("../models/ArticleModel");
 const Article = require("../models/Articles");
 const User = require("../models/UserModel");
-
+const mongoose = require('mongoose');
 // Create a new article
 module.exports.createArticle = async (req, res) => {
   try {
@@ -233,7 +233,7 @@ module.exports.updateViewCount = async (req, res) => {
 
   try {
     const articleDb = await Article.findById(article_id)
-      .populate(['tags', 'likedUsers', 'viewUsers'])
+      .populate(['tags', 'likedUsers'])
       .exec();
 
     if (!user || !articleDb) {
@@ -241,7 +241,10 @@ module.exports.updateViewCount = async (req, res) => {
     }
 
     // Check if the user has already viewed the article
-    const hasViewed = articleDb.viewUsers.some(viewUser => viewUser.toString() === req.user.userId);
+    const userId = new mongoose.Types.ObjectId(req.user.userId);
+    const hasViewed = articleDb.viewUsers.some(id => id.equals(userId));
+   // console.log('Has Viewed', hasViewed)
+   // console.log('Article View Users', articleDb.viewUsers);
 
     if (hasViewed) {
       return res.status(200).json({ message: 'Article already viewed by user', article: articleDb });
