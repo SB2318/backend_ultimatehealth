@@ -241,10 +241,10 @@ module.exports.updateViewCount = async (req, res) => {
       return res.status(404).json({ error: 'User or Article not found' });
     }
 
-    const userId = new mongoose.Types.ObjectId(req.user.userId);
+   // const userId = new mongoose.Types.ObjectId(req.user.userId);
     const viewUserSet = new Set(articleDb.viewUsers);
 
-    if (viewUserSet.has(userId)) {
+    if (viewUserSet.has(req.user.userId)) {
       return res.status(200).json({ message: 'Article already viewed by user', articleDb });
     }
 
