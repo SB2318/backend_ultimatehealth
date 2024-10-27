@@ -10,6 +10,7 @@ const writeAggregateSchema = new Schema({
     date: {
         type: Date,
         required: true,
+        default: Date.now
     },
     dailyWrites: {
         type: Number,

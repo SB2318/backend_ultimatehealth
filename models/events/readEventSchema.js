@@ -1,3 +1,4 @@
+const { now } = require('moment/moment');
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -10,6 +11,7 @@ const readAggregateSchema = new Schema({
     date: {
         type: Date,
         required: true,
+        default: Date.now
     },
     dailyReads: {
         type: Number,
