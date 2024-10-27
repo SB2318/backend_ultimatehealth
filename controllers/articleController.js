@@ -33,7 +33,7 @@ module.exports.createArticle = async (req, res) => {
     // Update the user's articles field
     user.articles.push(newArticle._id);
 
-    await updateWriteEvents(newArticle.id, user.id);
+    await updateWriteEvents(newArticle._id, user.id);
 
     await user.save();
 
