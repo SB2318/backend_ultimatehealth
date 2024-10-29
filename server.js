@@ -5,6 +5,7 @@ const compression = require('compression');
 const userRoutes = require("./routes/usersRoutes");
 const specializationRoutes = require("./routes/SpecializationsRoutes");
 const articleRoutes = require("./routes/articleRoutes");
+const analyticsRoute = require('./routes/analyticsRoute');
 require('dotenv').config();
 const PORT = process.env.PORT || 4000;
 const cookieParser = require("cookie-parser");
@@ -38,7 +39,7 @@ app.use("/api", userRoutes);
 app.use("/api", specializationRoutes);
 app.use("/api",articleRoutes );
 app.use("/api", uploadRoute);
-
+app.use("/api/analytics", analyticsRoute);
 
 
 // Start the server
