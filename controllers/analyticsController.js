@@ -214,6 +214,18 @@ exports.getMonthlyReadDataForGraphs = expressAsyncHandler(
 
         const monthlyData = await ReadAggregate.find({ userId, date: { $gte: monthStart, $lte: monthEnd } });
 
+        if (monthlyData.length === 0) {
+          const daysInMonth = new Date(currentYear, targetMonth + 1, 0).getDate();
+          const zeroData = Array.from({ length: daysInMonth }, (_, day) => ({
+            date: new Date(currentYear, targetMonth, day + 1).toISOString().slice(0, 10),
+            value: 0,
+          }));
+  
+         res.status(200).json({ 
+            monthlyReads: zeroData 
+          });
+          return;
+        }
         res.status(200).json({
           monthlyReads: monthlyData.map(entry => ({
             date: entry.date.toISOString().slice(0, 10), 
@@ -257,6 +269,24 @@ exports.getYearlyReadDataForGraphs = expressAsyncHandler(
         date: { $gte: yearStart, $lte: yearEnd } 
       });
 
+      if (yearlyData.length === 0) {
+        return res.status(200).json({
+          yearlyReads: [
+            { month: `${targetYear}-01`, value: 0 },
+            { month: `${targetYear}-02`, value: 0 },
+            { month: `${targetYear}-03`, value: 0 },
+            { month: `${targetYear}-04`, value: 0 },
+            { month: `${targetYear}-05`, value: 0 },
+            { month: `${targetYear}-06`, value: 0 },
+            { month: `${targetYear}-07`, value: 0 },
+            { month: `${targetYear}-08`, value: 0 },
+            { month: `${targetYear}-09`, value: 0 },
+            { month: `${targetYear}-10`, value: 0 },
+            { month: `${targetYear}-11`, value: 0 },
+            { month: `${targetYear}-12`, value: 0 },
+          ],
+        });
+      }
       res.status(200).json({
         yearlyReads: yearlyData.map(entry => ({
           month: entry.date.toISOString().slice(0, 7), //  YYYY-MM
@@ -346,6 +376,16 @@ exports.getMonthlyWriteDataForGraphs = expressAsyncHandler(
 
       const monthlyData = await WriteAggregate.find({ userId, date: { $gte: monthStart, $lte: monthEnd } });
 
+      if (monthlyData.length === 0) {
+        const daysInMonth = new Date(currentYear, targetMonth + 1, 0).getDate();
+        const zeroData = Array.from({ length: daysInMonth }, (i, day) => ({
+          date: new Date(currentYear, targetMonth, day + 1).toISOString().slice(0, 10),
+          value: 0,
+        }));
+          
+        res.status(200).json({ monthlyWrites: zeroData });
+        return;
+      }
       res.status(200).json({
         monthlyWrites: monthlyData.map(entry => ({
           date: entry.date.toISOString().slice(0, 10), 
@@ -389,6 +429,24 @@ async (req, res) => {
       date: { $gte: yearStart, $lte: yearEnd } 
     });
 
+    if (yearlyData.length === 0) {
+      return res.status(200).json({
+        yearlyWrites: [
+          { month: `${targetYear}-01`, value: 0 },
+          { month: `${targetYear}-02`, value: 0 },
+          { month: `${targetYear}-03`, value: 0 },
+          { month: `${targetYear}-04`, value: 0 },
+          { month: `${targetYear}-05`, value: 0 },
+          { month: `${targetYear}-06`, value: 0 },
+          { month: `${targetYear}-07`, value: 0 },
+          { month: `${targetYear}-08`, value: 0 },
+          { month: `${targetYear}-09`, value: 0 },
+          { month: `${targetYear}-10`, value: 0 },
+          { month: `${targetYear}-11`, value: 0 },
+          { month: `${targetYear}-12`, value: 0 },
+        ],
+      });
+    }
     res.status(200).json({
       yearlyWrites: yearlyData.map(entry => ({
         month: entry.date.toISOString().slice(0, 7), //  YYYY-MM
