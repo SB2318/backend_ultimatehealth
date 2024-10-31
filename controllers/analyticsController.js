@@ -188,55 +188,57 @@ exports.getDailyReadDataForGraphs = expressAsyncHandler(
 )
 
 exports.getMonthlyReadDataForGraphs = expressAsyncHandler(
-    async (req, res) => {
-     // const { userId } = req.params.userId;
-      const { userId, month } = req.query; 
-  
-      if(!userId){
-        res.status(400).json({message:'User Id and month is required'});
-      }
+  async (req, res) => {
+    const { userId, month } = req.query;
 
-      try {
-        const today = new Date();
-        const currentYear = today.getFullYear();
-  
-        const targetMonth = month !== undefined ? parseInt(month, 10) : today.getMonth();
-        
-        if (targetMonth < 0 || targetMonth > 11) {
-          return res.status(400).json({ error: 'Invalid month parameter. It should be between 0 (January) and 11 (December).' });
-        }
-  
-        const monthStart = new Date(currentYear, targetMonth, 1); 
-        const monthEnd = new Date(currentYear, targetMonth + 1, 0); 
-  
-        console.log('Target Month Start', monthStart);
-        console.log('Target Month End', monthEnd);
-
-        const monthlyData = await ReadAggregate.find({ userId, date: { $gte: monthStart, $lte: monthEnd } });
-
-        if (monthlyData.length === 0) {
-          const daysInMonth = new Date(currentYear, targetMonth + 1, 0).getDate();
-          const zeroData = Array.from({ length: daysInMonth }, (_, day) => ({
-            date: new Date(currentYear, targetMonth, day + 1).toISOString().slice(0, 10),
-            value: 0,
-          }));
-  
-         res.status(200).json({ 
-            monthlyReads: zeroData 
-          });
-          return;
-        }
-        res.status(200).json({
-          monthlyReads: monthlyData.map(entry => ({
-            date: entry.date.toISOString().slice(0, 10), 
-            value: entry.monthlyReads // Reads on that day
-          })), 
-        });
-      } catch (error) {
-        res.status(500).json({ error: 'An error occurred while fetching read data' });
-      }
+    if (!userId) {
+      return res.status(400).json({ message: 'User Id and month are required' });
     }
+
+    try {
+      const today = new Date();
+      const currentYear = today.getFullYear();
+
+      const targetMonth = month !== undefined ? Number(month) : today.getMonth();
+      
+      if (targetMonth < 0 || targetMonth > 11) {
+        return res.status(400).json({ error: 'Invalid month parameter. It should be between 0 (January) and 11 (December).' });
+      }
+
+      const monthStart = new Date(currentYear, targetMonth+1, 2); 
+      const monthEnd = new Date(currentYear, targetMonth + 2, 1); 
+
+      console.log('Target Month Start:', monthStart);
+      console.log('Target Month End:', monthEnd);
+
+      const monthlyData = await ReadAggregate.find({
+        userId,
+        date: { $gte: monthStart, $lte: monthEnd }
+      });
+
+      if (monthlyData.length === 0) {
+        const daysInMonth = new Date(currentYear, targetMonth + 1, 0).getDate();
+        const zeroData = Array.from({ length: daysInMonth }, (v, day) => ({
+          date: new Date(currentYear, targetMonth, day + 1).toISOString().slice(0, 10),
+          value: 0,
+        }));
+
+        return res.status(200).json({ monthlyReads: zeroData });
+      }
+
+      res.status(200).json({
+        monthlyReads: monthlyData.map(entry => ({
+          date: entry.date.toISOString().slice(0, 10),
+          value: entry.monthlyReads // Reads on that day
+        })),
+      });
+    } catch (error) {
+      console.error('Error fetching monthly read data:', error);
+      res.status(500).json({ error: 'An error occurred while fetching read data' });
+    }
+  }
 );
+
 
 exports.getYearlyReadDataForGraphs = expressAsyncHandler(
   async (req, res) => {
