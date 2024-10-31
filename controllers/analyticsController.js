@@ -141,8 +141,8 @@ module.exports.getMostViewedArticles = expressAsyncHandler(
 
 exports.getDailyReadDataForGraphs = expressAsyncHandler(
     async (req, res) => {
-        const { userId } = req.user;
-        const { specificDay } = req.query; 
+        //const { userId } = req.user;
+        const {userId, specificDay } = req.query; 
     
         if(!userId || !specificDay){
             res.status(400).json({message:'User Id and day is required'});
@@ -189,8 +189,8 @@ exports.getDailyReadDataForGraphs = expressAsyncHandler(
 
 exports.getMonthlyReadDataForGraphs = expressAsyncHandler(
     async (req, res) => {
-      const { userId } = req.params.userId;
-      const { month } = req.query; 
+     // const { userId } = req.params.userId;
+      const { userId, month } = req.query; 
   
       if(!userId){
         res.status(400).json({message:'User Id and month is required'});
@@ -228,8 +228,8 @@ exports.getMonthlyReadDataForGraphs = expressAsyncHandler(
 
 exports.getYearlyReadDataForGraphs = expressAsyncHandler(
   async (req, res) => {
-    const userId = req.params.userId; 
-    const { year } = req.query; 
+   // const userId = req.params.userId; 
+    const {userId, year } = req.query; 
 
     if (!userId) {
       return res.status(400).json({ message: "User ID and year are required" }); // Return early if validation fails
@@ -272,8 +272,8 @@ exports.getYearlyReadDataForGraphs = expressAsyncHandler(
 
 exports.getDailyWriteDataForGraphs = expressAsyncHandler(
   async (req, res) => {
-      const { userId } = req.user;
-      const { specificDay } = req.query; 
+     // const { userId } = req.user;
+      const { userId, specificDay } = req.query; 
   
       if(!userId || !specificDay){
           res.status(400).json({message:'User Id and day is required'});
@@ -320,9 +320,10 @@ exports.getDailyWriteDataForGraphs = expressAsyncHandler(
 
 exports.getMonthlyWriteDataForGraphs = expressAsyncHandler(
   async (req, res) => {
-    const { userId } = req.params.userId;
-    const { month } = req.query; 
-
+    //const { userId } = req.params.userId;
+    const { userId, month } = req.query; 
+     console.log('User Id', userId);
+     console.log('User Month', month);
     if(!userId){
       res.status(400).json({message:'User Id and month is required'});
     }
@@ -359,8 +360,8 @@ exports.getMonthlyWriteDataForGraphs = expressAsyncHandler(
 
 exports.getYearlyWriteDataForGraphs = expressAsyncHandler(
 async (req, res) => {
-  const userId = req.params.userId; 
-  const { year } = req.query; 
+ // const userId = req.params.userId; 
+  const { userId, year } = req.query; 
 
   if (!userId) {
     return res.status(400).json({ message: "User ID and year are required" }); 

@@ -8,12 +8,12 @@ router.get('/total-reads/:userId', authenticateToken, controller.getTotalReadCou
 router.get('/total-writes/:userId', authenticateToken,  controller.getTotalWriteCountOfUser);
 router.get('/mostly-viewed/:userId', authenticateToken,  controller.getMostViewedArticles);
 
-router.get('/daily-reads/:userId',authenticateToken, controller.getDailyReadDataForGraphs);
-router.get('/monthly-reads/:userId', authenticateToken, controller.getMonthlyReadDataForGraphs);
-router.get('/yearly-reads/:userId', authenticateToken, controller.getYearlyReadDataForGraphs);
+router.get('/daily-reads',authenticateToken, controller.getDailyReadDataForGraphs);
+router.get('/monthly-reads', authenticateToken, controller.getMonthlyReadDataForGraphs);
+router.get('/yearly-reads', authenticateToken, controller.getYearlyReadDataForGraphs);
 
-router.get('/daily-writes/:userId',authenticateToken, controller.getDailyWriteDataForGraphs);
-router.get('/monthly-writes/:userId', authenticateToken, controller.getMonthlyWriteDataForGraphs);
-router.get('/yearly-writes/:userId', authenticateToken, controller.getYearlyWriteDataForGraphs);
+router.get('/daily-writes',authenticateToken, controller.getDailyWriteDataForGraphs);
+router.get('/monthly-writes', authenticateToken, controller.getMonthlyWriteDataForGraphs);
+router.get('/yearly-writes', authenticateToken, controller.getYearlyWriteDataForGraphs);
 
 module.exports = router;
