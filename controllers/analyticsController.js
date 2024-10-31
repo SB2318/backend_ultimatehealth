@@ -216,22 +216,24 @@ exports.getMonthlyReadDataForGraphs = expressAsyncHandler(
         date: { $gte: monthStart, $lte: monthEnd }
       });
 
-      if (monthlyData.length === 0) {
+     // if (monthlyData.length === 0) {
         const daysInMonth = new Date(currentYear, targetMonth + 1, 0).getDate();
         const zeroData = Array.from({ length: daysInMonth }, (v, day) => ({
           date: new Date(currentYear, targetMonth, day + 1).toISOString().slice(0, 10),
           value: 0,
         }));
-
+        
+        if (monthlyData.length > 0) {
+          monthlyData.forEach(entry => {
+            const dayIndex = entry.date.getDate() - 1; 
+            zeroData[dayIndex].value = entry.monthlyReads; 
+          });
+        }
+        //res.status(200).json({ monthlyWrites: zeroData });
         return res.status(200).json({ monthlyReads: zeroData });
-      }
+     // }
 
-      res.status(200).json({
-        monthlyReads: monthlyData.map(entry => ({
-          date: entry.date.toISOString().slice(0, 10),
-          value: entry.monthlyReads // Reads on that day
-        })),
-      });
+      
     } catch (error) {
       console.error('Error fetching monthly read data:', error);
       res.status(500).json({ error: 'An error occurred while fetching read data' });
@@ -242,11 +244,10 @@ exports.getMonthlyReadDataForGraphs = expressAsyncHandler(
 
 exports.getYearlyReadDataForGraphs = expressAsyncHandler(
   async (req, res) => {
-   // const userId = req.params.userId; 
-    const {userId, year } = req.query; 
+    const { userId, year } = req.query;
 
     if (!userId) {
-      return res.status(400).json({ message: "User ID and year are required" }); // Return early if validation fails
+      return res.status(400).json({ message: "User ID and year are required" });
     }
 
     try {
@@ -255,52 +256,47 @@ exports.getYearlyReadDataForGraphs = expressAsyncHandler(
 
       const targetYear = year !== undefined ? parseInt(year, 10) : currentYear;
 
-      // Validate the year
       if (isNaN(targetYear) || targetYear < 2000 || targetYear > currentYear) {
         return res.status(400).json({ error: 'Invalid year parameter. It should be a number between 2000 and the current year.' });
       }
 
       const yearStart = new Date(targetYear, 0, 1); 
-      const yearEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0); 
-
-      console.log('Year Start:', yearStart);
-      console.log('Year End:', yearEnd);
+      const yearEnd = new Date(targetYear + 1, 0, 0); // End of the year
 
       const yearlyData = await ReadAggregate.find({ 
         userId, 
         date: { $gte: yearStart, $lte: yearEnd } 
       });
 
-      if (yearlyData.length === 0) {
-        return res.status(200).json({
-          yearlyReads: [
-            { month: `${targetYear}-01`, value: 0 },
-            { month: `${targetYear}-02`, value: 0 },
-            { month: `${targetYear}-03`, value: 0 },
-            { month: `${targetYear}-04`, value: 0 },
-            { month: `${targetYear}-05`, value: 0 },
-            { month: `${targetYear}-06`, value: 0 },
-            { month: `${targetYear}-07`, value: 0 },
-            { month: `${targetYear}-08`, value: 0 },
-            { month: `${targetYear}-09`, value: 0 },
-            { month: `${targetYear}-10`, value: 0 },
-            { month: `${targetYear}-11`, value: 0 },
-            { month: `${targetYear}-12`, value: 0 },
-          ],
+      // Use an object to hold aggregated values
+      const monthlyAggregates = {};
+
+      yearlyData.forEach(entry => {
+        const monthKey = entry.date.toISOString().slice(0, 7); // Format YYYY-MM
+        if (!monthlyAggregates[monthKey]) {
+          monthlyAggregates[monthKey] = 0;
+        }
+        monthlyAggregates[monthKey] += entry.yearlyReads; 
+      });
+
+      const response = [];
+      for (let month = 0; month < 12; month++) {
+        const monthKey = `${targetYear}-${String(month + 1).padStart(2, '0')}`;
+        response.push({
+          month: monthKey,
+          value: monthlyAggregates[monthKey] || 0 
         });
       }
-      res.status(200).json({
-        yearlyReads: yearlyData.map(entry => ({
-          month: entry.date.toISOString().slice(0, 7), //  YYYY-MM
-          value: entry.yearlyReads,
-        })),
-      });
+
+      res.status(200).json({ yearlyReads: response });
     } catch (error) {
-      console.error('Error fetching read data:', error); 
+      console.error('Error fetching read data:', error);
       res.status(500).json({ error: 'An error occurred while fetching read data' });
     }
   }
 );
+
+
 
 exports.getDailyWriteDataForGraphs = expressAsyncHandler(
   async (req, res) => {
@@ -378,22 +374,21 @@ exports.getMonthlyWriteDataForGraphs = expressAsyncHandler(
 
       const monthlyData = await WriteAggregate.find({ userId, date: { $gte: monthStart, $lte: monthEnd } });
 
-      if (monthlyData.length === 0) {
         const daysInMonth = new Date(currentYear, targetMonth + 1, 0).getDate();
         const zeroData = Array.from({ length: daysInMonth }, (i, day) => ({
           date: new Date(currentYear, targetMonth, day + 1).toISOString().slice(0, 10),
           value: 0,
         }));
-          
+        
+        
+        if (monthlyData.length > 0) {
+          monthlyData.forEach(entry => {
+            const dayIndex = entry.date.getDate() - 1; 
+            zeroData[dayIndex].value = entry.monthlyWrites; 
+          });
+        }
         res.status(200).json({ monthlyWrites: zeroData });
-        return;
-      }
-      res.status(200).json({
-        monthlyWrites: monthlyData.map(entry => ({
-          date: entry.date.toISOString().slice(0, 10), 
-          value: entry.monthlyWrites // Writes on that day
-        })), 
-      });
+      
     } catch (error) {
       res.status(500).json({ error: 'An error occurred while fetching read data' });
     }
@@ -431,29 +426,19 @@ async (req, res) => {
       date: { $gte: yearStart, $lte: yearEnd } 
     });
 
-    if (yearlyData.length === 0) {
-      return res.status(200).json({
-        yearlyWrites: [
-          { month: `${targetYear}-01`, value: 0 },
-          { month: `${targetYear}-02`, value: 0 },
-          { month: `${targetYear}-03`, value: 0 },
-          { month: `${targetYear}-04`, value: 0 },
-          { month: `${targetYear}-05`, value: 0 },
-          { month: `${targetYear}-06`, value: 0 },
-          { month: `${targetYear}-07`, value: 0 },
-          { month: `${targetYear}-08`, value: 0 },
-          { month: `${targetYear}-09`, value: 0 },
-          { month: `${targetYear}-10`, value: 0 },
-          { month: `${targetYear}-11`, value: 0 },
-          { month: `${targetYear}-12`, value: 0 },
-        ],
-      });
-    }
+     // Initialize an array for all months
+     const monthlyWrites = Array.from({ length: 12 }, (_, i) => ({
+      month: `${targetYear}-${String(i + 1).padStart(2, '0')}`,
+      value: 0
+    }));
+
+    // Map the existing data to the monthly array
+    yearlyData.forEach(entry => {
+      const monthIndex = entry.date.getMonth(); 
+      monthlyWrites[monthIndex].value = entry.yearlyWrites; 
+    });
     res.status(200).json({
-      yearlyWrites: yearlyData.map(entry => ({
-        month: entry.date.toISOString().slice(0, 7), //  YYYY-MM
-        value: entry.yearlyWrites,
-      })),
+      yearlyWrites: monthlyWrites
     });
   } catch (error) {
     console.error('Error fetching read data:', error); 
