@@ -6,7 +6,7 @@ const router = express.Router();
 router.get('/user-stats/:userId', authenticateToken, controller.getTotalLikeAndViewReceivedByUser);
 router.get('/total-reads/:userId', authenticateToken, controller.getTotalReadCountOfUser);
 router.get('/total-writes/:userId', authenticateToken,  controller.getTotalWriteCountOfUser);
-router.get('/mostly-viewed/:userId', authenticateToken,  controller.getMostViewedPostOfUser);
+router.get('/mostly-viewed/:userId', authenticateToken,  controller.getMostViewedArticles);
 
 router.get('/daily-reads/:userId',authenticateToken, controller.getDailyReadDataForGraphs);
 router.get('/monthly-reads/:userId', authenticateToken, controller.getMonthlyReadDataForGraphs);
