@@ -205,9 +205,9 @@ exports.getMonthlyReadDataForGraphs = expressAsyncHandler(
         return res.status(400).json({ error: 'Invalid month parameter. It should be between 0 (January) and 11 (December).' });
       }
 
-      const monthStart = new Date(currentYear, targetMonth+1, 2); 
-      const monthEnd = new Date(currentYear, targetMonth + 2, 1); 
-
+      const monthStart = new Date(currentYear, targetMonth, 1); // Start of November
+      const monthEnd = new Date(currentYear, targetMonth + 1, 1); // Start of December
+      
       console.log('Target Month Start:', monthStart);
       console.log('Target Month End:', monthEnd);
 
@@ -215,6 +215,8 @@ exports.getMonthlyReadDataForGraphs = expressAsyncHandler(
         userId,
         date: { $gte: monthStart, $lte: monthEnd }
       });
+
+    //  console.log('Monthly Data', monthlyData);
 
      // if (monthlyData.length === 0) {
         const daysInMonth = new Date(currentYear, targetMonth + 1, 0).getDate();
@@ -366,11 +368,11 @@ exports.getMonthlyWriteDataForGraphs = expressAsyncHandler(
         return res.status(400).json({ error: 'Invalid month parameter. It should be between 0 (January) and 11 (December).' });
       }
 
-      const monthStart = new Date(currentYear, targetMonth, 1); 
-      const monthEnd = new Date(currentYear, targetMonth + 1, 0); 
-
-      console.log('Target Month Start', monthStart);
-      console.log('Target Month End', monthEnd);
+      const monthStart = new Date(currentYear, targetMonth, 1); // Start of November
+      const monthEnd = new Date(currentYear, targetMonth + 1, 1); // Start of December
+      
+      console.log('Target Month Start:', monthStart);
+      console.log('Target Month End:', monthEnd);
 
       const monthlyData = await WriteAggregate.find({ userId, date: { $gte: monthStart, $lte: monthEnd } });
 

@@ -342,31 +342,31 @@ exports.updateReadEvents = async (req, res) => {
 
   const now = new Date();
   const today = new Date(now.setHours(0, 0, 0, 0));
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
+
   try {
     // New Read Event Entry
-    const newReadEvent = new ReadAggregate({ userId: req.user.userId, articleId: article_id });
-    await newReadEvent.save();
 
-    await ReadAggregate.findOneAndUpdate(
-      { userId: req.user.userId, date: today },
-      { $inc: { dailyReads: 1, monthlyReads: 1, yearlyReads: 1 } },
-      { upsert: true }
-    );
+    const readEvent = await ReadAggregate.findOne({ userId: req.user.userId, date:today});
 
-    await ReadAggregate.findOneAndUpdate(
-      { userId: req.user.userId, date: startOfMonth },
-      { $inc: { monthlyReads: 1 } },
-      { upsert: true }
-    );
-
-    await ReadAggregate.findOneAndUpdate(
-      { userId: req.user.userId, date: startOfYear },
-      { $inc: { yearlyReads: 1 } },
-      { upsert: true }
-    );
-    res.status(201).json({ message: 'Read Event Saved' });
+    if(!readEvent){
+      // Create New
+      const newReadEvent = new ReadAggregate({ userId: req.user.userId, date:today});
+      newReadEvent.dailyReads =1;
+      newReadEvent.monthlyReads =1;
+      newReadEvent.yearlyReads =1;
+      newReadEvent.date = today;
+      await newReadEvent.save();
+      
+    res.status(201).json({ message: 'Read Event Saved', event:newReadEvent });
+    }else{
+      readEvent.dailyReads +=1;
+      readEvent.monthlyReads +=1;
+      readEvent.yearlyReads +=1;
+     
+      await readEvent.save();
+      
+    res.status(201).json({ message: 'Read Event Saved', event:readEvent });
+    }
   } catch (err) {
     console.log('Article Read Event Update Error', err);
     res.status(500).json({ error: err.message });
@@ -547,30 +547,28 @@ async function updateWriteEvents(articleId, userId){
 
   const now = new Date();
   const today = new Date(now.setHours(0, 0, 0, 0));
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
+
   try {
-    // New Write Event Entry
-    const newWriteEvent = new WriteAggregate({ userId: userId, articleId: articleId });
-    await newWriteEvent.save();
 
-    await WriteAggregate.findOneAndUpdate(
-      { userId: userId, date: today },
-      { $inc: { dailyWrites: 1, monthlyWrites: 1, yearlyWrites: 1 } },
-      { upsert: true }
-    );
+    // Check for existing event entry
+    const writeEvent = await WriteAggregate.findOne({userId: userId, date:today});
 
-    await WriteAggregate.findOneAndUpdate(
-      { userId: userId, date: startOfMonth },
-      { $inc: { monthlyWrites: 1 } },
-      { upsert: true }
-    );
+    if(!writeEvent){
+       // New Write Event Entry
+      const newWriteEvent = new WriteAggregate({ userId: userId, date:today });
+      newWriteEvent.dailyWrites = 1;
+      newWriteEvent.monthlyWrites = 1;
+      newWriteEvent.yearlyWrites = 1;
+      
+      await newWriteEvent.save();
+    }else{
 
-    await WriteAggregate.findOneAndUpdate(
-      { userId: userId, date: startOfYear },
-      { $inc: { yearlyWrites: 1 } },
-      { upsert: true }
-    );
+      writeEvent.dailyWrites += 1;
+      writeEvent.monthlyWrites += 1;
+      writeEvent.yearlyWrites += 1;
+      
+      await writeEvent.save();
+    }
   } catch (err) {
     console.log('Article Write Event Update Error', err);
   }
