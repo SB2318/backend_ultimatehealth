@@ -4,8 +4,8 @@ const UnverifiedUser = require("../models/UnverifiedUserModel");
 
 const dbConnect = () => {
     mongoose.connect(process.env.MONGODB_URL,{
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      //useNewUrlParser: true,
+     // useUnifiedTopology: true,
       serverSelectionTimeoutMS: 15000, // Increase the timeout
     })
     .then(() => {

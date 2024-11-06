@@ -1,19 +1,21 @@
-const AWS = require('aws-sdk');
+//const AWS = require('aws-sdk');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const fs = require('fs');
 const sharp = require('sharp');
 const path = require('path');
 require('dotenv').config();
 
-
-AWS.config.update({
+  const s3Client = new S3Client({
     region: 'del1',
-    accessKeyId: 'ML63B37UJQOADMJIXP80',
-    hostname:"del1.vultrobjects.com",
-    secretAccessKey: 'VLJ7mrnzSZdSj3Cxvx4cWm8svhtgOQJGYngtQ57Z',
-    endpoint: 'https://del1.vultrobjects.com',
-  });
+    credentials: {
+        accessKeyId: 'ML63B37UJQOADMJIXP80',
+        secretAccessKey: 'VLJ7mrnzSZdSj3Cxvx4cWm8svhtgOQJGYngtQ57Z',
+    },
+    endpoint: 'https://del1.vultrobjects.com',  
+    forcePathStyle: true,  
+});
 
-const s3 = new AWS.S3();
+
 // upload file
 const uploadFile = async (req, res) => {
 
@@ -31,7 +33,7 @@ const uploadFile = async (req, res) => {
             // Optimize storage, create buffer and convert image in one format 
             await sharp(file.path)
                 .webp({ quality: 80 }) 
-                .toBuffer((err, buffer) => {
+                .toBuffer(async (err, buffer) => {
                     if (err) {
                         return res.status(500).send('Error processing image: ' + err.message);
                     }
@@ -44,6 +46,10 @@ const uploadFile = async (req, res) => {
                         ContentType: 'image/webp',
                     };
 
+                    const command = new PutObjectCommand(params);
+                    await s3Client.send(command);
+
+                    /*
                     s3.putObject(params, (err, data) => {
                         // Delete the temporary file after upload
                         console.log(data);
@@ -58,6 +64,13 @@ const uploadFile = async (req, res) => {
                         }
                         res.status(200).send({ message: 'Image uploaded successfully', key: `${fileNameWithoutExt}.webp` });
                     });
+                    */
+
+                    fs.unlink(file.path, (err) => {
+                        if (err) console.error('Unlink error', err);
+                    });
+
+                    res.status(200).send({ message: 'Image uploaded successfully', key: `${fileNameWithoutExt}.webp` });
                 });
         } else if (file.mimetype === 'text/html') {
             // Handle html file upload
@@ -65,9 +78,17 @@ const uploadFile = async (req, res) => {
                 Bucket: 'ultimatehealth-01',
                 Key: `${file.originalname}`, // Keep original extension, unique file name needed
                 Body: fs.createReadStream(file.path), // Use stream for larger files
-                ContentType: 'text/html',
+                ContentType: 'text/html; charset=UTF-8'
             };
 
+            const command = new PutObjectCommand(params);
+            await s3Client.send(command);
+
+            fs.unlink(file.path, (err) => {
+                if (err) console.error('Unlink error', err);
+            });
+
+            /*
             s3.putObject(params, (err, data) => {
                 // Delete the temporary file after upload
                 fs.unlink(file.path, (err) => {
@@ -78,9 +99,11 @@ const uploadFile = async (req, res) => {
                     return res.status(500).json({ message: 'Error uploading file to S3: ' + err.message });
 
                 }
-                res.status(200).send({ message: 'Image uploaded successfully', key:`${file.originalname}` });
+               
             });
+            */
 
+            res.status(200).send({ message: 'Text or HTML uploaded successfully', key:`${file.originalname}` });
         }
         else if (file.mimetype === 'audio/mpeg') {
             // Handle MP3 file upload
@@ -91,6 +114,13 @@ const uploadFile = async (req, res) => {
                 ContentType: 'audio/mpeg',
             };
 
+            const command = new PutObjectCommand(params);
+            await s3Client.send(command);
+
+            fs.unlink(file.path, (err) => {
+                if (err) console.error('Unlink error', err);
+            });
+            /*
             s3.putObject(params, (err, data) => {
                 fs.unlink(file.path, (err) => {
                     if (err) console.error('Unlink error', err);
@@ -101,6 +131,9 @@ const uploadFile = async (req, res) => {
                 }
                 res.status(200).send({ message: 'MP3 file uploaded successfully', key: `${file.originalname}` });
             });
+            */
+
+            res.status(200).send({ message: 'MP3 file uploaded successfully', key: `${file.originalname}` });
         } else {
             // Handle other file types (e.g., PDF, CSV, etc.), as of now not needed
             return res.status(400).json({ message: 'Unsupported file type.' });
@@ -118,13 +151,16 @@ const getFile = async(req, res)=>{
         Key: req.params.key,
     };
 
-    s3.getObject(params, (err, data) => {
-        if (err) {
-            return res.status(404).send(err);
-        }
+    const command = new GetObjectCommand(params);
+
+    try {
+        const data = await s3Client.send(command);
         res.setHeader('Content-Type', data.ContentType);
-        res.send(data.Body);
-    });
+        data.Body.pipe(res);
+    } catch (err) {
+        console.log("Error fetching file:", err);
+        return res.status(404).send(err);
+    }
 }
 
 // Delete File
@@ -135,12 +171,15 @@ const deleteFile = async (req, res) => {
         Key: req.params.key,
     };
 
-    s3.deleteObject(params, (err, data) => {
-        if (err) {
-            return res.status(404).send(err);
-        }
+    const command = new DeleteObjectCommand(params);
+
+    try {
+        await s3Client.send(command);
         res.status(200).send({ message: 'File deleted successfully' });
-    });
+    } catch (err) {
+        console.log("Error deleting file:", err);
+        return res.status(404).send(err);
+    }
 };
 
 module.exports = {
