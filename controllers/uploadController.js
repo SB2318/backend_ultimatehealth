@@ -8,8 +8,8 @@ require('dotenv').config();
   const s3Client = new S3Client({
     region: 'del1',
     credentials: {
-        accessKeyId: 'ML63B37UJQOADMJIXP80',
-        secretAccessKey: 'VLJ7mrnzSZdSj3Cxvx4cWm8svhtgOQJGYngtQ57Z',
+        accessKeyId: VULTR_ACCESS_KEY,
+        secretAccessKey: VULTR_SECRET_KEY,
     },
     endpoint: 'https://del1.vultrobjects.com',  
     forcePathStyle: true,  
