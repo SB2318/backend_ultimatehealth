@@ -6,6 +6,8 @@ const userRoutes = require("./routes/usersRoutes");
 const specializationRoutes = require("./routes/SpecializationsRoutes");
 const articleRoutes = require("./routes/articleRoutes");
 const analyticsRoute = require('./routes/analyticsRoute');
+const commentRoute = require('./routes/commentRoute');
+
 require('dotenv').config();
 const PORT = process.env.PORT || 4000;
 const cookieParser = require("cookie-parser");
@@ -40,6 +42,7 @@ app.use("/api", specializationRoutes);
 app.use("/api",articleRoutes );
 app.use("/api", uploadRoute);
 app.use("/api/analytics", analyticsRoute);
+app.use("/api", commentRoute);
 
 
 // Start the server
