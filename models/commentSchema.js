@@ -42,6 +42,11 @@ const commentSchema = new Schema({
         default:[]
     }],
 
+    likedUsers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'User', // Reference to User
+        default: []
+    }],
     status: {
         type: String,
         enum: ['Active', 'Deleted'],

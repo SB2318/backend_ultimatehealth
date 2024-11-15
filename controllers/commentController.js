@@ -1,8 +1,4 @@
 
-// getCommentsByArticleId
-// like comment
-// undo like
-
 const expressAsyncHandler = require("express-async-handler");
 const Article = require('../models/Articles');
 const User = require('../models/UserModel');
@@ -152,4 +148,86 @@ module.exports.deleteComment = expressAsyncHandler(
             return res.status(500).json({ message: 'Internal server error' });
         }
      }
+)
+
+// like or unlike comment
+module.exports.likeComment = expressAsyncHandler(
+
+    async (req, res) => {
+        try {
+          const { commentid } = req.body;
+      
+          if (!commentid) {
+            return res.status(400).json({ message: "Comment id is required" });
+          }
+      
+          const user = await User.findById(req.user.userId);
+      
+          const comment = await Comment.findById(commentid)
+            .populate('likedUsers') 
+            .exec();
+      
+          if (!user || !comment) {
+            return res.status(404).json({ error: 'User or comment not found' });
+          }
+      
+      
+          // Check if the article is already liked
+          const likedCommentsSet = new Set(comment.likedUsers);
+          const isCommentLiked = likedCommentsSet.has(req.user.userId);
+       
+          if (isCommentLiked) {
+      
+            // Unlike It
+            await Promise.all([
+              Comment.findByIdAndUpdate(commentid, {
+                $pull: { likedUsers: req.user.userId } // Remove user from likedUsers
+              }),
+            ]);
+      
+            return res.status(200).json({ message: 'Comment unliked successfully' });
+      
+          } else {
+            await Promise.all([
+              Comment.findByIdAndUpdate(commentid, {
+                $addToSet: { likedUsers: req.user.userId } // Add user to likedUsers
+              }),
+            ]);
+      
+            return res.status(200).json({ message: 'Comment liked successfully'});
+          }
+      
+        } catch (error) {
+          res.status(500).json({ error: 'Error liking article', details: error.message });
+        }
+      }
+)
+
+// get all comments
+module.exports.getAllCommentsForArticles = expressAsyncHandler(
+
+    async (req, res) =>{
+
+        try{
+
+          const {articleid} = req.params;
+
+          if(!articleid){
+            return res.status(404).json({error: 'Article id required'});
+          }
+
+
+          const comments = await Comment.find({ articleId: articleid, status: 'Active' }) 
+          .populate('userId', 'user_handle Profile_image')  
+          .populate('replies')  
+          .sort({ createdAt: -1 });
+
+          res.status(200).json(comments);
+
+        }catch(err){
+
+            console.log('GET ALL COMMENTS ERROR', err);
+            res.status(500).json({error: 'Error fetching comments', details: err.message});
+        }
+    }
 )
