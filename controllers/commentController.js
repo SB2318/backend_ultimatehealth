@@ -1,10 +1,7 @@
-// Add Comment
-// Edit Comment
-// Delete Comment
-// Reply to Comment
-// Edit Reply
-// Delete Reply
+
 // getCommentsByArticleId
+// like comment
+// undo like
 
 const expressAsyncHandler = require("express-async-handler");
 const Article = require('../models/Articles');
@@ -63,6 +60,7 @@ module.exports.addComment = expressAsyncHandler(
     }
 )
 
+
 module.exports.editComment = expressAsyncHandler(
     async(req, res)=>{
 
@@ -85,12 +83,13 @@ module.exports.editComment = expressAsyncHandler(
                 return res.status(404).json({message:'Comment or user not found'});
             }
 
-            if(comment.userId !== user._id){
+            if(comment.userId.toString() !== user._id.toString()){
                 return res.status(403).json({message:'You are not authorized to edit this comment'});
             }
 
             comment.content = content;
             comment.updatedAt = new Date();
+            comment.isEdited = true;
             await comment.save();
 
             return res.status(200).json({message:"Comment updated"});
@@ -100,4 +99,57 @@ module.exports.editComment = expressAsyncHandler(
             return res.status(500).json({message:"Internal server error"});
         }
     }
+)
+
+// soft delete
+module.exports.deleteComment = expressAsyncHandler(
+
+     async (req, res)=>{
+        const {commentId} = req.params;
+
+        if(!commentId){
+            return res.status(400).json({message:'Invalid request : Comment ID is required.'});
+        }
+
+        try{
+
+            const [comment, user] = await Promise.all([
+                Comment.findById(commentId),
+                User.findById(req.user.userId)
+            ]);
+
+            if(!comment || !user){
+                return res.status(404).json({message:'Comment or user not found'});
+            }
+
+            if(comment.userId.toString() !== user._id.toString()){
+
+                return res.status(403).json({message: 'You are not authorised to delete this comment'});
+            }
+
+            comment.status = 'Deleted';
+            comment.updatedAt = new Date();
+
+            // If it is a reply, then remove it from it's parent
+            if(comment.parentCommentId){
+                const parentComment = await Comment.findById(comment.parentCommentId);
+                if (parentComment) {
+                    // Remove the comment from the parent's replies list
+                    parentComment.replies = parentComment.replies.filter(
+                        (replyId) => replyId.toString() !== commentId
+                    );
+                    await parentComment.save();
+                }
+            }
+
+            await comment.save();
+
+            return res.status(200).json({ message: 'Comment as deleted' });
+
+        }catch(err){
+
+            console.log('Error deleting comment:', err);
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+     }
 )

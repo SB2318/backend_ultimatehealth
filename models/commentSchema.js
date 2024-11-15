@@ -47,6 +47,10 @@ const commentSchema = new Schema({
         enum: ['Active', 'Deleted'],
         default: 'Active',
     },
+    isEdited: {
+        type: Boolean,
+        default: false
+    }
 })
 
 const Comment = mongoose.model('Comment', commentSchema);
