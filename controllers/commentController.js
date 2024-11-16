@@ -221,12 +221,9 @@ module.exports.getAllCommentsForArticles = expressAsyncHandler(
           .populate('userId', 'user_handle Profile_image')  
           .populate('replies')  
           .sort([
-            {
-             userId: req.user.userId,
-            },
-            { 
-             createdAt: -1,
-            }]);
+            ['userId', req.user.userId ? 1 : -1],  
+            ['createdAt', -1]                     
+          ])
 
           res.status(200).json(comments);
 
