@@ -220,7 +220,13 @@ module.exports.getAllCommentsForArticles = expressAsyncHandler(
           const comments = await Comment.find({ articleId: articleid, status: 'Active' }) 
           .populate('userId', 'user_handle Profile_image')  
           .populate('replies')  
-          .sort({ createdAt: -1 });
+          .sort([
+            {
+             userId: req.user.userId,
+            },
+            { 
+             createdAt: -1,
+            }]);
 
           res.status(200).json(comments);
 
