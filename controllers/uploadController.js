@@ -6,12 +6,21 @@ require('dotenv').config();
 
 
 AWS.config.update({
+    region: 'eu-north-1', 
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID, 
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+});
+
+/*
+
+AWS.config.update({
     region: 'del1',
     accessKeyId: 'ML63B37UJQOADMJIXP80',
     hostname:"del1.vultrobjects.com",
     secretAccessKey: 'VLJ7mrnzSZdSj3Cxvx4cWm8svhtgOQJGYngtQ57Z',
     endpoint: 'https://del1.vultrobjects.com',
   });
+  */
 
 const s3 = new AWS.S3();
 // upload file
@@ -46,17 +55,17 @@ const uploadFile = async (req, res) => {
 
                     s3.putObject(params, (err, data) => {
                         // Delete the temporary file after upload
-                        console.log(data);
+                      //  console.log(data);
                         fs.unlink(file.path, (err) => {
                             if (err) console.error('Unlink error', err);
                         });
 
-                        console.log("Error", err);
+                      //  console.log("Error", err);
                         if (err) {
                             return res.status(500).json({ message: 'Error uploading file to S3: ' + err.message });
 
                         }
-                        res.status(200).send({ message: 'Image uploaded successfully', key: `${fileNameWithoutExt}.webp` });
+                        res.status(200).send({ message: 'Image uploaded successfully', key: `${fileNameWithoutExt}.webp`,  data: data });
                     });
                 });
         } else if (file.mimetype === 'text/html') {
@@ -65,7 +74,7 @@ const uploadFile = async (req, res) => {
                 Bucket: 'ultimatehealth-01',
                 Key: `${file.originalname}`, // Keep original extension, unique file name needed
                 Body: fs.createReadStream(file.path), // Use stream for larger files
-                ContentType: 'text/html',
+                ContentType: 'text/html; charset=UTF-8',
             };
 
             s3.putObject(params, (err, data) => {
@@ -78,7 +87,7 @@ const uploadFile = async (req, res) => {
                     return res.status(500).json({ message: 'Error uploading file to S3: ' + err.message });
 
                 }
-                res.status(200).send({ message: 'Image uploaded successfully', key:`${file.originalname}` });
+                res.status(200).send({ message: 'Image uploaded successfully', key:`${file.originalname}`,  data: data });
             });
 
         }
@@ -99,14 +108,14 @@ const uploadFile = async (req, res) => {
                 if (err) {
                     return res.status(500).json({ message: 'Error uploading MP3 file to S3: ' + err.message });
                 }
-                res.status(200).send({ message: 'MP3 file uploaded successfully', key: `${file.originalname}` });
+                res.status(200).send({ message: 'MP3 file uploaded successfully', key: `${file.originalname}`, data: data, });
             });
         } else {
             // Handle other file types (e.g., PDF, CSV, etc.), as of now not needed
             return res.status(400).json({ message: 'Unsupported file type.' });
         }
     } catch (err) {
-        console.log("Upload File Error", err);
+       // console.log("Upload File Error", err);
         res.status(500).json({ message: "Failed to upload your file" });
     }
 }

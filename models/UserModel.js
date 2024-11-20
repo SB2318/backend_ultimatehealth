@@ -4,6 +4,7 @@ const Article = require('./Articles');
 const Schema = mongoose.Schema;
 
 const userSchema = new mongoose.Schema({
+    
     user_id: {
         type: Schema.Types.ObjectId,
         auto: true,
