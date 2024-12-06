@@ -6,13 +6,11 @@ const path = require('path');
 require('dotenv').config();
 
   const s3Client = new S3Client({
-    region: 'del1',
+    region: 'eu-north-1',
     credentials: {
-        accessKeyId: VULTR_ACCESS_KEY,
-        secretAccessKey: VULTR_SECRET_KEY,
-    },
-    endpoint: 'https://del1.vultrobjects.com',  
-    forcePathStyle: true,  
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    }, 
 });
 
 
