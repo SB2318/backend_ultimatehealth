@@ -7,8 +7,8 @@ const userRoutes = require("./routes/usersRoutes");
 const specializationRoutes = require("./routes/SpecializationsRoutes");
 const articleRoutes = require("./routes/articleRoutes");
 const analyticsRoute = require('./routes/analyticsRoute');
-const commentRoute = require('./routes/commentRoute');
-const socketIo = require('./socket');
+const socketIo = require('socket.io');
+const { handleSocketEvents } = require('./controllers/commentController');
 
 require('dotenv').config();
 const PORT = process.env.PORT || 4000;
@@ -46,10 +46,10 @@ app.use("/api", specializationRoutes);
 app.use("/api",articleRoutes );
 app.use("/api", uploadRoute);
 app.use("/api/analytics", analyticsRoute);
-app.use("/api", commentRoute);
 
+const io = socketIo(server);
 
-socketIo(server);
+handleSocketEvents(io);
 
 server.listen(PORT, () => {
      console.log('Server is running on port 4000',PORT);

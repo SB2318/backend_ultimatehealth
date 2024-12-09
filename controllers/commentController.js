@@ -1,301 +1,243 @@
-
 const expressAsyncHandler = require("express-async-handler");
 const Article = require('../models/Articles');
 const User = require('../models/UserModel');
 const Comment = require('../models/commentSchema');
 
-module.exports.addComment = expressAsyncHandler(
+module.exports.handleSocketEvents = (io) => {
+    io.on('connection', (socket) => {
 
-    async (req, res) => {
+        console.log('a user connected');
 
-        const { userId, articleId, parentCommentId, content } = req.body;
+        socket.on('add-comment', async (data) => {
 
-        if (!userId || !articleId || !content) {
-            return res.status(400).json({ message: "Missing required fields." });
-        }
+            const { userId, articleId, content, parentCommentId } = data;
 
-        try {
-
-            const [user, article] = await Promise.all([
-                User.findById(userId),
-                Article.findById(articleId)
-            ]);
-
-            if (!user || !article) {
-                return res.status(400).json({ message: 'User or Article not found' });
+            if (!userId || !articleId || !content || content.trim() === '') {
+                socket.emit('error', 'Missing required fields');
+                return;
             }
 
-            // add a new comment
-            const newComment = new Comment({
-                userId: userId,
-                articleId: articleId,
-                parentCommentId: parentCommentId || null,
-                content: content
-            })
+            try {
 
-            await newComment.save();
-
-            // If it is a reply, add it to parent
-            if (parentCommentId) {
-                const parentComment = await Comment.findById(parentCommentId);
-
-                if (!parentComment) {
-                    return res.status(404).json({ message: 'Parent comment not found' });
-                }
-                parentComment.replies.push(newComment._id);
-                await parentComment.save();
-
-                // Emit the reply event to notify clients about the new reply
-
-                req.app.io.emit('update-parent-comment', {
-                    parentCommentId: newComment.parentCommentId,
-                    parentComment: parentComment
-                });
-
-                req.app.io.emit('new-reply', {
-                    parentCommentId: parentCommentId,
-                    reply: newComment,
-                    articleId: articleId
-                });
-
-                
-            } else {
-
-                req.app.io.emit('new-comment', {
-                    comment: newComment,
-                    articleId: articleId
-                }); // emit new comment to all connected clients
-            }
-
-
-            return res.status(200).json({ message: "new comment added" });
-
-        } catch (err) {
-
-            console.log('Comment addition error', err);
-            return res.status(500).json({ message: "Internal server error" });
-        }
-    }
-)
-
-
-module.exports.editComment = expressAsyncHandler(
-    async (req, res) => {
-
-        const { commentId, content, articleId } = req.body;
-
-        if (!commentId || !content || !articleId || content.trim() === '') {
-            return res.status(400).json({ message: 'Invalid request : Comment ID and non-empty content are required.' });
-        }
-
-        try {
-
-            const [comment, user, article] = await Promise.all(
-                [
-                    Comment.findById(commentId),
-                    User.findById(req.user.userId),
+                const [user, article] = await Promise.all([
+                    User.findById(userId),
                     Article.findById(Number(articleId))
-                ]
-            )
+                ]);
 
-            if (!comment || !user || !article) {
-                return res.status(404).json({ message: 'Comment or user or article not found' });
-            }
+                if (!user || !article) {
+                    socket.emit('error', 'User or article not found');
+                    return;
+                }
 
-            if (comment.userId.toString() !== user._id.toString()) {
-                return res.status(403).json({ message: 'You are not authorized to edit this comment' });
-            }
+                const newComment = new Comment({
+                    userId,
+                    articleId,
+                    parentCommentId: parentCommentId || null,
+                    content
+                });
 
-            comment.content = content;
-            comment.updatedAt = new Date();
-            comment.isEdited = true;
-            await comment.save();
+                await newComment.save();
 
-            req.app.io.emit('edit-comment', comment); // emit edited comment to all connected clients
-            return res.status(200).json({ message: "Comment updated" });
-        } catch (err) {
+                // Now emit event
 
-            console.log("Update Comment Error", err);
-            return res.status(500).json({ message: "Internal server error" });
-        }
-    }
-)
+                if (parentCommentId) {
+                    const parentComment = Comment.findById(parentCommentId);
 
-// soft delete
-module.exports.deleteComment = expressAsyncHandler(
-
-    async (req, res) => {
-        const { commentId, articleId } = req.params;
-
-        if (!commentId || !articleId || commentId.trim() === '' || articleId.trim() === '') {
-            return res.status(400).json({ message: 'Invalid request : Comment ID and article id is required.' });
-        }
-
-        try {
-
-            const [comment, user, article] = await Promise.all([
-                Comment.findById(commentId),
-                User.findById(req.user.userId),
-                Article.findById(Number(articleId))
-            ]);
-
-            if (!comment || !user || !article) {
-                return res.status(404).json({ message: 'Comment or user or article not found' });
-            }
-
-            if (comment.userId.toString() !== user._id.toString()) {
-
-                return res.status(403).json({ message: 'You are not authorised to delete this comment' });
-            }
-
-            comment.status = 'Deleted';
-            comment.updatedAt = new Date();
-
-            // If it is a reply, then remove it from it's parent
-            if (comment.parentCommentId) {
-                const parentComment = await Comment.findById(comment.parentCommentId);
-                if (parentComment) {
-                    // Remove the comment from the parent's replies list
-                    parentComment.replies = parentComment.replies.filter(
-                        (replyId) => replyId.toString() !== commentId
-                    );
+                    if (!parentComment) {
+                        socket.emit('error', { message: 'Parent comment not found' });
+                        return;
+                    }
+                    parentComment.replies.push(newComment._id);
                     await parentComment.save();
 
-                    // Emit the updated parent comment with the new replies array
-                    req.app.io.emit('update-parent-comment', {
-                        parentCommentId: comment.parentCommentId,
-                        parentComment: parentComment
+
+                    io.emit('update-parent-comment', {
+                        parentCommentId: parentComment._id,
+                        parentComment
+                    });
+
+                    io.emit('new-reply', {
+                        parentCommentId: parentCommentId,
+                        reply: newComment,
+                        articleId: articleId
+                    });
+
+                } else {
+                    io.emit('new-comment', {
+                        comment: newComment,
+                        articleId
                     });
                 }
+
+            } catch (err) {
+
+                console.error('Error adding comment:', err);
+                socket.emit('error', { message: 'Error adding comment' });
+            }
+        })
+
+        socket.on('edit-comment', async (data) => {
+
+            const { commentId, content, articleId } = data;
+
+            if (!commentId || !content || !articleId || content.trim() === '') {
+                socket.emit('error', { message: 'Invalid request: Comment ID and non-empty content are required.' });
+                return;
             }
 
-            await comment.save();
-
-            req.app.io.emit('delete-comment', {
-                commentId: commentId,
-                articleId: comment.articleId,
-                isReply: comment.parentCommentId? true: false
-            });
-
-            return res.status(200).json({ message: 'Comment as deleted' });
-
-        } catch (err) {
-
-            console.log('Error deleting comment:', err);
-            return res.status(500).json({ message: 'Internal server error' });
-        }
-    }
-)
-
-// like or unlike comment
-module.exports.likeComment = expressAsyncHandler(
-
-    async (req, res) => {
-        try {
-            const { commentid, articleId } = req.body;
-
-            if (!commentid || !articleId) {
-                return res.status(400).json({ message: "Comment id is required" });
-            }
-
-            const[user, article, comment] = await Promise.all([
-                User.findById(req.user.userId),
-                Article.findById(Number(articleId)),
-                Comment.findById(commentid)
-                .populate('likedUsers')
-                .exec()
-            ])
-   
-   
-
-            if (!user || !comment || !article) {
-                return res.status(404).json({ error: 'User or comment or article not found' });
-            }
-
-
-            // Check if the article is already liked
-            const likedCommentsSet = new Set(comment.likedUsers);
-            const isCommentLiked = likedCommentsSet.has(req.user.userId);
-
-            if (isCommentLiked) {
-
-                // Unlike It
-                await Promise.all([
-                    Comment.findByIdAndUpdate(commentid, {
-                        $pull: { likedUsers: req.user.userId } // Remove user from likedUsers
-                    }),
+            try {
+                const [comment, user, article] = await Promise.all([
+                    Comment.findById(commentId),
+                    User.findById(data.userId),
+                    Article.findById(articleId)
                 ]);
 
-                req.app.io.emit('unlike-comment', {
-                    commentId: commentid,
-                    userId: req.user.userId,
-                    articleId: comment.articleId,
-                    newLikeCount: comment.likedUsers.length - 1 
-                });
-                return res.status(200).json({ message: 'Comment unliked successfully' });
+                if (!comment || !user || !article) {
+                    socket.emit('error', { message: 'Comment or user or article not found' });
+                    return;
+                }
 
-            } else {
-                await Promise.all([
-                    Comment.findByIdAndUpdate(commentid, {
-                        $addToSet: { likedUsers: req.user.userId } // Add user to likedUsers
-                    }),
-                ]);
+                if (comment.userId.toString() !== user._id.toString()) {
+                    socket.emit('error', { message: 'You are not authorized to edit this comment' });
+                    return;
+                }
 
-                req.app.io.emit('like-comment', {
-                    commentId: commentid,
-                    userId: req.user.userId,
-                    articleId: comment.articleId,
-                    newLikeCount: comment.likedUsers.length - 1 
-                });
+                comment.content = content;
+                comment.updatedAt = new Date();
+                comment.isEdited = true;
+                await comment.save();
 
-                return res.status(200).json({ message: 'Comment liked successfully' });
+                io.emit('edit-comment', comment); // Broadcast the edited comment
+            } catch (err) {
+                console.error("Error editing comment:", err);
+                socket.emit('error', { message: 'Error editing comment' });
             }
 
-        } catch (error) {
-            res.status(500).json({ error: 'Error liking article', details: error.message });
-        }
-    }
-)
+        });
 
-// get all comments
-module.exports.getAllCommentsForArticles = expressAsyncHandler(
+        socket.on('delete-comment', async (data) => {
+            const { commentId, articleId } = data;
 
-    async (req, res) => {
-
-        try {
-
-            const { articleid } = req.params;
-
-            if (!articleid) {
-                return res.status(404).json({ error: 'Article id required' });
+            if (!commentId || !articleId) {
+                socket.emit('error', { message: 'Invalid request: Comment ID and article ID are required.' });
+                return;
             }
 
-            const article = await Article.findById(Number(articleid));
-            // Later with try to found comments from article
+            try {
+                const comment = await Comment.findById(commentId);
 
-            if(!article){
-                return res.status(404).json({ error: 'Article not found' });
+                if (!comment) {
+                    socket.emit('error', { message: 'Comment not found' });
+                    return;
+                }
+
+                // Check if the user is authorized to delete the comment
+                if (comment.userId.toString() !== data.userId) {
+                    socket.emit('error', { message: 'You are not authorized to delete this comment' });
+                    return;
+                }
+
+                comment.status = 'Deleted';
+                comment.updatedAt = new Date();
+                await comment.save();
+
+                // If it's a reply, update the parent comment
+                if (comment.parentCommentId) {
+                    const parentComment = await Comment.findById(comment.parentCommentId);
+                    if (parentComment) {
+                        parentComment.replies = parentComment.replies.filter(replyId => replyId.toString() !== commentId);
+                        await parentComment.save();
+
+                        io.emit('update-parent-comment', {
+                            parentCommentId: comment.parentCommentId,
+                            parentComment
+                        });
+                    }
+                }
+
+                io.emit('delete-comment', { commentId, articleId });
+            } catch (err) {
+                console.error('Error deleting comment:', err);
+                socket.emit('error', { message: 'Error deleting comment' });
+            }
+        });
+
+        socket.on('like-comment', async (data) => {
+            const { commentId, articleId, userId } = data;
+
+            if (!commentId || !articleId || !userId) {
+                socket.emit('error', { message: "Invalid request: Comment ID, Article ID, and User ID are required." });
+                return;
             }
 
-            const comments = await Comment.find({ articleId: articleid, status: 'Active' })
-                .populate('userId', 'user_handle Profile_image')
-                .populate('replies')
-                .sort([
-                    ['userId', req.user.userId ? 1 : -1],
-                    ['createdAt', -1]
-                ])
+            try {
+                const comment = await Comment.findById(commentId).populate('likedUsers');
 
-                req.app.io.emit('comments-loaded', {
-                    articleId: articleid,
+                if (!comment) {
+                    socket.emit('error', { message: 'Comment not found' });
+                    return;
+                }
+
+                const hasLiked = comment.likedUsers.some(like => like._id.toString() === userId);
+
+                if (hasLiked) {
+                    // Unlike the comment
+                    await Comment.findByIdAndUpdate(commentId, {
+                        $pull: { likedUsers: userId }
+                    });
+
+                    io.emit('unlike-comment', { commentId, userId, articleId });
+                } else {
+                    // Like the comment
+                    await Comment.findByIdAndUpdate(commentId, {
+                        $addToSet: { likedUsers: userId }
+                    });
+
+                    io.emit('like-comment', { commentId, userId, articleId });
+                }
+            } catch (err) {
+                console.error('Error liking/unliking comment:', err);
+                socket.emit('error', { message: 'Error processing like/unlike' });
+            }
+        });
+
+
+        socket.on('fetch-comments', async (data) => {
+            const { articleId } = data;
+
+            if (!articleId) {
+                socket.emit('error', { message: 'Article ID is required.' });
+                return;
+            }
+
+            try {
+                const article = await Article.findById(articleId);
+                if (!article) {
+                    socket.emit('error', { message: 'Article not found.' });
+                    return;
+                }
+
+                // Fetch all active comments related to the article
+                const comments = await Comment.find({ articleId: articleId, status: 'Active' })
+                    .populate('userId', 'user_handle Profile_image') // Populate user details
+                    .populate('replies') // Populate replies for each comment
+                    .sort({ createdAt: -1 }); // Sort by most recent first
+
+                // Emit the comments and replies to the client
+                socket.emit('comments-loaded', {
+                    articleId,
                     comments: comments
                 });
 
-            res.status(200).json(comments);
+            } catch (err) {
+                console.error('Error fetching comments:', err);
+                socket.emit('error', { message: 'Error fetching comments.' });
+            }
+        });
 
-        } catch (err) {
+        socket.on('disconnect', () => {
+            console.log('User disconnected');
+        });
 
-            console.log('GET ALL COMMENTS ERROR', err);
-            res.status(500).json({ error: 'Error fetching comments', details: err.message });
-        }
-    }
-)
+    });
+}
