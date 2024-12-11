@@ -7,7 +7,9 @@ module.exports.handleSocketEvents = (io) => {
     io.on('connection', (socket) => {
 
         console.log('a user connected');
-
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
         socket.on('add-comment', async (data) => {
 
             const { userId, articleId, content, parentCommentId } = data;
