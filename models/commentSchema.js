@@ -5,7 +5,7 @@ const commentSchema = new Schema({
 
     id: {
         type: Schema.Types.ObjectId,
-        required: true,
+        auto: true,
         unique: true
       },
     articleId:{

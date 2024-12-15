@@ -2,22 +2,22 @@
   "name": "ultimate_health",
   "version": "1.0.0",
   "description": "ultimate health backend",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "dotenvx run -- node server.js",
-    "dev": "nodemon server.js"
+    "start": "dotenvx run -- node index.js",
+    "dev": "nodemon index.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/meghanagottapu/UltimateHealth.git"
+    "url": "git+https://github.com/SB2318/UltimateHealth.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/meghanagottapu/UltimateHealth/issues"
+    "url": "https://github.com/SB2318/UltimateHealth/issues"
   },
-  "homepage": "https://github.com/meghanagottapu/UltimateHealth#readme",
+  "homepage": "https://github.com/SB2318/UltimateHealth#readme",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.685.0",
     "@aws-sdk/s3-request-presigner": "^3.685.0",
