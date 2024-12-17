@@ -89,8 +89,8 @@ io.on('connection', (socket) => {
                     articleId,
                     parentCommentId: parentCommentId || null,
                     content,
-                    username,
-                    userprofile
+                    //username,
+                    //userprofile
                 });
 
                 await newComment.save();
@@ -114,17 +114,25 @@ io.on('connection', (socket) => {
                     });
 
                     // reply
+
+                    const populatedComment = await Comment.findById(newComment._id)
+                    .populate('userId', 'user_handle Profile_image')
+                    .populate('replies'); 
+
                     socket.emit('comment', {
                         parentCommentId: parentCommentId,
-                        reply: newComment.populate('userId', 'user_handle Profile_image')
-                            .populate('replies'),
+                        reply: populatedComment,
                         articleId: articleId
                     });
 
                 } else {
+
+                    const populatedComment = await Comment.findById(newComment._id)
+                    .populate('userId', 'user_handle Profile_image')
+                    .populate('replies'); 
+
                     socket.emit('comment', {
-                        comment: newComment.populate('userId', 'user_handle Profile_image') 
-                        .populate('replies') ,
+                        comment: populatedComment,
                         articleId
                     });
                 }
