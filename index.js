@@ -65,6 +65,10 @@ io.on('connection', (socket) => {
     
             if (!userId || !articleId || !content || content.trim() === '') {
                 socket.emit('error', 'Missing required fields');
+                console.log("User Id", userId);
+                console.log("Article Id", articleId);
+                console.log("Content", content);
+                
                 return;
             }
     
