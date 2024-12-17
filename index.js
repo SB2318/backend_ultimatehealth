@@ -265,10 +265,10 @@ io.on('connection', (socket) => {
         async (data) => {
             const { articleId } = data;
     
-            console.log("fetch comment called");
+            console.log("fetch comment called", articleId);
     
             if (!articleId) {
-                socket.emit('error', { message: 'Article ID is required.' });
+                socket.emit('error', { message: 'articleId is required.' });
                 return;
             }
     
