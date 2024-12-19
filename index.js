@@ -228,10 +228,11 @@ io.on('connection', (socket) => {
                         parentComment.replies = parentComment.replies.filter(replyId => replyId.toString() !== commentId);
                         await parentComment.save();
 
-                        socket.emit('delete-comment', {
+                        socket.emit('delete-parent-comment', {
                             parentCommentId: comment.parentCommentId,
                             parentComment
                         });
+
                     }
                 }
 
@@ -268,15 +269,20 @@ io.on('connection', (socket) => {
                         $pull: { likedUsers: userId }
                     });
 
-                    socket.emit('unlike-comment', { commentId, userId, articleId });
                 } else {
                     // Like the comment
                     await Comment.findByIdAndUpdate(commentId, {
                         $addToSet: { likedUsers: userId }
                     });
 
-                    socket.emit('like-comment', { commentId, userId, articleId });
+                  //  socket.emit('like-comment', { commentId, userId, articleId });
                 }
+
+                const populatedComment = await Comment.findById(commentId)
+                .populate('userId', 'user_handle Profile_image')
+                .populate('replies'); 
+
+                socket.emit('like-comment', populatedComment);
             } catch (err) {
                 console.error('Error liking/unliking comment:', err);
                 socket.emit('error', { message: 'Error processing like/unlike' });
