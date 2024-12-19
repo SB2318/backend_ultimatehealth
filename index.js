@@ -148,17 +148,21 @@ io.on('connection', (socket) => {
     socket.on('edit-comment', expressAsyncHandler(
         async (data) => {
 
-            const { commentId, content, articleId } = data;
+            const { commentId, content, articleId, userId } = data;
 
-            if (!commentId || !content || !articleId || content.trim() === '') {
-                socket.broadcat.emit('error', { message: 'Invalid request: Comment ID and non-empty content are required.' });
+           // console.log("Comment Id", commentId);
+          //  console.log("Content", content);
+          //  console.log("Article Id", articleId);
+          //  console.log("User Id", userId);
+            if (!commentId || !content || !articleId || content.trim() === '' || !userId) {
+                socket.emit('error', { message: 'Invalid request: Comment ID, User Id and non-empty content are required.' });
                 return;
             }
 
             try {
                 const [comment, user, article] = await Promise.all([
                     Comment.findById(commentId),
-                    User.findById(data.userId),
+                    User.findById(userId),
                     Article.findById(articleId)
                 ]);
 
@@ -176,8 +180,12 @@ io.on('connection', (socket) => {
                 comment.updatedAt = new Date();
                 comment.isEdited = true;
                 await comment.save();
+       
+                const populatedComment = await Comment.findById(comment._id)
+                .populate('userId', 'user_handle Profile_image')
+                .populate('replies'); 
 
-                socket.emit('edit-comment', comment); // Broadcast the edited comment
+                socket.emit('edit-comment', populatedComment); // Broadcast the edited comment
             } catch (err) {
                 console.error("Error editing comment:", err);
                 socket.emit('error', { message: 'Error editing comment' });
@@ -188,9 +196,9 @@ io.on('connection', (socket) => {
 
     socket.on('delete-comment', expressAsyncHandler(
         async (data) => {
-            const { commentId, articleId } = data;
+            const { commentId, articleId, userId } = data;
 
-            if (!commentId || !articleId) {
+            if (!commentId || !articleId || !userId) {
                 socket.emit('error', { message: 'Invalid request: Comment ID and article ID are required.' });
                 return;
             }
@@ -204,7 +212,7 @@ io.on('connection', (socket) => {
                 }
 
                 // Check if the user is authorized to delete the comment
-                if (comment.userId.toString() !== data.userId) {
+                if (comment.userId.toString() !== userId) {
                     socket.emit('error', { message: 'You are not authorized to delete this comment' });
                     return;
                 }
