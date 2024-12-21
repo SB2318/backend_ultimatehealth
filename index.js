@@ -48,6 +48,29 @@ const server = app.listen(port, () => {
 
 let io = require('socket.io')(server);
 
+
+/*** TRACK ONLINE USERS */
+
+const onlineUsers = []
+const addNewUser = ({username, socketId})=>{
+
+    const existingUser = onlineUsers.find(user=>user.username === username);
+    if(existingUser) return existingUser.socketId;
+    const newUser = {id: crypto.randomUUID(), username, socketId};
+    onlineUsers.push(newUser);
+}
+
+/** Remove User */
+
+const removeUser = (socketId)=>{
+    onlineUsers = onlineUsers.filter((user)=> user.socketId !== socketId);
+}
+
+/** Get User */
+const getUser = (username)=>{
+    return onlineUsers.find(user=>user.username === username);
+}
+
 io.on('connection', (socket) => {
 
     console.log('a user connected');
@@ -57,18 +80,24 @@ io.on('connection', (socket) => {
         socket.emit("connect", "Some thing to show");
     });
 
+    socket.on('new-user', (username)=>{
+       addNewUser({username, socketId: socket.id});
+    })
+
     socket.on('comment', expressAsyncHandler(
         async (data) => {
+
+            socket.emit("comment-processing", true);
 
             console.log('Add Event called');
             const { userId, articleId, content, parentCommentId} = data;
 
             if (!userId || !articleId || !content || content.trim() === '') {
-                socket.emit('error', 'Missing required fields');
-                console.log("User Id", userId);
-                console.log("Article Id", articleId);
-                console.log("Content", content);
-              
+                //socket.emit('error', 'Missing required fields');
+                //console.log("User Id", userId);
+                //console.log("Article Id", articleId);
+                //console.log("Content", content);
+                socket.emit("comment-processing", false);
                 return;
             }
 
@@ -81,6 +110,7 @@ io.on('connection', (socket) => {
 
                 if (!user || !article) {
                     socket.emit('error', 'User or article not found');
+                    socket.emit("comment-processing", false);
                     return;
                 }
 
@@ -101,6 +131,7 @@ io.on('connection', (socket) => {
                     const parentComment = Comment.findById(parentCommentId);
 
                     if (!parentComment) {
+                        socket.emit("comment-processing", false);
                         socket.emit('error', { message: 'Parent comment not found' });
                         return;
                     }
@@ -119,6 +150,7 @@ io.on('connection', (socket) => {
                     .populate('userId', 'user_handle Profile_image')
                     .populate('replies'); 
 
+                    socket.emit("comment-processing", false);
                     socket.emit('comment', {
                         parentCommentId: parentCommentId,
                         reply: populatedComment,
@@ -131,6 +163,7 @@ io.on('connection', (socket) => {
                     .populate('userId', 'user_handle Profile_image')
                     .populate('replies'); 
 
+                    socket.emit("comment-processing", false);
                     socket.emit('comment', {
                         comment: populatedComment,
                         articleId
@@ -141,6 +174,7 @@ io.on('connection', (socket) => {
 
                 console.error('Error adding comment:', err);
                 socket.emit('error', { message: 'Error adding comment' });
+                socket.emit("comment-processing", false);
             }
         }
     ))
@@ -148,6 +182,7 @@ io.on('connection', (socket) => {
     socket.on('edit-comment', expressAsyncHandler(
         async (data) => {
 
+            socket.emit("edit-comment-processing", true);
             const { commentId, content, articleId, userId } = data;
 
            // console.log("Comment Id", commentId);
@@ -155,6 +190,7 @@ io.on('connection', (socket) => {
           //  console.log("Article Id", articleId);
           //  console.log("User Id", userId);
             if (!commentId || !content || !articleId || content.trim() === '' || !userId) {
+                socket.emit("edit-comment-processing", false);
                 socket.emit('error', { message: 'Invalid request: Comment ID, User Id and non-empty content are required.' });
                 return;
             }
@@ -167,11 +203,13 @@ io.on('connection', (socket) => {
                 ]);
 
                 if (!comment || !user || !article) {
+                    socket.emit("edit-comment-processing", false);
                     socket.emit('error', { message: 'Comment or user or article not found' });
                     return;
                 }
 
                 if (comment.userId.toString() !== user._id.toString()) {
+                    socket.emit("edit-comment-processing", false);
                     socket.emit('error', { message: 'You are not authorized to edit this comment' });
                     return;
                 }
@@ -185,9 +223,11 @@ io.on('connection', (socket) => {
                 .populate('userId', 'user_handle Profile_image')
                 .populate('replies'); 
 
+                socket.emit("edit-comment-processing", false);
                 socket.emit('edit-comment', populatedComment); // Broadcast the edited comment
             } catch (err) {
                 console.error("Error editing comment:", err);
+                socket.emit("edit-comment-processing", false);
                 socket.emit('error', { message: 'Error editing comment' });
             }
 
@@ -196,9 +236,12 @@ io.on('connection', (socket) => {
 
     socket.on('delete-comment', expressAsyncHandler(
         async (data) => {
+
+            socket.emit("delete-comment-processing", true);
             const { commentId, articleId, userId } = data;
 
             if (!commentId || !articleId || !userId) {
+                socket.emit("delete-comment-processing", false);
                 socket.emit('error', { message: 'Invalid request: Comment ID and article ID are required.' });
                 return;
             }
@@ -207,12 +250,14 @@ io.on('connection', (socket) => {
                 const comment = await Comment.findById(commentId);
 
                 if (!comment) {
+                    socket.emit("delete-comment-processing", false);
                     socket.emit('error', { message: 'Comment not found' });
                     return;
                 }
 
                 // Check if the user is authorized to delete the comment
                 if (comment.userId.toString() !== userId) {
+                    socket.emit("delete-comment-processing", false);
                     socket.emit('error', { message: 'You are not authorized to delete this comment' });
                     return;
                 }
@@ -228,6 +273,7 @@ io.on('connection', (socket) => {
                         parentComment.replies = parentComment.replies.filter(replyId => replyId.toString() !== commentId);
                         await parentComment.save();
 
+                        socket.emit("delete-comment-processing", false);
                         socket.emit('delete-parent-comment', {
                             parentCommentId: comment.parentCommentId,
                             parentComment
@@ -235,10 +281,11 @@ io.on('connection', (socket) => {
 
                     }
                 }
-
+                socket.emit("delete-comment-processing", false);
                 socket.emit('delete-comment', { commentId, articleId });
             } catch (err) {
                 console.error('Error deleting comment:', err);
+                socket.emit("delete-comment-processing", false);
                 socket.emit('error', { message: 'Error deleting comment' });
             }
         }
@@ -248,8 +295,10 @@ io.on('connection', (socket) => {
         async (data) => {
             const { commentId, articleId, userId } = data;
 
+            socket.emit("like-comment-processing", true);
             if (!commentId || !articleId || !userId) {
                 socket.emit('error', { message: "Invalid request: Comment ID, Article ID, and User ID are required." });
+                socket.emit("like-comment-processing", false);
                 return;
             }
 
@@ -258,6 +307,7 @@ io.on('connection', (socket) => {
 
                 if (!comment) {
                     socket.emit('error', { message: 'Comment not found' });
+                    socket.emit("like-comment-processing", false);
                     return;
                 }
 
@@ -282,9 +332,11 @@ io.on('connection', (socket) => {
                 .populate('userId', 'user_handle Profile_image')
                 .populate('replies'); 
 
+                socket.emit("like-comment-processing", false);
                 socket.emit('like-comment', populatedComment);
             } catch (err) {
                 console.error('Error liking/unliking comment:', err);
+                socket.emit("like-comment-processing", false);
                 socket.emit('error', { message: 'Error processing like/unlike' });
             }
         }
@@ -294,11 +346,12 @@ io.on('connection', (socket) => {
     socket.on('fetch-comments', expressAsyncHandler(
         async (data) => {
             const { articleId } = data;
-
+            socket.emit("fetch-comment-processing", true);
             console.log("fetch comment called", articleId);
 
             if (!articleId) {
                 socket.emit('error', { message: 'articleId is required.' });
+                socket.emit("fetch-comment-processing", false);
                 return;
             }
 
@@ -306,6 +359,7 @@ io.on('connection', (socket) => {
                 const article = await Article.findById(articleId);
                 if (!article) {
                     socket.emit('error', { message: 'Article not found.' });
+                    socket.emit("fetch-comment-processing", false);
                     return;
                 }
 
@@ -316,6 +370,7 @@ io.on('connection', (socket) => {
                     .sort({ createdAt: -1 }); // Sort by most recent first
 
                 // Emit the comments and replies to the client
+                socket.emit("fetch-comment-processing", false);
                 socket.emit('fetch-comments', {
                     articleId,
                     comments: comments
@@ -323,6 +378,7 @@ io.on('connection', (socket) => {
 
             } catch (err) {
                 console.error('Error fetching comments:', err);
+                socket.emit("fetch-comment-processing", false);
                 socket.emit('error', { message: 'Error fetching comments.' });
             }
         }
@@ -330,8 +386,11 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('User disconnected');
+        removeUser(socket.id);
     });
 
 });
+
+
 
 module.exports = app;
