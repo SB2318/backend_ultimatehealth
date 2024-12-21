@@ -7,3 +7,4 @@ node_modules/
 # Package lock file (optional; you may choose to keep it depending on your needs)
 package-lock.json
 
+ultimatehealth-firebase-adminsdk.json

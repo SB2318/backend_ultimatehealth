@@ -52,11 +52,11 @@ let io = require('socket.io')(server);
 /*** TRACK ONLINE USERS */
 
 const onlineUsers = []
-const addNewUser = ({username, socketId})=>{
+const addNewUser = ({userId, username, socketId})=>{
 
-    const existingUser = onlineUsers.find(user=>user.username === username);
+    const existingUser = onlineUsers.find(user=>user.userId === userId);
     if(existingUser) return existingUser.socketId;
-    const newUser = {id: crypto.randomUUID(), username, socketId};
+    const newUser = {id: crypto.randomUUID(), userId: userId, username: username, socketId: socketId};
     onlineUsers.push(newUser);
 }
 
@@ -67,8 +67,8 @@ const removeUser = (socketId)=>{
 }
 
 /** Get User */
-const getUser = (username)=>{
-    return onlineUsers.find(user=>user.username === username);
+const getUser = (userId)=>{
+    return onlineUsers.find(user=>user.userId === userId);
 }
 
 io.on('connection', (socket) => {
@@ -80,10 +80,18 @@ io.on('connection', (socket) => {
         socket.emit("connect", "Some thing to show");
     });
 
-    socket.on('new-user', (username)=>{
-       addNewUser({username, socketId: socket.id});
+    socket.on('new-user', (username, userId)=>{
+       addNewUser({userId, username, socketId: socket.id});
     })
 
+    socket.on("notification", ({sender, receiver, message, title})=>{
+
+        // get receiver info
+
+        const receiverInfo = getUser(receiver);
+
+        io.to(receiverInfo.socketId).emit("notification", {sender, message, title});
+    })
     socket.on('comment', expressAsyncHandler(
         async (data) => {
 
