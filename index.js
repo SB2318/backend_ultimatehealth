@@ -15,6 +15,7 @@ const specializationRoutes = require("./routes/SpecializationsRoutes");
 const articleRoutes = require("./routes/articleRoutes");
 const analyticsRoute = require('./routes/analyticsRoute');
 const uploadRoute = require('./routes/uploadRoute');
+const { default: sendPushNotification } = require('./notifications/notificationHelper');
 
 const app = express();
 dotenv.config();
@@ -84,13 +85,13 @@ io.on('connection', (socket) => {
        addNewUser({userId, username, socketId: socket.id});
     })
 
-    socket.on("notification", ({sender, receiver, message, title})=>{
+    socket.on("notification", (data)=>{
 
         // get receiver info
+       // const receiverInfo = getUser(receiver);
 
-        const receiverInfo = getUser(receiver);
-
-        io.to(receiverInfo.socketId).emit("notification", {sender, message, title});
+       // io.to(receiverInfo.socketId).emit("notification", {sender, message, title});
+       sendPushNotification(data.deviceToken, data.message);
     })
     socket.on('comment', expressAsyncHandler(
         async (data) => {
@@ -394,7 +395,7 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('User disconnected');
-        removeUser(socket.id);
+       // removeUser(socket.id);
     });
 
 });

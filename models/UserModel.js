@@ -91,7 +91,7 @@ const userSchema = new mongoose.Schema({
         default: null,
     },
     refreshToken: { type: String, default: null } ,
-
+    fcmToken: { type: String, default: null }, 
     articles: [{
         type: Number,
         ref: 'Article',

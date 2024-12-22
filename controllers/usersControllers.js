@@ -254,12 +254,12 @@ module.exports.checkOtp = async (req, res) => {
 
 module.exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, fcmToken } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || !fcmToken) {
       return res
         .status(400)
-        .json({ error: "Please provide email and password" });
+        .json({ error: "Please provide email and password and FCM Token" });
     }
 
     let user = await User.findOne({ email });
@@ -305,6 +305,7 @@ module.exports.login = async (req, res) => {
     console.log("Generated Refresh Token", refreshToken);
     // Store refresh token in the database
     user.refreshToken = refreshToken;
+    user.fcmToken = fcmToken;
     await user.save();
 
     // Set cookies for tokens
