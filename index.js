@@ -15,7 +15,7 @@ const specializationRoutes = require("./routes/SpecializationsRoutes");
 const articleRoutes = require("./routes/articleRoutes");
 const analyticsRoute = require('./routes/analyticsRoute');
 const uploadRoute = require('./routes/uploadRoute');
-const { default: sendPushNotification } = require('./notifications/notificationHelper');
+const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification } = require('./notifications/notificationHelper');
 
 const app = express();
 dotenv.config();
@@ -50,8 +50,9 @@ const server = app.listen(port, () => {
 let io = require('socket.io')(server);
 
 
-/*** TRACK ONLINE USERS */
+/***  
 
+// For Later Purpose
 const onlineUsers = []
 const addNewUser = ({userId, username, socketId})=>{
 
@@ -61,16 +62,18 @@ const addNewUser = ({userId, username, socketId})=>{
     onlineUsers.push(newUser);
 }
 
-/** Remove User */
+/** Remove User 
 
 const removeUser = (socketId)=>{
     onlineUsers = onlineUsers.filter((user)=> user.socketId !== socketId);
 }
 
-/** Get User */
+/** Get User 
 const getUser = (userId)=>{
     return onlineUsers.find(user=>user.userId === userId);
 }
+
+*/
 
 io.on('connection', (socket) => {
 
@@ -81,17 +84,37 @@ io.on('connection', (socket) => {
         socket.emit("connect", "Some thing to show");
     });
 
+    /*
     socket.on('new-user', (username, userId)=>{
        addNewUser({userId, username, socketId: socket.id});
     })
+       */
 
-    socket.on("notification", (data)=>{
-
+    socket.on("notification", (type, data)=>{
         // get receiver info
        // const receiverInfo = getUser(receiver);
-
+        if(type === 'openPost'){
+            console.log('open post notification');
+            sendPostNotification(data.postId, data.message, data.authorId);
+        }
+        else if(type === 'likePost'){
+            console.log('like post notification');
+            sendPostLikeNotification(data.authorId, data.message);
+        }
+        else if(type === 'commentPost'){
+            console.log('comment post notification');
+            sendCommentNotification(data.authorId, data.postId, data.message);
+        }
+        else if(type === 'commentLikePost' ){
+            console.log('comment like post notification');
+            //sendCommentLikeNotification(data.userId, data.postId, data.message);
+            sendCommentLikeNotification(data.userId, data.postId, data.message);
+        }
+        else if(type === 'userFollow'){
+            console.log('user follow notification');
+            sendUserFollowNotification(data.userId, data.message);
+        }
        // io.to(receiverInfo.socketId).emit("notification", {sender, message, title});
-       sendPushNotification(data.deviceToken, data.message);
     })
     socket.on('comment', expressAsyncHandler(
         async (data) => {

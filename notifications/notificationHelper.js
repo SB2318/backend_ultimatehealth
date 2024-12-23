@@ -1,5 +1,6 @@
 
-import admin from "../config/firebase";
+const admin = require('../config/firebase');
+const User = require('../models/UserModel');
 
 
 /**
@@ -16,6 +17,7 @@ import admin from "../config/firebase";
   (II) Post Like (Only to author, with user_handle) (Extra Data: HomeScreen)
   (III) Post Comment (Only to Author , with comment message) (Extra Data: Comment Screen, article id)
   (IV) Comment Like (Only to Comment-Author, with post id) (Extra Data: Comment Screen, article id)
+  (V) User Follow
 
   // Later 
   (I) POST Published
@@ -24,7 +26,7 @@ import admin from "../config/firebase";
   (IV) Comment Reply
   (V) Comment Mention
 */
-const sendPushNotification = (deviceToken, message) => {
+module.exports.sendPushNotification = (deviceToken, message, data) => {
 
     const payload = {
         notification: {
@@ -32,9 +34,9 @@ const sendPushNotification = (deviceToken, message) => {
             body: message.body,
         },
         data:{
-            action:"click_action",
-            screen: message.screen,
-            extraData: "",
+            action: data.action,
+            screen: data.screen,
+            extraData: data.data,
         }
     };
    
@@ -49,4 +51,130 @@ const sendPushNotification = (deviceToken, message) => {
 
 }
 
-export default sendPushNotification;
+/**
+ * 
+ * @param {*} postId  // article id
+ * @param {*} message // title: "@author posted", // body: "title of the article"
+ * @param {*} authorId  // author id
+ */
+// Open NotificationScreen -> ArticleViewScreen
+module.exports.sendPostNotification = async (postId, message, authorId) => {
+
+   try{
+    const user = await User.findById(authorId).populate('followers');
+
+    if(user){
+       user.followers.forEach(u => {
+           if (u.fcmToken) {  
+             sendPushNotification(user.fcmToken, message, {
+               action: 'openPost',
+               screen: 'NotificationScreen',
+               data: {
+                   postId: postId
+               },
+             });
+           }
+         });
+    }
+   }catch(err){
+    console.log(err);
+   }
+}
+
+/**
+ * 
+ * @param {*} authorId  // author of the article
+ * @param {*} message   // title & body:
+ *                     // title: "@username like your post"
+ */
+// Open NotificationScreen -> HomeScreen
+module.exports.sendPostLikeNotification = async (authorId, message) =>{
+    try{
+        const user = await User.findById(authorId);
+    
+    if(user && user.fcmToken){
+
+        sendPushNotification(user.fcmToken, message, {
+            action: 'likePost',
+            screen: 'NotificationScreen',
+            data: null
+        })
+    }
+    }catch(err){
+        console.log(err);
+    }
+}
+
+// CommentScreen
+/**
+ * 
+ * @param {*} authorId  // author of the article
+ * @param {*} postId   // article id
+ * @param {*} message  // title & body : title :"@username commented on your Post"
+ *                      // body: "Your comment content here"
+ */
+module.exports.sendCommentNotification = async (authorId, postId, message) =>{
+
+    try{
+
+        const user = await User.findById(authorId);
+
+        if(user && user.fcmToken){
+            sendPushNotification(user.fcmToken, message, {
+                action: 'commentPost',
+                screen: 'CommentScreen',
+                data: postId
+            })
+        }
+    }catch(err){
+        console.error(err);
+    }
+}
+
+/**
+ * 
+ * @param {*} userId  // comment author id
+ * @param {*} postId  // article id
+ * @param {*} message // title :"@username like your comment"
+ */
+
+module.exports.sendCommentLikeNotification = async (userId, postId, message) =>{
+
+     try{
+        const user = await User.findById(userId);
+
+        if(user && user.fcmToken){
+   
+            sendPushNotification(user.fcmToken, message, {
+               action: 'commentLikePost',
+               screen: 'CommentScreen',
+               data: postId
+            })
+        }
+     }catch(err){
+        console.error(err);
+        //sendPushNotification()
+     }
+}
+
+/**
+ * 
+ * @param {*} userId -> user id, whom to be followed you
+ * @param {*} message  -> title:"@username followed you since date.now"
+ */
+module.exports.userFollowNotification = async (userId,  message) =>{
+
+    try{
+        const user = await User.findById(userId);
+        if(user && user.fcmToken){
+            sendPushNotification(user.fcmToken, message, {      
+                action: 'userFollow',
+                screen: 'NotificationScreen',
+                data: null
+            })
+        }
+    }catch(err){
+        console.error(err);
+    }
+}
+
