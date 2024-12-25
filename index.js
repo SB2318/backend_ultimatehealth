@@ -188,6 +188,10 @@ io.on('connection', (socket) => {
                         reply: populatedComment,
                         articleId: articleId
                     });
+                    sendCommentNotification(parentComment.userId, articleId, {
+                        title: `${user.user_handle} replied to your comment`,
+                        body: content
+                    })
 
                 } else {
 
@@ -200,6 +204,11 @@ io.on('connection', (socket) => {
                         comment: populatedComment,
                         articleId
                     });
+
+                    sendCommentNotification(article.authorId, articleId, {
+                        title: `${user.user_handle} commented on your post`,
+                        body: content
+                    })
                 }
 
             } catch (err) {
@@ -335,10 +344,14 @@ io.on('connection', (socket) => {
             }
 
             try {
-                const comment = await Comment.findById(commentId).populate('likedUsers');
+                const [comment, article, user] = await Promise.all([
+                    Comment.findById(commentId).populate('likedUsers'),
+                    Article.findById(Number(articleId)),
+                    User.findById(userId)
+                ]);
 
-                if (!comment) {
-                    socket.emit('error', { message: 'Comment not found' });
+                if (!comment || !article || !user) {
+                    socket.emit('error', { message: 'Comment, article or user not found' });
                     socket.emit("like-comment-processing", false);
                     return;
                 }
@@ -357,6 +370,7 @@ io.on('connection', (socket) => {
                         $addToSet: { likedUsers: userId }
                     });
 
+                    
                   //  socket.emit('like-comment', { commentId, userId, articleId });
                 }
 
@@ -364,6 +378,11 @@ io.on('connection', (socket) => {
                 .populate('userId', 'user_handle Profile_image')
                 .populate('replies'); 
 
+                sendCommentLikeNotification(populatedComment.userId, articleId, {
+                   title: `${user.user_handle} liked your comment`,
+                   body: `${article.title}`
+
+                });
                 socket.emit("like-comment-processing", false);
                 socket.emit('like-comment', populatedComment);
             } catch (err) {

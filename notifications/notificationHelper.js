@@ -35,8 +35,8 @@ module.exports.sendPushNotification = (deviceToken, message, data) => {
         },
         data:{
             action: data.action,
-            screen: data.screen,
-            extraData: data.data,
+            postId: data.data.postId,
+            authorId: data.data.authorId,
         }
     };
    
@@ -68,9 +68,9 @@ module.exports.sendPostNotification = async (postId, message, authorId) => {
            if (u.fcmToken) {  
              sendPushNotification(user.fcmToken, message, {
                action: 'openPost',
-               screen: 'NotificationScreen',
                data: {
-                   postId: postId
+                   postId: postId,
+                   authorId: authorId
                },
              });
            }
@@ -96,8 +96,10 @@ module.exports.sendPostLikeNotification = async (authorId, message) =>{
 
         sendPushNotification(user.fcmToken, message, {
             action: 'likePost',
-            screen: 'NotificationScreen',
-            data: null
+            data: {
+                postId: null,
+                authorId: null
+            }
         })
     }
     }catch(err){
@@ -122,8 +124,10 @@ module.exports.sendCommentNotification = async (authorId, postId, message) =>{
         if(user && user.fcmToken){
             sendPushNotification(user.fcmToken, message, {
                 action: 'commentPost',
-                screen: 'CommentScreen',
-                data: postId
+                data:{
+                    postId: postId,
+                    authorId: null,
+                }
             })
         }
     }catch(err){
@@ -147,8 +151,10 @@ module.exports.sendCommentLikeNotification = async (userId, postId, message) =>{
    
             sendPushNotification(user.fcmToken, message, {
                action: 'commentLikePost',
-               screen: 'CommentScreen',
-               data: postId
+               data: {
+                postId: null,
+                authorId: null
+               }
             })
         }
      }catch(err){
@@ -169,8 +175,10 @@ module.exports.userFollowNotification = async (userId,  message) =>{
         if(user && user.fcmToken){
             sendPushNotification(user.fcmToken, message, {      
                 action: 'userFollow',
-                screen: 'NotificationScreen',
-                data: null
+                data: {
+                    postId: null,
+                    authorId: null
+                }
             })
         }
     }catch(err){
