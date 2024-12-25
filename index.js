@@ -90,27 +90,28 @@ io.on('connection', (socket) => {
     })
        */
 
-    socket.on("notification", (type, data)=>{
+    socket.on("notification", (data)=>{
         // get receiver info
        // const receiverInfo = getUser(receiver);
-        if(type === 'openPost'){
+      // console.log(type, "received");
+        if(data.type === 'openPost'){
             console.log('open post notification');
             sendPostNotification(data.postId, data.message, data.authorId);
         }
-        else if(type === 'likePost'){
+        else if(data.type === 'likePost'){
             console.log('like post notification');
             sendPostLikeNotification(data.authorId, data.message);
         }
-        else if(type === 'commentPost'){
+        else if(data.type === 'commentPost'){
             console.log('comment post notification');
             sendCommentNotification(data.authorId, data.postId, data.message);
         }
-        else if(type === 'commentLikePost' ){
+        else if(data.type === 'commentLikePost' ){
             console.log('comment like post notification');
             //sendCommentLikeNotification(data.userId, data.postId, data.message);
             sendCommentLikeNotification(data.userId, data.postId, data.message);
         }
-        else if(type === 'userFollow'){
+        else if(data.type === 'userFollow'){
             console.log('user follow notification');
             sendUserFollowNotification(data.userId, data.message);
         }

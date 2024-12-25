@@ -26,30 +26,37 @@ const User = require('../models/UserModel');
   (IV) Comment Reply
   (V) Comment Mention
 */
-module.exports.sendPushNotification = (deviceToken, message, data) => {
+const sendPushNotification = (deviceToken, message, data) => {
+    // Ensure all values in data are strings
+    const formattedData = {
+        action: String(data.action),
+        postId: String(data.data.postId), 
+        authorId: String(data.data.authorId), 
+    };
 
     const payload = {
         notification: {
             title: message.title,
             body: message.body,
         },
-        data:{
-            action: data.action,
-            postId: data.data.postId,
-            authorId: data.data.authorId,
-        }
+        data: formattedData, 
     };
-   
-    admin.messaging()
-        .sendToDevice(deviceToken, payload)
-        .then((response) => {
-          console.log("Successfully sent message", response);
-        })
-        .catch((error)=>{
-            console.log("Error sending message", error);
-        })
 
-}
+    // Send the push notification to a specific device token using send()
+    admin.messaging()
+        .send({
+            token: deviceToken,  // This is the device token you're targeting
+            notification: payload.notification,
+            data: payload.data,  
+        })
+        .then((response) => {
+            console.log("Successfully sent message:", response);
+        })
+        .catch((error) => {
+            console.log("Error sending message:", error);
+        });
+};
+
 
 /**
  * 
@@ -92,8 +99,10 @@ module.exports.sendPostLikeNotification = async (authorId, message) =>{
     try{
         const user = await User.findById(authorId);
     
+        console.log(user);
     if(user && user.fcmToken){
 
+        console.log("Push Notification sending");
         sendPushNotification(user.fcmToken, message, {
             action: 'likePost',
             data: {
@@ -101,6 +110,11 @@ module.exports.sendPostLikeNotification = async (authorId, message) =>{
                 authorId: null
             }
         })
+
+
+    }
+    else{
+        console.log("No FCM token found");
     }
     }catch(err){
         console.log(err);
