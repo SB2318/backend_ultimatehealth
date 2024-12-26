@@ -526,7 +526,7 @@ module.exports.follow = async (req, res) => {
       );
       userToFollow.followerCount = Math.max(0, userToFollow.followerCount - 1);
       await userToFollow.save();
-      res.json({ message: "Unfollow successfully" });
+      res.json({ message: "Unfollow successfully", followStatus: false});
     } else {
       // Follow
       user.followings.push(followUserId);
@@ -536,7 +536,7 @@ module.exports.follow = async (req, res) => {
       userToFollow.followers.push(req.user.userId);
       userToFollow.followerCount += 1;
       await userToFollow.save();
-      res.json({ message: "Follow successfully" });
+      res.json({ message: "Follow successfully", followStatus: true });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });

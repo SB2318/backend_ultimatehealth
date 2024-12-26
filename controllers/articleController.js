@@ -208,7 +208,10 @@ module.exports.likeArticle = async (req, res) => {
       articleDb.likeCount = Math.max(articleDb.likeCount - 1, 0); // Decrement like count
       await articleDb.save();
 
-      return res.status(200).json({ message: 'Article unliked successfully', articleDb });
+      return res.status(200).json({ message: 'Article unliked successfully', data:{
+        article: articleDb,
+        likeStatus: false
+      } });
 
     } else {
       await Promise.all([
@@ -223,7 +226,10 @@ module.exports.likeArticle = async (req, res) => {
       articleDb.likeCount++;
       await articleDb.save();
 
-      return res.status(200).json({ message: 'Article liked successfully', articleDb });
+      return res.status(200).json({ message: 'Article liked successfully', data:{
+        article: articleDb,
+        likeStatus: true
+      } });
     }
 
   } catch (error) {
