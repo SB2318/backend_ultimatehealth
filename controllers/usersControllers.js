@@ -562,6 +562,7 @@ module.exports.getProfileImage = async (req, res) => {
   if (!author) {
     return res.status(404).json({ error: 'Author not found' });
   }
+  
   return res.status(200).json({ profile_image: author.Profile_image });
 
 }
