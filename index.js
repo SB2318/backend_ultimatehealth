@@ -379,11 +379,13 @@ io.on('connection', (socket) => {
                 .populate('userId', 'user_handle Profile_image')
                 .populate('replies'); 
 
+               if(!hasLiked){
                 sendCommentLikeNotification(populatedComment.userId, articleId, {
-                   title: `${user.user_handle} liked your comment`,
-                   body: `${article.title}`
-
-                });
+                    title: `${user.user_handle} liked your comment`,
+                    body: `${article.title}`
+ 
+                 });
+               }
                 socket.emit("like-comment-processing", false);
                 socket.emit('like-comment', populatedComment);
             } catch (err) {
