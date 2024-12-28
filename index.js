@@ -15,6 +15,7 @@ const specializationRoutes = require("./routes/SpecializationsRoutes");
 const articleRoutes = require("./routes/articleRoutes");
 const analyticsRoute = require('./routes/analyticsRoute');
 const uploadRoute = require('./routes/uploadRoute');
+const notificationRoute = require('./routes/notificationRoute');
 const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification } = require('./notifications/notificationHelper');
 
 const app = express();
@@ -35,6 +36,7 @@ app.use("/api", specializationRoutes);
 app.use("/api", articleRoutes);
 app.use("/api", uploadRoute);
 app.use("/api/analytics", analyticsRoute);
+app.use("/api", notificationRoute);
 
 // Test route (can be removed later)
 app.get("/hello", (req, res) => {

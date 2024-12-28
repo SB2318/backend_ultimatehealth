@@ -6,8 +6,14 @@ const notifcationSchema = new mongoose.Schema({
         ref:'User',
         required:true
     },
-    title: String,
-    message: String,
+    title: {
+        type: String,
+        required: true
+    },
+    message: {
+        type: String,
+        required: true
+    },
     read: { type: Boolean, default: false },
     timestamp: { type: Date, default: Date.now },
 })
