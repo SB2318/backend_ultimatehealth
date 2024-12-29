@@ -37,7 +37,8 @@ module.exports.getAllNotifications = expressAsyncHandler(
 
     async(req, res)=>{
 
-        const {userId} = req.user.userId;
+        const userId = req.user.userId;
+        console.log("User Id", userId);
 
         if(!userId){
             res.status(400).json({message:"User ID is required"});
