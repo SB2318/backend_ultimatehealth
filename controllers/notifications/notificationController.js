@@ -60,7 +60,7 @@ module.exports.getAllNotifications = expressAsyncHandler(
 module.exports.markNotifications = expressAsyncHandler(
     async (req, res) => {
 
-         const {userId} = req.user.userId;
+         const userId = req.user.userId;
 
          if(!userId){
             res.status(400).json({message:"User ID is required"});
@@ -85,7 +85,7 @@ module.exports.markNotifications = expressAsyncHandler(
 module.exports.getUnreadNotificationCount = expressAsyncHandler(
 
     async (req, res)=>{
-        const {userId} = req.user.userId;
+        const userId = req.user.userId;
 
         if(!userId){
             res.status(400).json({message:"User ID is required"});
