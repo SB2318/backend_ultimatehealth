@@ -2,7 +2,7 @@ const expressAsyncHandler = require("express-async-handler");
 const cron = require('node-cron');
 
 // CREATE NOTIFICATION
-const Notification = require('../models/notificationSchema');
+const Notification = require('../../models/notificationSchema');
 
 module.exports.createNotification = expressAsyncHandler(
     async(req, res)=>{

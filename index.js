@@ -16,7 +16,7 @@ const articleRoutes = require("./routes/articleRoutes");
 const analyticsRoute = require('./routes/analyticsRoute');
 const uploadRoute = require('./routes/uploadRoute');
 const notificationRoute = require('./routes/notificationRoute');
-const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification } = require('./notifications/notificationHelper');
+const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification } = require('./controllers/notifications/notificationHelper');
 
 const app = express();
 dotenv.config();

@@ -1,6 +1,7 @@
 
-const admin = require('../config/firebase');
-const User = require('../models/UserModel');
+const admin = require('../../config/firebase');
+const User = require('../../models/UserModel');
+const Notification = require('../../models/notificationSchema');
 
 
 /**
@@ -26,12 +27,12 @@ const User = require('../models/UserModel');
   (IV) Comment Reply
   (V) Comment Mention
 */
-const sendPushNotification = (deviceToken, message, data) => {
+const sendPushNotification = (deviceToken, message, data, id) => {
     // Ensure all values in data are strings
     const formattedData = {
         action: String(data.action),
-        postId: String(data.data.postId), 
-        authorId: String(data.data.authorId), 
+        postId: String(data.data.postId),
+        authorId: String(data.data.authorId),
     };
 
     const payload = {
@@ -39,7 +40,7 @@ const sendPushNotification = (deviceToken, message, data) => {
             title: message.title,
             body: message.body,
         },
-        data: formattedData, 
+        data: formattedData,
     };
 
     // Send the push notification to a specific device token using send()
@@ -47,10 +48,19 @@ const sendPushNotification = (deviceToken, message, data) => {
         .send({
             token: deviceToken,  // This is the device token you're targeting
             notification: payload.notification,
-            data: payload.data,  
+            data: payload.data,
         })
-        .then((response) => {
+        .then(async (response) => {
             console.log("Successfully sent message:", response);
+            // Create Notification table, whenever a notification send, it will also store in our database
+            const notification = new Notification({
+                title: message.title,
+                message: message.body,
+                userId: id,
+            });
+
+            console.log("Notification", notification);
+            await notification.save();
         })
         .catch((error) => {
             console.log("Error sending message:", error);
@@ -67,25 +77,26 @@ const sendPushNotification = (deviceToken, message, data) => {
 // Open NotificationScreen -> ArticleViewScreen
 module.exports.sendPostNotification = async (postId, message, authorId) => {
 
-   try{
-    const user = await User.findById(authorId).populate('followers');
+    try {
+        const user = await User.findById(authorId).populate('followers');
 
-    if(user){
-       user.followers.forEach(u => {
-           if (u.fcmToken) {  
-             sendPushNotification(user.fcmToken, message, {
-               action: 'openPost',
-               data: {
-                   postId: postId,
-                   authorId: authorId
-               },
-             });
-           }
-         });
+        if (user) {
+            user.followers.forEach(u => {
+                if (u.fcmToken) {
+                    sendPushNotification(u.fcmToken, message, {
+                        action: 'openPost',
+                        data: {
+                            postId: postId,
+                            authorId: authorId
+                        },
+                        
+                    }, u._id);
+                }
+            });
+        }
+    } catch (err) {
+        console.log(err);
     }
-   }catch(err){
-    console.log(err);
-   }
 }
 
 /**
@@ -95,28 +106,29 @@ module.exports.sendPostNotification = async (postId, message, authorId) => {
  *                     // title: "@username like your post"
  */
 // Open NotificationScreen -> HomeScreen
-module.exports.sendPostLikeNotification = async (authorId, message) =>{
-    try{
+module.exports.sendPostLikeNotification = async (authorId, message) => {
+    try {
         const user = await User.findById(authorId);
-    
+
         console.log(user);
-    if(user && user.fcmToken){
+        if (user && user.fcmToken) {
 
-        console.log("Push Notification sending");
-        sendPushNotification(user.fcmToken, message, {
-            action: 'likePost',
-            data: {
-                postId: null,
-                authorId: null
-            }
-        })
+            console.log("Push Notification sending");
+            sendPushNotification(user.fcmToken, message, {
+                action: 'likePost',
+                data: {
+                    postId: null,
+                    authorId: null
+                },
+               
+            }, user._id)
 
 
-    }
-    else{
-        console.log("No FCM token found");
-    }
-    }catch(err){
+        }
+        else {
+            console.log("No FCM token found");
+        }
+    } catch (err) {
         console.log(err);
     }
 }
@@ -129,22 +141,22 @@ module.exports.sendPostLikeNotification = async (authorId, message) =>{
  * @param {*} message  // title & body : title :"@username commented on your Post"
  *                      // body: "Your comment content here"
  */
-module.exports.sendCommentNotification = async (authorId, postId, message) =>{
+module.exports.sendCommentNotification = async (authorId, postId, message) => {
 
-    try{
+    try {
 
         const user = await User.findById(authorId);
 
-        if(user && user.fcmToken){
+        if (user && user.fcmToken) {
             sendPushNotification(user.fcmToken, message, {
                 action: 'commentPost',
-                data:{
+                data: {
                     postId: postId,
                     authorId: null,
                 }
-            })
+            }, user._id)
         }
-    }catch(err){
+    } catch (err) {
         console.error(err);
     }
 }
@@ -156,25 +168,25 @@ module.exports.sendCommentNotification = async (authorId, postId, message) =>{
  * @param {*} message // title :"@username like your comment"
  */
 
-module.exports.sendCommentLikeNotification = async (userId, postId, message) =>{
+module.exports.sendCommentLikeNotification = async (userId, postId, message) => {
 
-     try{
+    try {
         const user = await User.findById(userId);
 
-        if(user && user.fcmToken){
-   
+        if (user && user.fcmToken) {
+
             sendPushNotification(user.fcmToken, message, {
-               action: 'commentLikePost',
-               data: {
-                postId: null,
-                authorId: null
-               }
-            })
+                action: 'commentLikePost',
+                data: {
+                    postId: null,
+                    authorId: null
+                }
+            }, user._id)
         }
-     }catch(err){
+    } catch (err) {
         console.error(err);
         //sendPushNotification()
-     }
+    }
 }
 
 /**
@@ -182,20 +194,20 @@ module.exports.sendCommentLikeNotification = async (userId, postId, message) =>{
  * @param {*} userId -> user id, whom to be followed you
  * @param {*} message  -> title:"@username followed you since date.now"
  */
-module.exports.userFollowNotification = async (userId,  message) =>{
+module.exports.userFollowNotification = async (userId, message) => {
 
-    try{
+    try {
         const user = await User.findById(userId);
-        if(user && user.fcmToken){
-            sendPushNotification(user.fcmToken, message, {      
+        if (user && user.fcmToken) {
+            sendPushNotification(user.fcmToken, message, {
                 action: 'userFollow',
                 data: {
                     postId: null,
                     authorId: null
                 }
-            })
+            }, user._id)
         }
-    }catch(err){
+    } catch (err) {
         console.error(err);
     }
 }
