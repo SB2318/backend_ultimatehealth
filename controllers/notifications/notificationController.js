@@ -3,6 +3,7 @@ const cron = require('node-cron');
 
 // CREATE NOTIFICATION
 const Notification = require('../../models/notificationSchema');
+const User = require('../../models/UserModel');
 
 module.exports.createNotification = expressAsyncHandler(
     async(req, res)=>{
@@ -96,6 +97,36 @@ module.exports.getUnreadNotificationCount = expressAsyncHandler(
 
             const unreadCount = await Notification.countDocuments({userId:userId,read:false});
             res.status(200).json({unreadCount});
+        }catch(err){
+            console.log(err);
+            res.status(500).json({message:"Internal server error"});
+        }
+    }
+)
+
+// DELETE NOTIFICATION BY ID
+module.exports.deleteNotificationById = expressAsyncHandler(
+
+    async (req, res)=>{
+        const notificationId = req.params.id;
+        const userId = req.user.userId;
+        if(!notificationId || !userId){
+           res.status(400).json({message:"Notification id or User id are required"});
+           return;
+        }
+
+        try{
+            const notification = await 
+            Notification.findById(notificationId);
+
+            if(notification.userId !== userId){
+               res.status(403).json({message:" Request forbidden"});
+               return;
+            }
+
+            await notification.remove();
+            res.status(200).json({message:"Notification deleted"});
+
         }catch(err){
             console.log(err);
             res.status(500).json({message:"Internal server error"});

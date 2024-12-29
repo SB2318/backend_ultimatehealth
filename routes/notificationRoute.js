@@ -9,6 +9,7 @@ router.post('/notification', authenticateToken, notificationController.createNot
 router.get('/notifications', authenticateToken, notificationController.getAllNotifications);
 router.get('/notification/unread-count', authenticateToken, notificationController.getUnreadNotificationCount);
 router.put('/notifications/mark-as-read', authenticateToken, notificationController.markNotifications);
+router.delete('/notification/:id', authenticateToken, notificationController.deleteNotificationById);
 
 
 module.exports = router;
