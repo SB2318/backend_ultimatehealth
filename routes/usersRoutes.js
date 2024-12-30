@@ -26,7 +26,8 @@ const {
   updateUserPassword,
   updateUserGeneralDetails,
   updateUserContactDetails,
-  updateUserProfessionalDetails
+  updateUserProfessionalDetails,
+  checkUserHandle
 } = require("../controllers/usersControllers");
 
 const {
@@ -125,5 +126,5 @@ router.put("/user/update-contact-details", authenticateToken, updateUserContactD
 
 // Update user professional details
 router.put("/user/update-professional-details", authenticateToken, updateUserProfessionalDetails);
-
+router.post("/user/check-user-handle", checkUserHandle); // registration process, open routing
 module.exports = router;

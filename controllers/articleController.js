@@ -1,3 +1,4 @@
+const expressAsyncHandler = require("express-async-handler");
 const ArticleTag = require("../models/ArticleModel");
 const Article = require("../models/Articles");
 const User = require("../models/UserModel");
@@ -412,141 +413,7 @@ exports.getReadDataForGraphs = async (req, res) => {
   }
 };
 
-/**
- * 
- * 
- * {
-    "userId": "60d21b4667d0d8992e610c85", 
-    "monthlyReads": [
-        {
-            "date": "2024-01-01T00:00:00.000Z",
-            "readCount": 3
-        },
-        {
-            "date": "2024-01-02T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-03T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-04T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-05T00:00:00.000Z",
-            "readCount": 2
-        },
-        {
-            "date": "2024-01-06T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-07T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-08T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-09T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-10T00:00:00.000Z",
-            "readCount": 1
-        },
-        {
-            "date": "2024-01-11T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-12T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-13T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-14T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-15T00:00:00.000Z",
-            "readCount": 4
-        },
-        {
-            "date": "2024-01-16T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-17T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-18T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-19T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-20T00:00:00.000Z",
-            "readCount": 5
-        },
-        {
-            "date": "2024-01-21T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-22T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-23T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-24T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-25T00:00:00.000Z",
-            "readCount": 2
-        },
-        {
-            "date": "2024-01-26T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-27T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-28T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-29T00:00:00.000Z",
-            "readCount": 0
-        },
-        {
-            "date": "2024-01-30T00:00:00.000Z",
-            "readCount": 3
-        },
-        {
-            "date": "2024-01-31T00:00:00.000Z",
-            "readCount": 0
-        }
-    ],
-    "totalReads": 15 
-}
 
- */
 
 // Update Write Event Tasks 
 async function updateWriteEvents(articleId, userId){
@@ -611,3 +478,53 @@ exports.getWriteDataForGraphs = async (req, res) => {
     res.status(500).json({ error: 'An error occurred while fetching read data' });
   }
 };
+
+// Repost Article
+exports.repostArticle = expressAsyncHandler(
+  async (req, res) => {
+
+    try{
+  
+      const {articleId} = req.body;
+      const userId  = req.user.userId;
+  
+      if(!articleId){
+         res.status(400).json({error: 'Article ID is required.'});
+         return;
+      }
+  
+      const [article, user] = await Promise.all([
+        Article.findById(Number(articleId)),
+        User.findById(userId),
+      ]);
+  
+      if(!article || !user){
+        res.status(404).json({error: 'Article or user not found.'});
+        return;
+      }
+      
+      // Check if user has already reposted the article
+         // Check if the article is already liked
+         const repostArticlesSet = new Set(user.repostArticles);
+         const isArticleRepost = repostArticlesSet.has(article._id);
+  
+        if(isArticleRepost){
+          user.repostArticles = user.repostArticles.filter(id => id !== article._id);
+          user.repostArticles.unshift(article._id); // unshift will add one element at the beginning of the array
+          await user.save();
+        }else{
+          user.repostArticles.push(article._id);
+          await user.save();
+          article.repostUsers.push(user._id);
+          await article.save();
+        }
+  
+        res.status(200).json({message:"Article reposted successfully"});
+  
+    }catch(err){
+      console.log('Error reposting article', err);
+      res.status(500).json({message:"Internal server error"});
+    }
+  
+  }
+)

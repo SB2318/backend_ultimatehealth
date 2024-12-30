@@ -9,6 +9,7 @@ const moment = require("moment");
 const Article = require("../models/Articles");
 const adminModel = require("../models/adminModel");
 const BlacklistedToken = require('../models/blackListedToken');
+const expressAsyncHandler = require("express-async-handler");
 require("dotenv").config();
 
 module.exports.register = async (req, res) => {
@@ -35,13 +36,24 @@ module.exports.register = async (req, res) => {
     }
 
     // Check if user already exists in User or UnverifiedUser collections
-    let existingUser = await User.findOne({ email });
+
+    const [existingUser, existingUserHandle, existingUnverifiedUser, existingUnverifiedUserHandle] =
+    await Promise.all([
+      await User.findOne({ email }),
+      await User.findOne({user_handle}),
+      await UnverifiedUser.findOne({ email }),
+      await UnverifiedUser.findOne({user_handle}),
+    ])
+
     if (existingUser) {
       return res.status(400).json({ error: "Email already in use" });
     }
 
-    existingUser = await UnverifiedUser.findOne({ email });
-    if (existingUser) {
+    if(existingUserHandle || existingUnverifiedUserHandle){
+      return res.status(400).json({ error: "User Handle already in use" });
+    }
+
+    if (existingUnverifiedUser) {
       return res.status(400).json({
         error: "Please verify your email. Verification email already sent.",
       });
@@ -123,6 +135,32 @@ function generateOTP() {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
+module.exports.checkUserHandle = expressAsyncHandler(
+
+  async (req, res)=>{
+    const userHandle = req.body.userHandle;
+
+    if(!userHandle){
+      return res.status(400).json({error: "User handle is required"});
+    }
+
+    try{
+
+      const user = await User.findOne({user_handle: userHandle});
+      const unverifiedUser = await UnverifiedUser.findOne({user_handle: userHandle});
+
+      if(user || unverifiedUser){
+        return res.status(200).json({status: true, message: "User handle already exists"});
+      }
+
+      return res.status(200).json({ status: false, message: 'User handle is available.' });
+
+    }catch(err){
+      console.error("Error checking user handle:", err);
+      return res.status(500).json({error: "Internal server error"});
+    }
+  }
+)
 module.exports.getprofile = async (req, res) => {
   try {
     const user = await User.findOne({ _id: req.user.userId })
@@ -132,6 +170,10 @@ module.exports.getprofile = async (req, res) => {
       })
       .populate({
         path: "savedArticles",
+        populate: { path: "tags" }, // Populate tags for saved articles
+      })
+      .populate({
+        path: "repostArticles",
         populate: { path: "tags" }, // Populate tags for saved articles
       })
       .exec();
@@ -156,6 +198,10 @@ module.exports.getUserProfile = async (req, res) => {
       .populate({
         path: "articles",
         populate: { path: "tags" }, // Populate tags for articles
+      })
+      .populate({
+        path: "repostArticles",
+        populate: { path: "tags" }, // Populate tags for saved articles
       })
       .exec();
 
@@ -770,6 +816,7 @@ module.exports.getUserDetails = async (req, res) => {
       likedArticles,
       readArticles,
       savedArticles,
+      repostArticles,
       created_at,
       ...publicProfile
     } = user._doc;

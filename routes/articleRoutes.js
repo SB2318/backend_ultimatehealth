@@ -23,6 +23,7 @@ router.post('/articles/updateViewCount', authenticateToken, articleController.up
 router.post('/article/readEvent', authenticateToken, articleController.updateReadEvents);
 router.get('/article/read-status', authenticateToken, articleController.getReadDataForGraphs);
 router.get('/article/write-status', authenticateToken, articleController.getWriteDataForGraphs );
+router.post('/article/repost', authenticateToken, articleController.repostArticle);
 
 
 module.exports = router;

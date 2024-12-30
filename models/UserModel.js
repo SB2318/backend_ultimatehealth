@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema({
     user_handle: {
         type: String,
         required: true,
+        unique: true,
     },
     email: {
         type: String,
@@ -98,6 +99,11 @@ const userSchema = new mongoose.Schema({
         default: []
     }],
     
+    repostArticles: [{
+        type: Number,
+        ref: 'Article',
+        default: []
+    }],
     savedArticles: [{
         type: Number,
         ref: 'Article',

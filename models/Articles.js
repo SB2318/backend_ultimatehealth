@@ -64,6 +64,7 @@ const articleSchema = new Schema({
     required: true,
     default: 0,
   },
+ 
   language: {
     type: String,
     required: true,
@@ -75,6 +76,12 @@ const articleSchema = new Schema({
     default: false,
   },
   likedUsers: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User', // Reference to User
+    default: []
+  }],
+
+  repostUsers: [{
     type: Schema.Types.ObjectId,
     ref: 'User', // Reference to User
     default: []
