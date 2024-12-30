@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const expressAsyncHandler = require("express-async-handler");
 const cron = require('node-cron');
 
@@ -116,15 +117,19 @@ module.exports.deleteNotificationById = expressAsyncHandler(
         }
 
         try{
-            const notification = await 
-            Notification.findById(notificationId);
+            const notification= await Notification.findById(notificationId);
 
-            if(notification.userId !== userId){
+           
+            if(!notification){
+                res.status(404).json({message:"Notification not found"});
+                return;
+            }
+            if(!notification.userId.equals(new mongoose.Types.ObjectId(userId))){
                res.status(403).json({message:" Request forbidden"});
                return;
             }
 
-            await notification.remove();
+            await Notification.deleteOne({ _id: notification._id });
             res.status(200).json({message:"Notification deleted"});
 
         }catch(err){
