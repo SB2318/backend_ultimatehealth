@@ -58,7 +58,7 @@ router.get("/user/getprofile", authenticateToken, getprofile);
 // Get profile image
 router.get('/user/getprofileimage/:userId',authenticateToken, getProfileImage);
 // Get Other's Profile
-router.get("/user/getprofile/:id", authenticateToken, getUserProfile);
+router.get("/user/getuserprofile/:id", authenticateToken, getUserProfile);
 // Follow and Unfollow Routes
 router.post("/user/follow", authenticateToken, follow);
 router.get("/user/:userId/followers", authenticateToken, getFollowers);
