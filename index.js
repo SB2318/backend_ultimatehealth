@@ -16,7 +16,7 @@ const articleRoutes = require("./routes/articleRoutes");
 const analyticsRoute = require('./routes/analyticsRoute');
 const uploadRoute = require('./routes/uploadRoute');
 const notificationRoute = require('./routes/notificationRoute');
-const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification } = require('./controllers/notifications/notificationHelper');
+const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification, repostNotification } = require('./controllers/notifications/notificationHelper');
 
 const app = express();
 dotenv.config();
@@ -116,6 +116,10 @@ io.on('connection', (socket) => {
         else if(data.type === 'userFollow'){
             console.log('user follow notification');
             sendUserFollowNotification(data.userId, data.message);
+        }
+        else if(data.type === "repost"){
+            console.log("repost notification");
+            repostNotification(data.userId, data.authorId, data.postId, data.message, data.authorMessage);
         }
        // io.to(receiverInfo.socketId).emit("notification", {sender, message, title});
     })

@@ -212,3 +212,46 @@ module.exports.userFollowNotification = async (userId, message) => {
     }
 }
 
+// Repost Notification
+
+module.exports.repostNotification = async (userId, authorId, postId, message, authorMessage) => {
+
+   try{
+
+    // Notify to all followers
+    const user = await User.findById(userId).populate('followers');
+
+    if (user) {
+        user.followers.forEach(u => {
+            if (u.fcmToken) {
+                sendPushNotification(u.fcmToken, message, {
+                    action: 'notifyFollowersOnRepost',
+                    data: {
+                        postId: postId,
+                        authorId: authorId
+                    },
+                    
+                }, u._id);
+            }
+        });
+    }
+    // Notify to author
+    const author = await User.findById(authorId);
+
+    if(author && author.fcmToken){
+        sendPushNotification(author.fcmToken, authorMessage, {
+            action: 'notifyAuthorOnRepost',
+            data: {
+                postId: postId,
+                authorId: authorId
+            },
+            
+        }, author._id);
+    }
+
+   }catch(err){
+
+    console.error(err);
+   }
+}
+
