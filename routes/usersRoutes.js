@@ -53,7 +53,7 @@ router.post("/user/login", login);
 router.post("/user/refreshToken", refreshToken);
 
 // Get profile
-router.get("/user/getprofile/", authenticateToken, getprofile);
+router.get("/user/getprofile", authenticateToken, getprofile);
 
 // Get profile image
 router.get('/user/getprofileimage/:userId',authenticateToken, getProfileImage);
