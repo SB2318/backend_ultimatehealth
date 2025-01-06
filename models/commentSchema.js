@@ -55,7 +55,12 @@ const commentSchema = new Schema({
     isEdited: {
         type: Boolean,
         default: false
-    }
+    },
+    mentionedUsers:[{
+        type: Schema.Types.ObjectId,
+        ref: 'User', // Reference to User
+        default: []
+    }]
 })
 
 const Comment = mongoose.model('Comment', commentSchema);

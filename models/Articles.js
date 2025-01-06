@@ -95,6 +95,11 @@ const articleSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'User', 
     default: []
+  }],
+  mentionedUsers: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User', 
+    default: []
   }]
 });
 

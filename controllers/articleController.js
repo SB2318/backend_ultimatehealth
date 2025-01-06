@@ -28,6 +28,7 @@ module.exports.createArticle = async (req, res) => {
       authorId: user._id, // Set authorId to the user's ObjectId
     });
 
+    newArticle.mentionedUsers.push(user._id); // Initially all can mention the author.
     // Save the new article to the database
     await newArticle.save();
 
@@ -50,7 +51,8 @@ module.exports.createArticle = async (req, res) => {
 module.exports.getAllArticles = async (req, res) => {
   try {
     const articles = await Article.find()
-      .populate('tags') // This populates the tag data
+      .populate('tags')
+      .populate('mentionedUsers', 'user_handle Profile_image') // This populates the mentioned users data
       .exec();
     res.status(200).json({ articles });
   } catch (error) {

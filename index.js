@@ -153,6 +153,14 @@ io.on('connection', (socket) => {
                     return;
                 }
 
+                /** If a new user comment on the article, the id will automatically stored */
+                const hasCommentedBefore = article.mentionedUsers.some(user => user._id.toString() === userId);
+
+                if(!hasCommentedBefore){
+                    article.mentionedUsers.push(userId);
+                    await article.save();
+                }
+
                 const newComment = new Comment({
                     userId,
                     articleId,
