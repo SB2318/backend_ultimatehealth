@@ -16,7 +16,7 @@ const articleRoutes = require("./routes/articleRoutes");
 const analyticsRoute = require('./routes/analyticsRoute');
 const uploadRoute = require('./routes/uploadRoute');
 const notificationRoute = require('./routes/notificationRoute');
-const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification, repostNotification } = require('./controllers/notifications/notificationHelper');
+const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification, repostNotification, mentionNotification } = require('./controllers/notifications/notificationHelper');
 
 const app = express();
 dotenv.config();
@@ -129,7 +129,7 @@ io.on('connection', (socket) => {
             socket.emit("comment-processing", true);
 
             console.log('Add Event called');
-            const { userId, articleId, content, parentCommentId} = data;
+            const { userId, articleId, content, parentCommentId, mentionedUsers} = data;
 
             if (!userId || !articleId || !content || content.trim() === '') {
                 //socket.emit('error', 'Missing required fields');
@@ -186,6 +186,7 @@ io.on('connection', (socket) => {
                     await parentComment.save();
 
 
+
                     socket.broacast.emit('update-parent-comment', {
                         parentCommentId: parentComment._id,
                         parentComment
@@ -220,6 +221,14 @@ io.on('connection', (socket) => {
                         articleId
                     });
 
+                    /** Send Mention Notification */
+                    if(mentionedUsers && isArray(mentionedUsers) && mentionedUsers.length > 0) {
+                        mentionNotification(mentionedUsers, articleId, {
+                            title: `${user.user_handle} mentioned you in a comment`,
+                            body: content
+                        });
+                    }
+                    
                     sendCommentNotification(article.authorId, articleId, {
                         title: `${user.user_handle} commented on your post`,
                         body: content

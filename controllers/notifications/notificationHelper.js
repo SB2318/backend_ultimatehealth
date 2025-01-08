@@ -255,3 +255,29 @@ module.exports.repostNotification = async (userId, authorId, postId, message, au
    }
 }
 
+// Mention Notification
+
+module.exports.mentionNotification = async (mentionedUsers, postId, message) =>{
+    try{
+        mentionedUsers.forEach( async userId => {
+
+        const user = await User.findById(userId);
+
+        if (user && user.fcmToken) {
+
+            sendPushNotification(user.fcmToken, message, {
+                action: 'commentMentionPost',
+                data: {
+                    postId: postId,
+                    authorId: null
+                }
+            }, user._id)
+        }
+            
+        });
+    }catch(err){
+        console.error(err);
+
+    }
+}
+
