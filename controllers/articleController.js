@@ -52,7 +52,7 @@ module.exports.getAllArticles = async (req, res) => {
   try {
     const articles = await Article.find()
       .populate('tags')
-      .populate('mentionedUsers', 'user_handle Profile_image') // This populates the mentioned users data
+      .populate('mentionedUsers', 'user_handle username Profile_image') // This populates the mentioned users data
       .exec();
     res.status(200).json({ articles });
   } catch (error) {
