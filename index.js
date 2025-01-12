@@ -222,12 +222,13 @@ io.on('connection', (socket) => {
                     });
 
                     /** Send Mention Notification */
-                    if(mentionedUsers && isArray(mentionedUsers) && mentionedUsers.length > 0) {
+                    if(mentionedUsers && Array.isArray(mentionedUsers) && mentionedUsers.length > 0) {
                         mentionNotification(mentionedUsers, articleId, {
                             title: `${user.user_handle} mentioned you in a comment`,
                             body: content
                         });
                     }
+                    console.log("Mentioned Users", mentionedUsers);
                     
                     sendCommentNotification(article.authorId, articleId, {
                         title: `${user.user_handle} commented on your post`,
