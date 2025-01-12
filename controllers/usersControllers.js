@@ -193,8 +193,18 @@ module.exports.getprofile = async (req, res) => {
 
 module.exports.getUserProfile = async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId)
+    const userId = req.query.id;
+    const userHandle = req.query.handle;
+
+    if(!userHandle && !userId){
+      return res.status(400).json({error: "User handle or id is required."});
+    }
+
+    let user;
+
+    if(userId){
+
+     user = await User.findById(userId)
       .populate({
         path: "articles",
         populate: { path: "tags" }, // Populate tags for articles
@@ -204,7 +214,19 @@ module.exports.getUserProfile = async (req, res) => {
         populate: { path: "tags" }, // Populate tags for saved articles
       })
       .exec();
+    }
+    else if(userHandle){
 
+      user = await User.findOne({user_handle: handle}).populate({
+        path: "articles",
+        populate: { path: "tags" }, // Populate tags for articles
+      })
+      .populate({
+        path: "repostArticles",
+        populate: { path: "tags" }, // Populate tags for saved articles
+      })
+      .exec();
+    }
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -225,46 +247,7 @@ module.exports.getUserProfile = async (req, res) => {
   }
 };
 
-module.exports.getUserByHandle = async (req, res)=>{
-  try{
 
-    const {handle} = req.query;
-
-    if(!handle){
-      return res.status(400).json({error: "User Handle is required."});
-    }
-    const user = await User.findOne({user_handle: handle}).populate({
-      path: "articles",
-      populate: { path: "tags" }, // Populate tags for articles
-    })
-    .populate({
-      path: "repostArticles",
-      populate: { path: "tags" }, // Populate tags for saved articles
-    })
-    .exec();
-
-    
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Exclude sensitive information
-    const {
-      password,
-      refreshToken,
-      verificationToken,
-      otp,
-      otpExpires,
-      ...publicProfile
-    } = user._doc;
-
-    res.json({ status: true, profile: publicProfile });
-
-  }catch(err){
-    console.log("Error", err);
-    res.status(500).json({error:err.message});
-  }
-}
 
 module.exports.sendOTPForForgotPassword = async (req, res) => {
   const { email } = req.body;
