@@ -217,7 +217,7 @@ module.exports.getUserProfile = async (req, res) => {
     }
     else if(userHandle){
 
-      user = await User.findOne({user_handle: handle}).populate({
+      user = await User.findOne({user_handle: userHandle}).populate({
         path: "articles",
         populate: { path: "tags" }, // Populate tags for articles
       })
@@ -243,6 +243,7 @@ module.exports.getUserProfile = async (req, res) => {
 
     res.json({ status: true, profile: publicProfile });
   } catch (error) {
+    console.log(error)
     res.status(500).json({ error: error.message });
   }
 };
