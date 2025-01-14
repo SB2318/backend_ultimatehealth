@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 const expressAsyncHandler = require("express-async-handler");
 const Report = require("../models/reportModel");
-const Reason = require("../models/reportModel");
+const Reason = require("../models/reasonSchema");
 const Article = require('../models/Articles');
 const User = require("../models/UserModel");
 
@@ -25,9 +25,12 @@ module.exports.addReason = expressAsyncHandler(
         }
 
         try {
-            await Reason.create({ reason });
+            //await Reason.create({ reason }); SQL dilemma
+            const newReason = new Reason({ reason });
+            await newReason.save();
             res.status(201).json({ message: "Reason added successfully." });
         } catch (err) {
+          console.log(err);
             return res.status(500).json({ message: "Failed to add reason, Internal server error" });
         }
     }
@@ -43,12 +46,12 @@ module.exports.updateReason = expressAsyncHandler(
         }
 
         try {
-            const reason = await Reason.findById(id);
-            if (!reason) {
+            const reasonDb = await Reason.findById(id);
+            if (!reasonDb) {
                 return res.status(404).json({ message: "Reason not found." });
             }
-            reason.reason = reason;
-            await reason.save();
+            reasonDb.reason = reason;
+            await reasonDb.save();
             res.status(200).json({ message: "Reason updated successfully." });
         } catch (err) {
             console.log(err);
@@ -67,11 +70,11 @@ module.exports.deleteReason = expressAsyncHandler(
         }
 
         try {
-            const reason = await Reason.findById(Number(id));
+            const reason = await Reason.deleteOne({_id: Number(id)});
             if (!reason) {
                 return res.status(404).json({ message: "Reason not found." });
             }
-            await reason.remove();
+            
             res.status(200).json({ message: "Reason deleted successfully." });
         }
         catch (err) {
@@ -86,7 +89,7 @@ module.exports.getAllReasons = expressAsyncHandler(
     async (req, res) => {
 
         try {
-            const reasons = await Reason.find().sort({ createdAt: -1 });
+            const reasons = await Reason.find({ status: 'Active' }).sort({ createdAt: -1 });
             res.status(200).json(reasons);
         } catch (err) {
             console.log(err);
@@ -100,6 +103,8 @@ module.exports.submitReport = expressAsyncHandler(
 
         const { articleId, commentId, reportedBy, reasonId, authorId } = req.body;
 
+        //console.log("Reason Id", reasonId);
+
         if (!articleId || !reportedBy || !reasonId || !authorId) {
             return res.status(400).json({ message: "Please fill in all fields." });
         }
@@ -110,7 +115,7 @@ module.exports.submitReport = expressAsyncHandler(
                 [
                     Article.findById(Number(articleId)),
                     User.findById(reportedBy),
-                    Reason.findById(Number(reasonId)),
+                    Reason.findById(reasonId),
                     User.findById(authorId)
                 ]
             );
@@ -158,7 +163,7 @@ module.exports.submitReport = expressAsyncHandler(
                 articleId: Number(articleId),
                 commentId: commentId,
                 reportedBy: reportedBy,
-                reasonId: Number(reasonId),
+                reasonId: reasonId,
 
             });
 

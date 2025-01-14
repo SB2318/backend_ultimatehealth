@@ -1,34 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-const AutoIncrement = require('mongoose-sequence')(mongoose);
+const Reason = require('./reasonSchema');
 
-const reasonSchema = new Schema({
-    _id: {
-        type: Number,
-        autoIncrement: true,
-    },
-    reason: {
-        type: String,
-        required: true
-    },
-    status:{
-        type: String,
-        enum: ['Active','Archive'],
-        default: 'Active',
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
-    updatedAt:{
-        type: Date,
-        default: Date.now,
-    },
-
-})
-
-reasonSchema.plugin(AutoIncrement, { id: 'report_reason_id_counter', inc_field: '_id' });
-const Reason = mongoose.model('Reason', reasonSchema);
 
 const reportSchema = new Schema({
 
@@ -78,5 +51,5 @@ const reportSchema = new Schema({
 
 const Report = mongoose.model('Report', reportSchema);
 
-module.exports = { Report, Reason };
+module.exports =  Report;
 
