@@ -98,30 +98,35 @@ module.exports.getAllReasons = expressAsyncHandler(
 module.exports.submitReport = expressAsyncHandler(
     async (req, res) => {
 
-        const { articleId, commentId, reportedBy, reasonId } = req.body;
+        const { articleId, commentId, reportedBy, reasonId, authorId } = req.body;
 
-        if (!articleId || !reportedBy || !reasonId) {
+        if (!articleId || !reportedBy || !reasonId || !authorId) {
             return res.status(400).json({ message: "Please fill in all fields." });
         }
 
         try {
 
-            const [article, user, reason] = await Promise.all(
+            const [article, user, reason, author] = await Promise.all(
                 [
                     Article.findById(Number(articleId)),
                     User.findById(reportedBy),
                     Reason.findById(Number(reasonId)),
+                    User.findById(authorId)
                 ]
             );
 
+            let comment;
             if(commentId){
-                const comment = await Comment.findById(commentId);
+                comment = await Comment.findById(commentId);
 
                 if(!comment){
                     return res.status(404).json({ message: "Comment not found." });
                 }
             }
 
+            if(!author){
+              return res.status(404).json({ message: "Author of the content not found." });
+            }
             if (!article) {
                 return res.status(404).json({ message: "Article not found." });
             }
@@ -130,6 +135,23 @@ module.exports.submitReport = expressAsyncHandler(
             }
             if (!reason) {
                 return res.status(404).json({ message: "Please select a valid reason" });
+            }
+
+
+            let reportType = comment? 'comment': 'content';
+            let details;
+
+            if(comment){
+              details = {
+                commentId: comment._id,
+                comment: comment.content,
+              }
+            
+            }else{
+              details = {
+                articleId: article._id,
+                title: article.title
+              }
             }
 
             const report = new Report({
@@ -141,6 +163,14 @@ module.exports.submitReport = expressAsyncHandler(
             });
 
             await report.save();
+
+            // send mail to user
+            await sendMailtoUser(user.email);
+
+            // send mail to censurable
+            if(details){
+              await sendMailtoReportUser(author.email, details, reportType);
+            }
 
             res.status(201).json({ message: "Report submitted successfully" });
 
@@ -363,7 +393,7 @@ const sendMailtoReportUser = async (email, details, reportType) => {
     });
 }
 
-// Send Report to admin
+
 
 // Get all reports (later)
 // Get all reports for article

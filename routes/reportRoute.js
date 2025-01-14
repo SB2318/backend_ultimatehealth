@@ -10,3 +10,5 @@ router.delete('/report/reason/:id', authenticateToken, controller.deleteReason);
 router.get('/report/reasons', authenticateToken, controller.getAllReasons);
 
 router.post('/report/submit', authenticateToken, controller.submitReport);
+
+module.exports = router;
