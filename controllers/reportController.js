@@ -5,6 +5,7 @@ const Report = require("../models/reportModel");
 const Reason = require("../models/reasonSchema");
 const Article = require('../models/Articles');
 const User = require("../models/UserModel");
+const Comment = require('../models/commentSchema');
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
