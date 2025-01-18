@@ -38,7 +38,7 @@ const reportActionSchema = new Schema({
         type: String,
         required: true,
         enum: reportActionEnum,
-        default: "Pending"
+        default: "Investigation"
     },
     last_action_date:{
       type: Date,

@@ -63,3 +63,9 @@ const adminSchema = new Schema({
 
 });
 module.exports = mongoose.model("admin",adminSchema);
+
+/**
+ * 
+ * Super Admin: UltimateHealth itself
+ * Moderators: All review team members
+ */
