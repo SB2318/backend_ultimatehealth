@@ -7,7 +7,7 @@ const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
 const moment = require("moment");
 const Article = require("../models/Articles");
-const adminModel = require("../models/adminModel");
+const adminModel = require("../models/admin/adminModel");
 const BlacklistedToken = require('../models/blackListedToken');
 const expressAsyncHandler = require("express-async-handler");
 require("dotenv").config();
@@ -529,7 +529,7 @@ module.exports.deleteByUser = async (req, res) => {
 module.exports.deleteByAdmin = async (req, res) => {
   try {
     const { adminEmail, adminPassword, userEmail } = req.body;
-    const admin = await adminModel.findOne({ adminEmail });
+    const admin = await adminModel.findOne({email: adminEmail });
     if (!admin) res.status(404).json({ message: "user not found" });
     else {
       console.log(admin);
