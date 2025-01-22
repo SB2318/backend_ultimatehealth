@@ -207,6 +207,7 @@ module.exports.getUserProfile = async (req, res) => {
      user = await User.findById(userId)
       .populate({
         path: "articles",
+        match: { status: 'Published' },
         populate: { path: "tags" }, // Populate tags for articles
       })
       .populate({
@@ -219,6 +220,7 @@ module.exports.getUserProfile = async (req, res) => {
 
       user = await User.findOne({user_handle: userHandle}).populate({
         path: "articles",
+        match: { status: 'Published' },
         populate: { path: "tags" }, // Populate tags for articles
       })
       .populate({

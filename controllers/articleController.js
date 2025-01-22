@@ -35,7 +35,7 @@ module.exports.createArticle = async (req, res) => {
     // Update the user's articles field
     user.articles.push(newArticle._id);
 
-    await updateWriteEvents(newArticle._id, user.id);
+    // await updateWriteEvents(newArticle._id, user.id);
 
     await user.save();
 
@@ -47,10 +47,10 @@ module.exports.createArticle = async (req, res) => {
   }
 };
 
-// Get all articles
+// Get all articles (published)
 module.exports.getAllArticles = async (req, res) => {
   try {
-    const articles = await Article.find()
+    const articles = await Article.find({ status: 'Published' })
       .populate('tags')
       .populate('mentionedUsers', 'user_handle user_name Profile_image') // This populates the mentioned users data
       .exec();
@@ -116,7 +116,7 @@ module.exports.deleteArticle = async (req, res) => {
   }
 };
 
-// Save Article :
+// Save Article : (published article)
 module.exports.saveArticle = async (req, res) => {
   try {
     const { article_id } = req.body;
@@ -133,6 +133,9 @@ module.exports.saveArticle = async (req, res) => {
       return res.status(404).json({ error: 'User or article not found' });
     }
 
+    if (article.status !== 'Published') {
+      return res.status(400).json({ message: 'Article is not published' });
+    }
     // Check if the article is already saved
     //const isArticleSaved = user.savedArticles.includes(id => id === article_id);
     const savedArticlesSet = new Set(user.savedArticles);
@@ -168,7 +171,7 @@ module.exports.saveArticle = async (req, res) => {
   }
 };
 
-// Like Articles
+// Like Articles (published article)
 module.exports.likeArticle = async (req, res) => {
   try {
     const { article_id } = req.body;
@@ -188,6 +191,9 @@ module.exports.likeArticle = async (req, res) => {
     }
 
 
+    if (articleDb.status !== 'Published') {
+      return res.status(400).json({ message: 'Article is not published' });
+    }
     // Check if the article is already liked
     const likedArticlesSet = new Set(user.likedArticles);
     const isArticleLiked = likedArticlesSet.has(article_id);
@@ -240,7 +246,7 @@ module.exports.likeArticle = async (req, res) => {
   }
 };
 
-// Update View Count
+// Update View Count (Published article)
 module.exports.updateViewCount = async (req, res) => {
   const { article_id } = req.body;
   const user = await User.findById(req.user.userId);
@@ -252,6 +258,10 @@ module.exports.updateViewCount = async (req, res) => {
 
     if (!user || !articleDb) {
       return res.status(404).json({ error: 'User or Article not found' });
+    }
+
+    if (articleDb.status !== 'Published') {
+      return res.status(400).json({ message: 'Article is not published' });
     }
 
     // Check if the user has already viewed the article
@@ -417,7 +427,7 @@ exports.getReadDataForGraphs = async (req, res) => {
 
 
 
-// Update Write Event Tasks 
+// Update Write Event Tasks (Once article published)
 async function updateWriteEvents(articleId, userId){
 
   const now = new Date();
@@ -481,7 +491,7 @@ exports.getWriteDataForGraphs = async (req, res) => {
   }
 };
 
-// Repost Article
+// Repost Article (Published article)
 exports.repostArticle = expressAsyncHandler(
   async (req, res) => {
 
@@ -505,6 +515,9 @@ exports.repostArticle = expressAsyncHandler(
         return;
       }
       
+      if (article.status !== 'Published') {
+        return res.status(400).json({ message: 'Article is not published' });
+      }
       // Check if user has already reposted the article
          // Check if the article is already liked
          const repostArticlesSet = new Set(user.repostArticles);
@@ -530,3 +543,22 @@ exports.repostArticle = expressAsyncHandler(
   
   }
 )
+
+/**
+ * 
+ * New Flow For Article Creation:
+ *  (i) User will submit an article
+ *  (ii) Article will be created with Review-Pending status (it will not visible to other users)
+ * (iii) In the profile module, there will be a section where User can show their unpublished articles,
+ *      reviewer comments, can add their feedback, can resubmit the article
+ * (iv) Once article published, their read count updated
+ * 
+ * 
+ * New Flow For Article Edit:
+ * (i) User will submit an edit request
+ * (ii) Reviewer will review the reason
+ * (iii) Once they approved, the user can start their work (but they have only 4 days in that case)
+ * (iv) In the profile module, one draft section will be available for them, there they can continue
+ * (v) After submitting their existing work, rest flow will be same as article creation
+ *  
+ */

@@ -17,6 +17,7 @@ const analyticsRoute = require('./routes/analyticsRoute');
 const uploadRoute = require('./routes/uploadRoute');
 const notificationRoute = require('./routes/notificationRoute');
 const reportRoute = require('./routes/reportRoute');
+const adminAuthRoute = require('./routes/adminAuthRoute');
 const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification, repostNotification, mentionNotification } = require('./controllers/notifications/notificationHelper');
 
 const app = express();
@@ -39,6 +40,7 @@ app.use("/api", uploadRoute);
 app.use("/api/analytics", analyticsRoute);
 app.use("/api", notificationRoute);
 app.use("/api", reportRoute);
+app.use("/api", adminAuthRoute);
 
 // Test route (can be removed later)
 app.get("/hello", (req, res) => {

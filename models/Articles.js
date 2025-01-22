@@ -47,8 +47,8 @@ const articleSchema = new Schema({
   }],
   status: {
     type: String,
-    enum: ['Draft', 'Published', 'Archived'],
-    default: 'Draft',
+    enum: ['Draft','Review-Pending', 'Awaiting-Author','In-Progress', 'Published', 'Discarded'],
+    default: 'Review-Pending',
   },
   imageUtils: {
     type: [String],
