@@ -45,11 +45,7 @@ const articleSchema = new Schema({
     ref: 'ArticleTag',
     default: []
   }],
-  status: {
-    type: String,
-    enum: ['Draft','Review-Pending', 'Awaiting-Author','In-Progress', 'Published', 'Discarded'],
-    default: 'Review-Pending',
-  },
+ 
   imageUtils: {
     type: [String],
     required: true,
@@ -100,7 +96,27 @@ const articleSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'User', 
     default: []
-  }]
+  }],
+
+  status :{
+    type: String,
+    enum: ['unassigned', 'in-progress', 'pending',  'published', 'discarded','awaiting-user'],
+    default: 'unassigned'
+  },
+
+  reviewer_id:{
+    type: Schema.Types.ObjectId,
+    ref: 'admin', 
+    default: null
+ },
+
+  review_comments:[
+  {
+      type: Schema.Types.ObjectId,
+      ref: 'Comment',
+      default: []
+  }
+  ],
 });
 
 // Apply the autoIncrement plugin to the schema

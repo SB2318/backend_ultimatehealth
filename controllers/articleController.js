@@ -5,6 +5,7 @@ const User = require("../models/UserModel");
 const ReadAggregate = require("../models/events/readEventSchema");
 const WriteAggregate = require("../models/events/writeEventSchema");
 
+
 const mongoose = require('mongoose');
 // Create a new article
 module.exports.createArticle = async (req, res) => {
@@ -33,14 +34,14 @@ module.exports.createArticle = async (req, res) => {
     await newArticle.save();
 
     // Update the user's articles field
-    user.articles.push(newArticle._id);
+    //user.articles.push(newArticle._id);
 
     // await updateWriteEvents(newArticle._id, user.id);
 
-    await user.save();
+    //await user.save();
 
     // Respond with a success message and the new article
-    res.status(201).json({ message: "Article created successfully", newArticle });
+    res.status(201).json({ message: "Article under reviewed", newArticle });
   } catch (error) {
     console.log("Article Creation Error", error);
     res.status(500).json({ error: "Error creating article", details: error.message });
@@ -50,7 +51,7 @@ module.exports.createArticle = async (req, res) => {
 // Get all articles (published)
 module.exports.getAllArticles = async (req, res) => {
   try {
-    const articles = await Article.find({ status: 'Published' })
+    const articles = await Article.find({ status: 'published' })
       .populate('tags')
       .populate('mentionedUsers', 'user_handle user_name Profile_image') // This populates the mentioned users data
       .exec();
@@ -133,7 +134,7 @@ module.exports.saveArticle = async (req, res) => {
       return res.status(404).json({ error: 'User or article not found' });
     }
 
-    if (article.status !== 'Published') {
+    if (article.status !== 'published') {
       return res.status(400).json({ message: 'Article is not published' });
     }
     // Check if the article is already saved
@@ -191,7 +192,7 @@ module.exports.likeArticle = async (req, res) => {
     }
 
 
-    if (articleDb.status !== 'Published') {
+    if (articleDb.status !== 'published') {
       return res.status(400).json({ message: 'Article is not published' });
     }
     // Check if the article is already liked
@@ -260,7 +261,7 @@ module.exports.updateViewCount = async (req, res) => {
       return res.status(404).json({ error: 'User or Article not found' });
     }
 
-    if (articleDb.status !== 'Published') {
+    if (articleDb.status !== 'published') {
       return res.status(400).json({ message: 'Article is not published' });
     }
 
@@ -515,7 +516,7 @@ exports.repostArticle = expressAsyncHandler(
         return;
       }
       
-      if (article.status !== 'Published') {
+      if (article.status !== 'published') {
         return res.status(400).json({ message: 'Article is not published' });
       }
       // Check if user has already reposted the article

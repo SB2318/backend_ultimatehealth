@@ -2,6 +2,7 @@
 const admin = require('../../config/firebase');
 const User = require('../../models/UserModel');
 const Notification = require('../../models/notificationSchema');
+const Admin = require('../../models/admin/adminModel');
 
 
 /**
@@ -141,11 +142,19 @@ module.exports.sendPostLikeNotification = async (authorId, message) => {
  * @param {*} message  // title & body : title :"@username commented on your Post"
  *                      // body: "Your comment content here"
  */
-module.exports.sendCommentNotification = async (authorId, postId, message) => {
+module.exports.sendCommentNotification = async (authorId, postId, message, isAdmin = false) => {
 
     try {
 
-        const user = await User.findById(authorId);
+
+        let user;
+
+        if(isAdmin){
+
+            user = await Admin.findById(authorId);
+        }else{
+            user = await User.findById(authorId);
+        }
 
         if (user && user.fcmToken) {
             sendPushNotification(user.fcmToken, message, {
@@ -278,6 +287,28 @@ module.exports.mentionNotification = async (mentionedUsers, postId, message) =>{
     }catch(err){
         console.error(err);
 
+    }
+}
+
+
+module.exports.articleReviewNotificationsToUser = async (userId, postId, message) => {
+
+    try {
+        const user = await User.findById(userId);
+
+        if (user && user.fcmToken) {
+
+            sendPushNotification(user.fcmToken, message, {
+                action: 'articleReview',
+                data: {
+                    postId: postId,
+                    authorId: user._id
+                }
+            }, user._id)
+        }
+    } catch (err) {
+        console.error(err);
+        //sendPushNotification()
     }
 }
 

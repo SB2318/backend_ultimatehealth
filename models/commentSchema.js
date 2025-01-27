@@ -15,8 +15,14 @@ const commentSchema = new Schema({
     },
     userId:{
         type: Schema.Types.ObjectId,
-        required: true,
-        ref:'User'
+        //required: true,
+        ref:'User',
+        default: null
+    },
+    adminId:{
+        type: Schema.Types.ObjectId,
+        ref:"admin",
+        default: null
     },
     content: {
         type: String,
@@ -56,6 +62,14 @@ const commentSchema = new Schema({
         type: Boolean,
         default: false
     },
+    isReview:{
+        type:Boolean,
+        default:false
+    },
+    isNote:{
+        type:Boolean,
+        default:false
+    }
 })
 
 const Comment = mongoose.model('Comment', commentSchema);
