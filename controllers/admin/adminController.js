@@ -1,10 +1,11 @@
 const expressAsyncHandler = require('express-async-handler');
 const Article = require('../../models/Articles');
 const admin = require('../../models/admin/adminModel');
-const user = require('../../models/UserModel');
+const User = require('../../models/UserModel');
 const { articleReviewNotificationsToUser, sendCommentNotification } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
-const { sendArticleFeedbackEmail } = require('../emailservice');
+const WriteAggregate = require("../../models/events/writeEventSchema");
+const { sendArticleFeedbackEmail, sendArticlePublishedEmail } = require('../emailservice');
 // article review section
 
 // getallDraftArticle
@@ -218,9 +219,95 @@ module.exports.getAllArticlesForAssignModerator = expressAsyncHandler(
 )
 
 // publish article
+module.exports.publishArticle = expressAsyncHandler(
+    async (req, res)=>{
+        const {articleId, reviewerId} = req.body;
+
+        if(!articleId  || !reviewerId){
+            return res.status(400).json({message: "Article ID and Reviewer ID are required"});
+        }
+
+        try{
+
+            const [article, reviewer] = await Promise.all([
+                Article.findById(Number(articleId)),
+                admin.findById(reviewerId)
+            ]);
+
+            if(!article || !reviewer){
+                return res.status(404).json({message: "Article or Reviewer not found"});
+            }
+
+            if(article.reviewer_id !== reviewerId){
+                return res.status(403).json({message: "Article is not assigned to this reviewer"});
+            }
+            const user = await User.findById(article.authorId);
+            if(!user){
+                return res.status(404).json({message: "Author not found"});
+            }
+            article.status = "published";
+            article.publishedDate = new Date();
+            article.lastUpdated = new Date();
+
+            await article.save();
+            user.articles.push(article._id);
+
+            await updateWriteEvents(article._id, user.id);
+            await user.save();
+
+            // send mail to user
+           sendArticlePublishedEmail(user.email, "", article.title);
+
+            // send notification
+            articleReviewNotificationsToUser(user._id, article._id, {
+                title: ` Your Article : ${article.title} is Live now!`,
+                body: "Keep contributing!  We encourage you to keep sharing valuable content with us."
+            });
+
+            res.status(200).json({message: "Article Published"});
+
+        }catch(err){
+            console.error(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
 
 
+// Update Write Event Tasks (Once article published)
+
+async function updateWriteEvents(articleId, userId){
+
+    const now = new Date();
+    const today = new Date(now.setHours(0, 0, 0, 0));
+  
+    try {
+  
+      // Check for existing event entry
+      const writeEvent = await WriteAggregate.findOne({userId: userId, date:today});
+  
+      if(!writeEvent){
+         // New Write Event Entry
+        const newWriteEvent = new WriteAggregate({ userId: userId, date:today });
+        newWriteEvent.dailyWrites = 1;
+        newWriteEvent.monthlyWrites = 1;
+        newWriteEvent.yearlyWrites = 1;
+        
+        await newWriteEvent.save();
+      }else{
+  
+        writeEvent.dailyWrites += 1;
+        writeEvent.monthlyWrites += 1;
+        writeEvent.yearlyWrites += 1;
+        
+        await writeEvent.save();
+      }
+    } catch (err) {
+      console.log('Article Write Event Update Error', err);
+    }
+  }
 // cron job for article unassigned
+
 // cron job for article discarded
 
 // article edit request section

@@ -428,37 +428,8 @@ exports.getReadDataForGraphs = async (req, res) => {
 
 
 
-// Update Write Event Tasks (Once article published)
-async function updateWriteEvents(articleId, userId){
 
-  const now = new Date();
-  const today = new Date(now.setHours(0, 0, 0, 0));
 
-  try {
-
-    // Check for existing event entry
-    const writeEvent = await WriteAggregate.findOne({userId: userId, date:today});
-
-    if(!writeEvent){
-       // New Write Event Entry
-      const newWriteEvent = new WriteAggregate({ userId: userId, date:today });
-      newWriteEvent.dailyWrites = 1;
-      newWriteEvent.monthlyWrites = 1;
-      newWriteEvent.yearlyWrites = 1;
-      
-      await newWriteEvent.save();
-    }else{
-
-      writeEvent.dailyWrites += 1;
-      writeEvent.monthlyWrites += 1;
-      writeEvent.yearlyWrites += 1;
-      
-      await writeEvent.save();
-    }
-  } catch (err) {
-    console.log('Article Write Event Update Error', err);
-  }
-}
 // GET ALL Write EVENTS STATUS DAILY, WEEKLY, MONTHLY
 exports.getWriteDataForGraphs = async (req, res) => {
 
