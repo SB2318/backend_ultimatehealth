@@ -7,6 +7,7 @@ const User = require("../models/UserModel");
 const admin = require("../models/admin/adminModel");
 const cache = require('memory-cache');
 const emailBody = require("../utils/emailBody");
+const statusEnum = require("../utils/StatusEnum");
 const cooldownTime = 3600;
 
 const transporter = nodemailer.createTransport({
@@ -246,12 +247,14 @@ const verifyEmail = async (req, res) => {
 
 const sendArticleFeedbackEmail = (email, feedback, title) => {
 
-  
+
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
         subject: `New Feedback on Your Article: ${title}`,
-        html: emailBody.ARTICLE_FEEDBACK,
+        html: emailBody.ARTICLE_FEEDBACK
+            .replace("{title}", title)
+            .replace("{feedback}", feedback),
     };
 
     transporter.sendMail(mailOptions, (err, info) => {
@@ -266,12 +269,14 @@ const sendArticleFeedbackEmail = (email, feedback, title) => {
 // Later will centralize all email body, once the thing is integrated in frontend
 const sendArticlePublishedEmail = (email, articleLink, title) => {
 
-  
+
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
         subject: `New Feedback on Your Article: ${title}`,
-        html: emailBody.ARTICLE_PUBLISH,
+        html: emailBody.ARTICLE_PUBLISH
+            .replace("{title}", title)
+            .replace("{articleLink}", articleLink),
     };
 
     transporter.sendMail(mailOptions, (err, info) => {
@@ -283,7 +288,29 @@ const sendArticlePublishedEmail = (email, articleLink, title) => {
     });
 };
 
-module.exports = { sendVerificationEmail, verifyEmail, Sendverifymail, resendVerificationEmail, sendArticleFeedbackEmail, sendArticlePublishedEmail };
+const sendArticleDiscardEmail = (email, status, title) => {
+
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: `Article Discarded ${title}`,
+        html: status === statusEnum.UNASSIGNED ? emailBody.ARTICLE_DISCARDED_FROM_SYSTEM
+            .replace("{title}", title) :
+            emailBody.ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION
+                .replace("{title}", title),
+    };
+
+    transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+            console.error('Error sending email:', err);
+        } else {
+            console.log('Verification email sent:', info.response);
+        }
+    });
+};
+
+module.exports = { sendVerificationEmail, verifyEmail, Sendverifymail, resendVerificationEmail, sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail };
 
 
 

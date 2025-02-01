@@ -5,7 +5,7 @@ const User = require('../../models/UserModel');
 const { articleReviewNotificationsToUser, sendCommentNotification } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
 const WriteAggregate = require("../../models/events/writeEventSchema");
-const { sendArticleFeedbackEmail, sendArticlePublishedEmail } = require('../emailservice');
+const { sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail } = require('../emailservice');
 const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
 // article review section
@@ -36,36 +36,36 @@ module.exports.assignModerator = expressAsyncHandler(
 
         try {
 
-         const [article, moderator] = await Promise.all(
-            [
-                Article.findById(Number(articleId)),
-                admin.findById(moderatorId),
-            ]
-         );
+            const [article, moderator] = await Promise.all(
+                [
+                    Article.findById(Number(articleId)),
+                    admin.findById(moderatorId),
+                ]
+            );
 
-         if (!article || !moderator) {
-            res.status(404).json({ message: 'Article or Moderator not found' });
-            return;
-         }
+            if (!article || !moderator) {
+                res.status(404).json({ message: 'Article or Moderator not found' });
+                return;
+            }
 
-         if(article.status !== statusEnum.UNASSIGNED){
-            res.status(400).json({ message: 'Article is already assigned to a moderator' });
-            return;
-         }
+            if (article.status !== statusEnum.UNASSIGNED) {
+                res.status(400).json({ message: 'Article is already assigned to a moderator' });
+                return;
+            }
 
-         // Update article status and assign reviewer
-         article.status = statusEnum.IN_PROGRESS;
-         article.reviewer_id = moderator._id;
-         article.assigned_at = new Date();
+            // Update article status and assign reviewer
+            article.status = statusEnum.IN_PROGRESS;
+            article.reviewer_id = moderator._id;
+            article.assigned_at = new Date();
 
-         await article.save();
-         // send Notification
-         articleReviewNotificationsToUser(article.authorId, article._id, {
-            title:`Congrats!Your Article : ${article.title} is Under Review`,
-            body:"Our team has started reviewing your article. Stay tuned!"
-         })
+            await article.save();
+            // send Notification
+            articleReviewNotificationsToUser(article.authorId, article._id, {
+                title: `Congrats!Your Article : ${article.title} is Under Review`,
+                body: "Our team has started reviewing your article. Stay tuned!"
+            })
 
-         res.status(200).json({message:"Article status updated"});
+            res.status(200).json({ message: "Article status updated" });
 
         } catch (err) {
             console.log(err);
@@ -75,33 +75,33 @@ module.exports.assignModerator = expressAsyncHandler(
 )
 
 // submitReview
-module.exports.submitReview  = expressAsyncHandler(
-     
-    async(req, res) =>{
+module.exports.submitReview = expressAsyncHandler(
+
+    async (req, res) => {
         const { articleId, reviewerId, feedback } = req.body;
 
-        if(!articleId || !reviewerId || !feedback){
+        if (!articleId || !reviewerId || !feedback) {
             res.status(400).json({ message: 'Please fill all fields: articleId, reviewerId, reviewContent' });
             return;
         }
 
-        try{
-            
+        try {
+
             const [article, reviewer] = await Promise.all([
 
                 Article.findById(Number(articleId))
-                .populate('authorId')
-                .exec(),
+                    .populate('authorId')
+                    .exec(),
                 admin.findById(reviewerId),
             ]);
 
-            if(!article || !reviewer){
+            if (!article || !reviewer) {
                 res.status(404).json({ message: 'Article or Moderator not found' });
                 return;
             }
 
-            if(article.reviewer_id !== reviewer._id){
-                res.status(403).json({ message: 'You are not authorized to access this article'});
+            if (article.reviewer_id !== reviewer._id) {
+                res.status(403).json({ message: 'You are not authorized to access this article' });
             }
 
 
@@ -127,9 +127,9 @@ module.exports.submitReview  = expressAsyncHandler(
             // send mail
             sendArticleFeedbackEmail(article.authorId.email, feedback, article.title);
 
-            res.status(200).json({message:"Review submitted"});
+            res.status(200).json({ message: "Review submitted" });
 
-        }catch(err){
+        } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });
         }
@@ -140,35 +140,35 @@ module.exports.submitReview  = expressAsyncHandler(
 module.exports.submitSuggestedChanges = expressAsyncHandler(
     async (req, res) => {
 
-        const { userId, articleId, content, aditionalNote, title, imageUtils} = req.body;
+        const { userId, articleId, content, aditionalNote, title, imageUtils } = req.body;
 
-        if(!userId || !articleId || !content  || !title || !imageUtils){
-            res.status(400).json({message:"Missing required fields: articleId, content, aditionalNote, title, imageUtils"});
+        if (!userId || !articleId || !content || !title || !imageUtils) {
+            res.status(400).json({ message: "Missing required fields: articleId, content, aditionalNote, title, imageUtils" });
             return;
         }
-       
-        try{
 
-             const article = await Article.findById(Number(articleId));
+        try {
 
-             if(!article){
-                res.status(404).json({message:"Article not found"});
+            const article = await Article.findById(Number(articleId));
+
+            if (!article) {
+                res.status(404).json({ message: "Article not found" });
                 return;
-             }
+            }
 
-             if(article.authorId !== userId){
-                res.status(403).json({message:"You are not the author of this article"});
+            if (article.authorId !== userId) {
+                res.status(403).json({ message: "You are not the author of this article" });
                 return;
-             }
+            }
 
-             article.content = content;
-             article.title = title;
-             article.imageUtils = imageUtils;
-             article.status = statusEnum.REVIEW_PENDING;
+            article.content = content;
+            article.title = title;
+            article.imageUtils = imageUtils;
+            article.status = statusEnum.REVIEW_PENDING;
 
-             await article.save();
+            await article.save();
 
-             if(aditionalNote){
+            if (aditionalNote) {
                 // create comment object and notify moderator
                 const comment = new Comment({
                     userId: article.authorId,
@@ -184,15 +184,15 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
                 await article.save();
 
                 sendCommentNotification(article.reviewer_id, article._id, {
-                    title:"New Additional Note from Author",
+                    title: "New Additional Note from Author",
                     body: `An author has added a new note to the article titled ${article.title}.`
                 })
-            
-             }
 
-             res.status(200).json({message:"Article submitted"});
-             
-        }catch(err){
+            }
+
+            res.status(200).json({ message: "Article submitted" });
+
+        } catch (err) {
 
             console.log(err);
             res.status(500).json({ message: err.message });
@@ -202,19 +202,19 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
 
 // get all articles for assigned moderator
 module.exports.getAllArticlesForAssignModerator = expressAsyncHandler(
-   
-    async (req, res) =>{
 
-        const {moderatorId} = req.params;
+    async (req, res) => {
 
-        if(!moderatorId){
-            return res.status(400).json({message: "Moderator ID is required"});
+        const { moderatorId } = req.params;
+
+        if (!moderatorId) {
+            return res.status(400).json({ message: "Moderator ID is required" });
         }
-        try{
+        try {
 
-            const articles = await Article.find({reviewer_id: moderatorId, status: { $nin: [statusEnum.UNASSIGNED, statusEnum.PUBLISHED, statusEnum.DISCARDED] }});
+            const articles = await Article.find({ reviewer_id: moderatorId, status: { $nin: [statusEnum.UNASSIGNED, statusEnum.PUBLISHED, statusEnum.DISCARDED] } });
             res.status(200).json(articles);
-        }catch(err){
+        } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });
         }
@@ -223,30 +223,30 @@ module.exports.getAllArticlesForAssignModerator = expressAsyncHandler(
 
 // publish article
 module.exports.publishArticle = expressAsyncHandler(
-    async (req, res)=>{
-        const {articleId, reviewerId} = req.body;
+    async (req, res) => {
+        const { articleId, reviewerId } = req.body;
 
-        if(!articleId  || !reviewerId){
-            return res.status(400).json({message: "Article ID and Reviewer ID are required"});
+        if (!articleId || !reviewerId) {
+            return res.status(400).json({ message: "Article ID and Reviewer ID are required" });
         }
 
-        try{
+        try {
 
             const [article, reviewer] = await Promise.all([
                 Article.findById(Number(articleId)),
                 admin.findById(reviewerId)
             ]);
 
-            if(!article || !reviewer){
-                return res.status(404).json({message: "Article or Reviewer not found"});
+            if (!article || !reviewer) {
+                return res.status(404).json({ message: "Article or Reviewer not found" });
             }
 
-            if(article.reviewer_id !== reviewerId){
-                return res.status(403).json({message: "Article is not assigned to this reviewer"});
+            if (article.reviewer_id !== reviewerId) {
+                return res.status(403).json({ message: "Article is not assigned to this reviewer" });
             }
             const user = await User.findById(article.authorId);
-            if(!user){
-                return res.status(404).json({message: "Author not found"});
+            if (!user) {
+                return res.status(404).json({ message: "Author not found" });
             }
             article.status = statusEnum.PUBLISHED;
             article.publishedDate = new Date();
@@ -259,7 +259,7 @@ module.exports.publishArticle = expressAsyncHandler(
             await user.save();
 
             // send mail to user
-           sendArticlePublishedEmail(user.email, "", article.title);
+            sendArticlePublishedEmail(user.email, "", article.title);
 
             // send notification
             articleReviewNotificationsToUser(user._id, article._id, {
@@ -267,9 +267,9 @@ module.exports.publishArticle = expressAsyncHandler(
                 body: "Keep contributing!  We encourage you to keep sharing valuable content with us."
             });
 
-            res.status(200).json({message: "Article Published"});
+            res.status(200).json({ message: "Article Published" });
 
-        }catch(err){
+        } catch (err) {
             console.error(err);
             res.status(500).json({ message: err.message });
         }
@@ -279,97 +279,117 @@ module.exports.publishArticle = expressAsyncHandler(
 
 // Update Write Event Tasks (Once article published)
 
-async function updateWriteEvents(articleId, userId){
+async function updateWriteEvents(articleId, userId) {
 
     const now = new Date();
     const today = new Date(now.setHours(0, 0, 0, 0));
-  
-    try {
-  
-      // Check for existing event entry
-      const writeEvent = await WriteAggregate.findOne({userId: userId, date:today});
-  
-      if(!writeEvent){
-         // New Write Event Entry
-        const newWriteEvent = new WriteAggregate({ userId: userId, date:today });
-        newWriteEvent.dailyWrites = 1;
-        newWriteEvent.monthlyWrites = 1;
-        newWriteEvent.yearlyWrites = 1;
-        
-        await newWriteEvent.save();
-      }else{
-  
-        writeEvent.dailyWrites += 1;
-        writeEvent.monthlyWrites += 1;
-        writeEvent.yearlyWrites += 1;
-        
-        await writeEvent.save();
-      }
-    } catch (err) {
-      console.log('Article Write Event Update Error', err);
-    }
-  }
-// cron job for article unassigned
-async function unassignArticle(){
 
-    const articles = await Article.find({status: {
-        $in: [statusEnum.IN_PROGRESS]
-    } });
+    try {
+
+        // Check for existing event entry
+        const writeEvent = await WriteAggregate.findOne({ userId: userId, date: today });
+
+        if (!writeEvent) {
+            // New Write Event Entry
+            const newWriteEvent = new WriteAggregate({ userId: userId, date: today });
+            newWriteEvent.dailyWrites = 1;
+            newWriteEvent.monthlyWrites = 1;
+            newWriteEvent.yearlyWrites = 1;
+
+            await newWriteEvent.save();
+        } else {
+
+            writeEvent.dailyWrites += 1;
+            writeEvent.monthlyWrites += 1;
+            writeEvent.yearlyWrites += 1;
+
+            await writeEvent.save();
+        }
+    } catch (err) {
+        console.log('Article Write Event Update Error', err);
+    }
+}
+// cron job for article unassigned
+async function unassignArticle() {
+
+   try{
+
+    const articles = await Article.find({
+        status: {
+            $in: [statusEnum.IN_PROGRESS]
+        }
+    });
     articles.forEach(async (article) => {
 
-       const assignedDate = new Date(article.assigned_date);
-       const currentDate = new Date();
-       const timeDifference = currentDate - assignedDate;
-       const daysDifference = timeDifference / (1000 * 3600 * 24);
+        const assignedDate = new Date(article.assigned_date);
+        const currentDate = new Date();
+        const timeDifference = currentDate - assignedDate;
+        const daysDifference = timeDifference / (1000 * 3600 * 24);
 
-       if(daysDifference > 4){
+        if (daysDifference > 4) {
 
-        let reviewer_id = article.reviewer_id;
-        article.reviewer_id = null;
-        article.assigned_at = null;
-        article.status = statusEnum.UNASSIGNED;
+            let reviewer_id = article.reviewer_id;
+            article.reviewer_id = null;
+            article.assigned_at = null;
+            article.status = statusEnum.UNASSIGNED;
 
-        await article.save();
-       }
+            await article.save();
+        }
 
     });
+
+   }catch(err){
+
+     console.error(err);
+    
+   }
 }
 // cron job for article discarded
 
-async function discardArticle(){
+async function discardArticle() {
 
-    const articles = await Article.find({status: {
-        $in: [statusEnum.UNASSIGNED, statusEnum.REVIEW_PENDING]
-    } });
-    articles.forEach(async (article) => {
+    try{
 
-       const assignedDate = new Date(article.assigned_date);
-       const currentDate = new Date();
-       const timeDifference = currentDate - assignedDate;
-       const daysDifference = timeDifference / (1000 * 3600 * 24);
-
-       // Discard all unassigned and review pending articles after 30 days
-       if(daysDifference > 30){
-
-        let reviewer_id = article.reviewer_id;
-        article.reviewer_id = null;
-        article.assigned_at = null;
-        article.status = statusEnum.DISCARDED;
-
-        await article.save();
-       }
-
-    });
+        const articles = await Article.find({
+            status: {
+                $in: [statusEnum.UNASSIGNED, statusEnum.REVIEW_PENDING]
+            }
+        });
+        articles.forEach(async (article) => {
+    
+    
+            const assignedDate = new Date(article.assigned_date);
+            const currentDate = new Date();
+            const timeDifference = currentDate - assignedDate;
+            const daysDifference = timeDifference / (1000 * 3600 * 24);
+    
+            // Discard all unassigned and review pending articles after 30 days
+            if (daysDifference > 30) {
+                const user = await User.findById(article.authorId);
+                let status = article.status;
+                article.reviewer_id = null;
+                article.assigned_at = null;
+                article.status = statusEnum.DISCARDED;
+    
+                await article.save();
+                if(user)
+                sendArticleDiscardEmail(user.email, status, article.title)
+            }
+    
+        });
+    }catch(err){
+        console.error(err);
+    }
 }
 
-cron.schedule('0 0 * * *',async()=>{
-     
+cron.schedule('0 0 * * *', async () => {
+
     console.log('running cron job unassign article...');
     await unassignArticle();
 });
 
-cron.schedule('0 0 * * *',async()=>{
-     
+cron.schedule('0 0 * * *', async () => {
+
     console.log('running cron job discard article...');
     await discardArticle();
 });

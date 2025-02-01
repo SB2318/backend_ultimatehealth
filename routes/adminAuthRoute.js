@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-import {register, login, logout} from '../controllers/admin/adminAuthController';
+const {register, login, logout} = require('../controllers/admin/adminAuthController');
 const {
     verifyEmail,
     sendVerificationEmail,

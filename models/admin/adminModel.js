@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const {Schema} = require('mongoose');
+const validator = require('validator');
 
 const adminSchema = new Schema({
     _id:{
