@@ -100,10 +100,15 @@ const articleSchema = new Schema({
 
   status :{
     type: String,
-    enum: ['unassigned', 'in-progress', 'pending',  'published', 'discarded','awaiting-user'],
+    enum: ['unassigned', 'in-progress', 'review-pending',  'published', 'discarded','awaiting-user'],
     default: 'unassigned'
   },
 
+  assigned_date:{
+
+     type: Date,
+     default: null
+  },
   reviewer_id:{
     type: Schema.Types.ObjectId,
     ref: 'admin', 

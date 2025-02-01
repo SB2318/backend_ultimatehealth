@@ -158,4 +158,8 @@ const deleteOldNotifications = async()=>{
     }
 }
 
-cron.schedule('0 0 * * *',deleteOldNotifications)
+cron.schedule('0 0 * * *',async()=>{
+     
+    console.log('running cron job delete notifications...');
+    await deleteOldNotifications();
+});

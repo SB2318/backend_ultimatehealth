@@ -4,6 +4,7 @@ const Article = require("../models/Articles");
 const User = require("../models/UserModel");
 const ReadAggregate = require("../models/events/readEventSchema");
 const WriteAggregate = require("../models/events/writeEventSchema");
+const statusEnum = require("../utils/StatusEnum");
 
 
 const mongoose = require('mongoose');
@@ -51,7 +52,7 @@ module.exports.createArticle = async (req, res) => {
 // Get all articles (published)
 module.exports.getAllArticles = async (req, res) => {
   try {
-    const articles = await Article.find({ status: 'published' })
+    const articles = await Article.find({ status: statusEnum.PUBLISHED })
       .populate('tags')
       .populate('mentionedUsers', 'user_handle user_name Profile_image') // This populates the mentioned users data
       .exec();
@@ -134,7 +135,7 @@ module.exports.saveArticle = async (req, res) => {
       return res.status(404).json({ error: 'User or article not found' });
     }
 
-    if (article.status !== 'published') {
+    if (article.status !== statusEnum.PUBLISHED) {
       return res.status(400).json({ message: 'Article is not published' });
     }
     // Check if the article is already saved
@@ -192,7 +193,7 @@ module.exports.likeArticle = async (req, res) => {
     }
 
 
-    if (articleDb.status !== 'published') {
+    if (articleDb.status !== statusEnum.PUBLISHED) {
       return res.status(400).json({ message: 'Article is not published' });
     }
     // Check if the article is already liked
@@ -261,7 +262,7 @@ module.exports.updateViewCount = async (req, res) => {
       return res.status(404).json({ error: 'User or Article not found' });
     }
 
-    if (articleDb.status !== 'published') {
+    if (articleDb.status !== statusEnum.PUBLISHED) {
       return res.status(400).json({ message: 'Article is not published' });
     }
 
@@ -487,7 +488,7 @@ exports.repostArticle = expressAsyncHandler(
         return;
       }
       
-      if (article.status !== 'published') {
+      if (article.status !== statusEnum.PUBLISHED) {
         return res.status(400).json({ message: 'Article is not published' });
       }
       // Check if user has already reposted the article

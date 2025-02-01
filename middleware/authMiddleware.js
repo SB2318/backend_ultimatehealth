@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const User = require("../models/UserModel");
+const Admin = require("../models/admin/adminModel");
 
 const verifyToken = async (req, res, next) => {
     let token;
@@ -17,14 +18,27 @@ const verifyToken = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.userId);
+        const [user, admin] = await Promise.all(
+          [
+            User.findById(decoded.userId),
+            Admin.findById(decoded.userId)
+          ]
+        );
 
-        if (!user || !user.isVerified) {
-            return res.status(403).json({ error: 'Email not verified' });
+        if(!admin || !admin.isVerified){
+
+            if (!user || !user.isVerified) {
+                return res.status(403).json({ error: 'Email not verified' });
+            }else{
+
+                req.userId = user._id;
+                next();
+            }
+        }else{
+            req.userId = admin._id;
+            next();
         }
-
-        req.userId = user._id;
-        next();
+        
     } catch (err) {
         console.error('Error verifying token:', err);
         return res.status(403).json({ error: 'Invalid or expired token' });
