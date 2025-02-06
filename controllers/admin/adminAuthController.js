@@ -200,3 +200,23 @@ module.exports.logout = expressAsyncHandler(
         }
       }
 )
+
+module.exports.getprofile = expressAsyncHandler(
+  async (req, res) => {
+    try{
+      const user = await admin.findById(req.user.userId);
+      if(!user) return res.status(404).json({ message: "User not found"});
+      if (!user.isVerified) {
+        return res
+          .status(403)
+          .json({ error: "Email not verified. Please check your email." });
+      }
+
+      return res.json({ status: true, profile: user });
+    }catch(err){
+       console.error(err);
+       res.status(500).json({error: "Internal server error"});
+    }
+
+  }
+)

@@ -146,10 +146,14 @@ module.exports.checkUserHandle = expressAsyncHandler(
 
     try{
 
-      const user = await User.findOne({user_handle: userHandle});
-      const unverifiedUser = await UnverifiedUser.findOne({user_handle: userHandle});
+      const [user, unverifiedUser, admin] = await Promise.all([
+          User.findOne({user_handle: userHandle}),
+          UnverifiedUser.findOne({user_handle: userHandle}),
+          adminModel.findOne({user_handle: userHandle})
+      ])
+      
 
-      if(user || unverifiedUser){
+      if(user || unverifiedUser || admin){
         return res.status(200).json({status: true, message: "User handle already exists"});
       }
 
