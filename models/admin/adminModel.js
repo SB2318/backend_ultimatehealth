@@ -35,7 +35,8 @@ const adminSchema = new Schema({
     role:{
         type:String,
         required:true,
-        enum: ['Super Admin','Moderator']
+        enum: ['Super Admin','Moderator'],
+        default:"Moderator"
     },
     created_at:{
         type:Date,

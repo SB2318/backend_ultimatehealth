@@ -8,6 +8,7 @@ const nodemailer = require("nodemailer");
 const expressAsyncHandler = require("express-async-handler");
 const admin = require('../../models/admin/adminModel')
 const BlacklistedToken = require('../../models/blackListedToken');
+const jwt = require("jsonwebtoken");
 
 
 module.exports.register = expressAsyncHandler(

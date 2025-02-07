@@ -32,6 +32,8 @@ app.use(express.static('public'));
 app.use(cookieParser()); // Parse cookies
 app.use(compression()); // Compress response bodies
 app.use(express.json()); // Parse incoming JSON requests
+//app.use(express.json()); // for parsing application/json
+app.use(express.urlencoded({ extended: true }))
 
 // Define routes
 app.use("/api", userRoutes);
