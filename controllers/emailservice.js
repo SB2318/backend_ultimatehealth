@@ -18,9 +18,9 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-const sendVerificationEmail = (email, token) => {
+const sendVerificationEmail = (email, token, isAdmin) => {
 
-    const url = `${process.env.BASE_URL}api/user/verifyEmail?token=${token}`;
+    const url = `${process.env.BASE_URL}api/user/verifyEmail?token=${token}&isAdmin=${isAdmin}`;
     console.log("URL", url);
     const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -90,7 +90,7 @@ const resendVerificationEmail = async (req, res) => {
     }
 
     const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    sendVerificationEmail(email, verificationToken);
+    sendVerificationEmail(email, verificationToken, isAdmin);
 
     const cooldownKey = `resend-verification-email:${email}`;
 
