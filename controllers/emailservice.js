@@ -63,7 +63,7 @@ const Sendverifymail = async (req, res) => {
     if (!user || user.isVerified) {
         return res.status(400).json({ message: 'User not found or already verified' });
     } else {
-        sendVerificationEmail(email, token);
+        sendVerificationEmail(email, token, isAdmin);
     }
 
     res.status(200).json({ message: 'Verification email sent' });
