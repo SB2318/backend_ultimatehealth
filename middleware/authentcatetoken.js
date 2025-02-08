@@ -17,6 +17,7 @@ const authenticateToken = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+   // console.log("Decoded", decoded);
     const [user, admin] = await Promise.all(
       [
         User.findById(decoded.userId),
@@ -24,8 +25,10 @@ const authenticateToken = async (req, res, next) => {
       ]
     );
 
+    //console.log("User",user);
+    //console.log("Admin",admin);
     if (!admin || !admin.isVerified) {
-
+     //  console.log("Enter If Block", user);
       if (!user || !user.isVerified) {
         return res.status(403).json({ error: 'Email not verified' });
       } else {
@@ -39,7 +42,7 @@ const authenticateToken = async (req, res, next) => {
     }
 
   } catch (err) {
-    console.log(err);
+    console.log("middleware server error",err);
     res.status(500).json({ message: "Internal server error" });
   }
 

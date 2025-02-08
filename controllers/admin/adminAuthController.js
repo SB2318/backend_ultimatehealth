@@ -181,7 +181,7 @@ module.exports.logout = expressAsyncHandler(
     
         try {
           // Find the user and remove the refresh token
-          const user = await admin.findById(req.user.userId);
+          const user = await admin.findById(req.userId);
     
           if (user) {
             // BlackList the token first
@@ -205,7 +205,7 @@ module.exports.logout = expressAsyncHandler(
 module.exports.getprofile = expressAsyncHandler(
   async (req, res) => {
     try{
-      const user = await admin.findById(req.user.userId);
+      const user = await admin.findById(req.userId);
       if(!user) return res.status(404).json({ message: "User not found"});
       if (!user.isVerified) {
         return res

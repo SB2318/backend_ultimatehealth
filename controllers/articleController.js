@@ -126,7 +126,7 @@ module.exports.saveArticle = async (req, res) => {
     if (!article_id) {
       return res.status(400).json({ message: "User ID and Article ID are required" });
     }
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.userId);
     const article = await Article.findById(article_id)
       .populate('tags') // This populates the tag data
       .exec();
@@ -148,9 +148,9 @@ module.exports.saveArticle = async (req, res) => {
       // unsave article
       await Promise.all([
         Article.findByIdAndUpdate(article_id, {
-          $pull: { savedUsers: req.user.userId } // Remove user from savedUsers
+          $pull: { savedUsers: req.userId } // Remove user from savedUsers
         }),
-        User.findByIdAndUpdate(req.user.userId, {
+        User.findByIdAndUpdate(req.userId, {
           $pull: { savedArticles: article_id } // Remove article from savedArticles
         })
       ]);
@@ -160,9 +160,9 @@ module.exports.saveArticle = async (req, res) => {
     else {
       await Promise.all([
         Article.findByIdAndUpdate(article_id, {
-          $addToSet: { savedUsers: req.user.userId } // Add user to savedUsers
+          $addToSet: { savedUsers: req.userId } // Add user to savedUsers
         }),
-        User.findByIdAndUpdate(req.user.userId, {
+        User.findByIdAndUpdate(req.userId, {
           $addToSet: { savedArticles: article_id } // Add article to savedArticles
         })
       ]);
@@ -182,7 +182,7 @@ module.exports.likeArticle = async (req, res) => {
       return res.status(400).json({ message: "Article ID and User ID are required" });
     }
 
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.userId);
 
     const articleDb = await Article.findById(article_id)
       .populate(['tags', 'likedUsers']) // This populates the tag data
@@ -209,9 +209,9 @@ module.exports.likeArticle = async (req, res) => {
       // Unlike It
       await Promise.all([
         Article.findByIdAndUpdate(article_id, {
-          $pull: { likedUsers: req.user.userId } // Remove user from likedUsers
+          $pull: { likedUsers: req.userId } // Remove user from likedUsers
         }),
-        User.findByIdAndUpdate(req.user.userId, {
+        User.findByIdAndUpdate(req.userId, {
           $pull: { likedArticles: article_id } // Remove article from likedArticles
         })
       ]);
@@ -227,9 +227,9 @@ module.exports.likeArticle = async (req, res) => {
     } else {
       await Promise.all([
         Article.findByIdAndUpdate(article_id, {
-          $addToSet: { likedUsers: req.user.userId } // Add user to likedUsers
+          $addToSet: { likedUsers: req.userId } // Add user to likedUsers
         }),
-        User.findByIdAndUpdate(req.user.userId, {
+        User.findByIdAndUpdate(req.userId, {
           $addToSet: { likedArticles: article_id } // Add article to likedArticles
         })
       ]);
@@ -251,7 +251,7 @@ module.exports.likeArticle = async (req, res) => {
 // Update View Count (Published article)
 module.exports.updateViewCount = async (req, res) => {
   const { article_id } = req.body;
-  const user = await User.findById(req.user.userId);
+  const user = await User.findById(req.userId);
 
   try {
     const articleDb = await Article.findById(article_id)
@@ -267,7 +267,7 @@ module.exports.updateViewCount = async (req, res) => {
     }
 
     // Check if the user has already viewed the article
-    const userId = new mongoose.Types.ObjectId(req.user.userId);
+    const userId = new mongoose.Types.ObjectId(req.userId);
     const hasViewed = articleDb.viewUsers.some(id => id.equals(userId));
     // console.log('Has Viewed', hasViewed)
     // console.log('Article View Users', articleDb.viewUsers);
@@ -278,7 +278,7 @@ module.exports.updateViewCount = async (req, res) => {
 
     // Increment view count and add user to viewUsers
     articleDb.viewCount += 1;
-    articleDb.viewUsers.push(req.user.userId);
+    articleDb.viewUsers.push(req.userId);
 
     await articleDb.save();
     res.status(200).json({ message: 'Article view count updated', article: articleDb });
@@ -367,11 +367,11 @@ exports.updateReadEvents = async (req, res) => {
   try {
     // New Read Event Entry
 
-    const readEvent = await ReadAggregate.findOne({ userId: req.user.userId, date:today});
+    const readEvent = await ReadAggregate.findOne({ userId: req.userId, date:today});
 
     if(!readEvent){
       // Create New
-      const newReadEvent = new ReadAggregate({ userId: req.user.userId, date:today});
+      const newReadEvent = new ReadAggregate({ userId: req.userId, date:today});
       newReadEvent.dailyReads =1;
       newReadEvent.monthlyReads =1;
       newReadEvent.yearlyReads =1;
@@ -397,7 +397,7 @@ exports.updateReadEvents = async (req, res) => {
 // GET ALL READ EVENTS STATUS DAILY, WEEKLY, MONTHLY
 exports.getReadDataForGraphs = async (req, res) => {
 
-  const { userId } = req.user.userId;
+  const { userId } = req.userId;
 
   try {
     const today = new Date();
@@ -434,7 +434,7 @@ exports.getReadDataForGraphs = async (req, res) => {
 // GET ALL Write EVENTS STATUS DAILY, WEEKLY, MONTHLY
 exports.getWriteDataForGraphs = async (req, res) => {
 
-  const { userId } = req.user.userId;
+  const { userId } = req.userId;
 
   try {
     const today = new Date();
@@ -471,7 +471,7 @@ exports.repostArticle = expressAsyncHandler(
     try{
   
       const {articleId} = req.body;
-      const userId  = req.user.userId;
+      const userId  = req.userId;
   
       if(!articleId){
          res.status(400).json({error: 'Article ID is required.'});

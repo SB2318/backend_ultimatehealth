@@ -167,7 +167,7 @@ module.exports.checkUserHandle = expressAsyncHandler(
 )
 module.exports.getprofile = async (req, res) => {
   try {
-    const user = await User.findOne({ _id: req.user.userId })
+    const user = await User.findOne({ _id: req.userId })
       .populate({
         path: "articles",
         populate: { path: "tags" }, // Populate tags for articles
@@ -191,6 +191,7 @@ module.exports.getprofile = async (req, res) => {
     }
     res.json({ status: true, profile: user });
   } catch (error) {
+    console.error("Error getting user profile:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -408,7 +409,7 @@ module.exports.login = async (req, res) => {
 
 module.exports.logout = async (req, res) => {
   
- // const { refreshToken } = req.user.userId;
+ // const { refreshToken } = req.userId;
 
 //  if (!refreshToken) {
 //    return res.status(400).json({ error: "Refresh token required" });
@@ -416,7 +417,7 @@ module.exports.logout = async (req, res) => {
 
   try {
     // Find the user and remove the refresh token
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.userId);
 
 
     if (user) {
@@ -560,14 +561,14 @@ module.exports.follow = async (req, res) => {
     const { followUserId } = req.body;
 
     // Check if user is trying to follow themselves
-    if (req.user.userId === followUserId) {
+    if (req.userId === followUserId) {
       return res
         .status(400)
         .json({ message: "You cannot follow or unfollow yourself" });
     }
 
     // Convert user IDs to ObjectId
-    const userId = new mongoose.Types.ObjectId(req.user.userId);
+    const userId = new mongoose.Types.ObjectId(req.userId);
     const followId = new mongoose.Types.ObjectId(followUserId);
 
     // Find the user who is following
@@ -588,7 +589,7 @@ module.exports.follow = async (req, res) => {
     );
 
     if (
-      followerUserset.has(req.user.userId) ||
+      followerUserset.has(req.userId) ||
       followingUserSet.has(followUserId)
     ) {
       // Unfollow
@@ -599,7 +600,7 @@ module.exports.follow = async (req, res) => {
       await user.save();
 
       userToFollow.followers = userToFollow.followers.filter(
-        (id) => id && id.toString() !== req.user.userId
+        (id) => id && id.toString() !== req.userId
       );
       userToFollow.followerCount = Math.max(0, userToFollow.followerCount - 1);
       await userToFollow.save();
@@ -610,7 +611,7 @@ module.exports.follow = async (req, res) => {
       user.followingCount += 1;
       await user.save();
 
-      userToFollow.followers.push(req.user.userId);
+      userToFollow.followers.push(req.userId);
       userToFollow.followerCount += 1;
       await userToFollow.save();
       res.json({ message: "Follow successfully", followStatus: true });
@@ -647,7 +648,7 @@ module.exports.getProfileImage = async (req, res) => {
 // get User Articles,
 module.exports.getUserWithArticles = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).populate("articles"); // Populate  articles
+    const user = await User.findById(req.userId).populate("articles"); // Populate  articles
 
     if (!user) {
       return res.status(400).json({ message: "user not found" });
@@ -662,7 +663,7 @@ module.exports.getUserWithArticles = async (req, res) => {
 // get user like and save articles
 module.exports.getUserLikeAndSaveArticles = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId)
+    const user = await User.findById(req.userId)
       .populate("likedArticles") // Populate liked articles
       .populate("savedArticles"); // Populate saved articles
 
@@ -800,9 +801,9 @@ module.exports.updateProfileImage = async (req, res) => {
       return;
     }
 
-    console.log(req.user.userId);
+    console.log(req.userId);
     // Find the user in the User collection
-    let user = await User.findById(req.user.userId);
+    let user = await User.findById(req.userId);
 
     if (!user) {
       return res.status(404).json({ error: "User not found." });
@@ -827,7 +828,7 @@ module.exports.updateProfileImage = async (req, res) => {
 // get user details
 module.exports.getUserDetails = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
