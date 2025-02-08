@@ -52,10 +52,13 @@ module.exports.createArticle = async (req, res) => {
 // Get all articles (published)
 module.exports.getAllArticles = async (req, res) => {
   try {
-    const articles = await Article.find({ status: statusEnum.PUBLISHED })
+
+   // console.log('status enum', statusEnum);
+    const articles = await Article.find({ status: statusEnum.statusEnum.PUBLISHED })
       .populate('tags')
       .populate('mentionedUsers', 'user_handle user_name Profile_image') // This populates the mentioned users data
       .exec();
+      //console.log(articles);
     res.status(200).json({ articles });
   } catch (error) {
     res
@@ -135,7 +138,7 @@ module.exports.saveArticle = async (req, res) => {
       return res.status(404).json({ error: 'User or article not found' });
     }
 
-    if (article.status !== statusEnum.PUBLISHED) {
+    if (article.status !== statusEnum.statusEnum.PUBLISHED) {
       return res.status(400).json({ message: 'Article is not published' });
     }
     // Check if the article is already saved
@@ -193,7 +196,7 @@ module.exports.likeArticle = async (req, res) => {
     }
 
 
-    if (articleDb.status !== statusEnum.PUBLISHED) {
+    if (articleDb.status !== statusEnum.statusEnum.PUBLISHED) {
       return res.status(400).json({ message: 'Article is not published' });
     }
     // Check if the article is already liked
@@ -262,7 +265,7 @@ module.exports.updateViewCount = async (req, res) => {
       return res.status(404).json({ error: 'User or Article not found' });
     }
 
-    if (articleDb.status !== statusEnum.PUBLISHED) {
+    if (articleDb.status !== statusEnum.statusEnum.PUBLISHED) {
       return res.status(400).json({ message: 'Article is not published' });
     }
 
@@ -488,7 +491,7 @@ exports.repostArticle = expressAsyncHandler(
         return;
       }
       
-      if (article.status !== statusEnum.PUBLISHED) {
+      if (article.status !== statusEnum.statusEnum.PUBLISHED) {
         return res.status(400).json({ message: 'Article is not published' });
       }
       // Check if user has already reposted the article

@@ -15,7 +15,7 @@ const jwt = require("jsonwebtoken");
 module.exports.getAllArticleForReview = expressAsyncHandler(
     async (req, res) => {
         try {
-            const articles = await Article.find({ status: statusEnum.UNASSIGNED });
+            const articles = await Article.find({ status: statusEnum.statusEnum.UNASSIGNED });
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -49,13 +49,13 @@ module.exports.assignModerator = expressAsyncHandler(
                 return;
             }
 
-            if (article.status !== statusEnum.UNASSIGNED) {
+            if (article.status !== statusEnum.statusEnum.UNASSIGNED) {
                 res.status(400).json({ message: 'Article is already assigned to a moderator' });
                 return;
             }
 
             // Update article status and assign reviewer
-            article.status = statusEnum.IN_PROGRESS;
+            article.status = statusEnum.statusEnum.IN_PROGRESS;
             article.reviewer_id = moderator._id;
             article.assigned_at = new Date();
 
@@ -117,7 +117,7 @@ module.exports.submitReview = expressAsyncHandler(
             await comment.save();
             article.reviewComments.push(comment._id);
 
-            article.status = statusEnum.AWAITING_USER;
+            article.status = statusEnum.statusEnum.AWAITING_USER;
 
             await article.save();
 
@@ -165,7 +165,7 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
             article.content = content;
             article.title = title;
             article.imageUtils = imageUtils;
-            article.status = statusEnum.REVIEW_PENDING;
+            article.status = statusEnum.statusEnum.REVIEW_PENDING;
 
             await article.save();
 
@@ -213,7 +213,7 @@ module.exports.getAllArticlesForAssignModerator = expressAsyncHandler(
         }
         try {
 
-            const articles = await Article.find({ reviewer_id: moderatorId, status: { $nin: [statusEnum.UNASSIGNED, statusEnum.PUBLISHED, statusEnum.DISCARDED] } });
+            const articles = await Article.find({ reviewer_id: moderatorId, status: { $nin: [statusEnum.statusEnum.UNASSIGNED, statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED] } });
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -249,7 +249,7 @@ module.exports.publishArticle = expressAsyncHandler(
             if (!user) {
                 return res.status(404).json({ message: "Author not found" });
             }
-            article.status = statusEnum.PUBLISHED;
+            article.status = statusEnum.statusEnum.PUBLISHED;
             article.publishedDate = new Date();
             article.lastUpdated = new Date();
 
@@ -317,7 +317,7 @@ async function unassignArticle() {
 
     const articles = await Article.find({
         status: {
-            $in: [statusEnum.IN_PROGRESS]
+            $in: [statusEnum.statusEnum.IN_PROGRESS]
         }
     });
     articles.forEach(async (article) => {
@@ -332,7 +332,7 @@ async function unassignArticle() {
             let reviewer_id = article.reviewer_id;
             article.reviewer_id = null;
             article.assigned_at = null;
-            article.status = statusEnum.UNASSIGNED;
+            article.status = statusEnum.statusEnum.UNASSIGNED;
 
             await article.save();
         }
@@ -353,7 +353,7 @@ async function discardArticle() {
 
         const articles = await Article.find({
             status: {
-                $in: [statusEnum.UNASSIGNED, statusEnum.REVIEW_PENDING]
+                $in: [statusEnum.statusEnum.UNASSIGNED, statusEnum.statusEnum.REVIEW_PENDING]
             }
         });
         articles.forEach(async (article) => {
@@ -370,7 +370,7 @@ async function discardArticle() {
                 let status = article.status;
                 article.reviewer_id = null;
                 article.assigned_at = null;
-                article.status = statusEnum.DISCARDED;
+                article.status = statusEnum.statusEnum.DISCARDED;
     
                 await article.save();
                 if(user)

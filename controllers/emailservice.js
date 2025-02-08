@@ -295,7 +295,7 @@ const sendArticleDiscardEmail = (email, status, title) => {
         from: process.env.EMAIL_USER,
         to: email,
         subject: `Article Discarded ${title}`,
-        html: status === statusEnum.UNASSIGNED ? emailBody.ARTICLE_DISCARDED_FROM_SYSTEM
+        html: status === statusEnum.statusEnum.UNASSIGNED ? emailBody.ARTICLE_DISCARDED_FROM_SYSTEM
             .replace("{title}", title) :
             emailBody.ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION
                 .replace("{title}", title),
