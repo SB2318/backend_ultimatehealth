@@ -230,12 +230,12 @@ module.exports.getprofile = expressAsyncHandler(
 module.exports.updateAdminPassword = expressAsyncHandler(
   async (req, res) => {
     try {
-      const userId = req?.userId;
-      const { old_password, new_password } = req.body;
+      //const userId = req?.userId;
+      const {  new_password, email } = req.body;
   
       // Check if both old and new passwords are provided
-      if (!old_password || !new_password) {
-        return res.status(400).json({ error: "Missing passwords" });
+      if ( !new_password || !email) {
+        return res.status(400).json({ error: "Missing passwords and email" });
       }
   
       // Check if the new password is long enough
@@ -244,12 +244,13 @@ module.exports.updateAdminPassword = expressAsyncHandler(
       }
   
       // Find the user by ID
-      const user = await admin.findById(userId);
+      const user = await admin.findOne({email});
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
   
       // Check if the old password matches the stored password
+      /*
       const isOldPasswordValid = await bcrypt.compare(
         old_password,
         user.password
@@ -257,6 +258,7 @@ module.exports.updateAdminPassword = expressAsyncHandler(
       if (!isOldPasswordValid) {
         return res.status(401).json({ error: "Invalid old password" });
       }
+        */
   
       // Ensure the new password is not the same as the old password
       const isSameAsOldPassword = await bcrypt.compare(

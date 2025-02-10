@@ -327,18 +327,18 @@ module.exports.verifyOtpForForgotPassword = expressAsyncHandler(
 
     try {
 
-      const [user, admin] = await Promise.all([
-        User.findOne({ email }),
-        adminModel.findOne({ email })
-      ]);
+    //  const [user] = await Promise.all([
+    //    User.findOne({ email }),
+       // adminModel.findOne({ email })
+    //  ]);
 
-      //const user = await User.findOne({ email });
+      const user = await User.findOne({ email });
 
-      if (!user && !admin) {
+      if (!user) {
         return res.status(400).json({ message: "User not found" });
       }
 
-      if (user) {
+   //   if (user) {
 
         const isPasswordSame = await bcrypt.compare(newPassword, user.password);
         if (isPasswordSame) {
@@ -353,22 +353,9 @@ module.exports.verifyOtpForForgotPassword = expressAsyncHandler(
         user.otp = null;
         user.otpExpires = null;
         await user.save();
-      } else {
-        const isPasswordSame = await bcrypt.compare(newPassword, admin.password);
-        if (isPasswordSame) {
-          return res
-            .status(402)
-            .json({ message: "New password should not be same as old password." });
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-        admin.password = hashedPassword;
-        admin.otp = null;
-        admin.otpExpires = null;
-        await admin.save();
-      }
-
+    //  } else {
+       
+      //}
 
       res.status(200).json({ message: "Password reset successful." });
     } catch (err) {
@@ -1128,12 +1115,12 @@ module.exports.updateUserProfessionalDetails = async (req, res) => {
 module.exports.updateUserPassword = expressAsyncHandler(
   async (req, res) => {
     try {
-      const userId = req?.userId;
-      const { old_password, new_password } = req.body;
+    //  const userId = req?.userId;
+      const { old_password, new_password, userId } = req.body;
   
       // Check if both old and new passwords are provided
-      if (!old_password || !new_password) {
-        return res.status(400).json({ error: "Missing passwords" });
+      if (!old_password || !new_password || !userId) {
+        return res.status(400).json({ error: "Missing passwords and user id" });
       }
   
       // Check if the new password is long enough
