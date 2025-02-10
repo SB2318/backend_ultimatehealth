@@ -22,7 +22,7 @@ router.get("/admin/verifyEmail", verifyEmail);
 router.post("/admin/verifyEmail", Sendverifymail);
 router.post("/admin/resend-verification-mail", resendVerificationEmail);
 router.get('admin/getprofile', authenticateToken, getprofile);
-router.post('/admin/update-password', authenticateToken, updateAdminPassword);
+router.post('/admin/update-password',  updateAdminPassword);
 
 module.exports = router;
 
