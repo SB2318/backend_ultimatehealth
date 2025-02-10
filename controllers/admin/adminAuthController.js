@@ -9,6 +9,8 @@ const expressAsyncHandler = require("express-async-handler");
 const admin = require('../../models/admin/adminModel')
 const BlacklistedToken = require('../../models/blackListedToken');
 const jwt = require("jsonwebtoken");
+const User = require("../../models/UserModel");
+const UnverifiedUser = require('../../models/UnverifiedUserModel');
 
 
 module.exports.register = expressAsyncHandler(
@@ -31,13 +33,15 @@ module.exports.register = expressAsyncHandler(
       
           // Check if user already exists in User or UnverifiedUser collections
       
-          const [existingUser, existingUserHandle] =
+          const [existingAdmin, existingUserHandle, existingUser, existingUnverifiedUser] =
           await Promise.all([
             await admin.findOne({ email }),
             await admin.findOne({user_handle}),
+            await User.findOne({ email }),
+            await UnverifiedUser.findOne({ email })
           ])
       
-          if (existingUser) {
+          if (existingUser || existingAdmin || existingUserHandle || existingUnverifiedUser) {
             return res.status(400).json({ error: "Email already in use" });
           }
       
@@ -221,3 +225,59 @@ module.exports.getprofile = expressAsyncHandler(
 
   }
 )
+
+// update user password
+module.exports.updateAdminPassword = expressAsyncHandler(
+  async (req, res) => {
+    try {
+      const userId = req?.userId;
+      const { old_password, new_password } = req.body;
+  
+      // Check if both old and new passwords are provided
+      if (!old_password || !new_password) {
+        return res.status(400).json({ error: "Missing passwords" });
+      }
+  
+      // Check if the new password is long enough
+      if (new_password.length < 6) {
+        return res.status(400).json({ error: "Password too short" });
+      }
+  
+      // Find the user by ID
+      const user = await admin.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+  
+      // Check if the old password matches the stored password
+      const isOldPasswordValid = await bcrypt.compare(
+        old_password,
+        user.password
+      );
+      if (!isOldPasswordValid) {
+        return res.status(401).json({ error: "Invalid old password" });
+      }
+  
+      // Ensure the new password is not the same as the old password
+      const isSameAsOldPassword = await bcrypt.compare(
+        new_password,
+        user.password
+      );
+      if (isSameAsOldPassword) {
+        return res.status(400).json({ error: "Same as old password" });
+      }
+  
+      // Hash the new password
+      const salt = await bcrypt.genSalt(10);
+      const newHashedPassword = await bcrypt.hash(new_password, salt);
+  
+      // Update the user's password
+      user.password = newHashedPassword;
+      await user.save();
+      res.json({ status: true, message: "Password updated" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);

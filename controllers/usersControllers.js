@@ -37,19 +37,20 @@ module.exports.register = async (req, res) => {
 
     // Check if user already exists in User or UnverifiedUser collections
 
-    const [existingUser, existingUserHandle, existingUnverifiedUser, existingUnverifiedUserHandle] =
-    await Promise.all([
-      await User.findOne({ email }),
-      await User.findOne({user_handle}),
-      await UnverifiedUser.findOne({ email }),
-      await UnverifiedUser.findOne({user_handle}),
-    ])
+    const [existingUser,  existingUserHandle, existingUnverifiedUser, existingUnverifiedUserHandle, existingAdmin] =
+      await Promise.all([
+        await User.findOne({ email }),
+        await User.findOne({ user_handle }),
+        await UnverifiedUser.findOne({ email }),
+        await UnverifiedUser.findOne({ user_handle }),
+        await adminModel.findOne({ email })
+      ])
 
-    if (existingUser) {
+    if (existingUser || existingUnverifiedUser || existingAdmin) {
       return res.status(400).json({ error: "Email already in use" });
     }
 
-    if(existingUserHandle || existingUnverifiedUserHandle){
+    if (existingUserHandle || existingUnverifiedUserHandle) {
       return res.status(400).json({ error: "User Handle already in use" });
     }
 
@@ -137,31 +138,31 @@ function generateOTP() {
 
 module.exports.checkUserHandle = expressAsyncHandler(
 
-  async (req, res)=>{
+  async (req, res) => {
     const userHandle = req.body.userHandle;
 
-    if(!userHandle){
-      return res.status(400).json({error: "User handle is required"});
+    if (!userHandle) {
+      return res.status(400).json({ error: "User handle is required" });
     }
 
-    try{
+    try {
 
       const [user, unverifiedUser, admin] = await Promise.all([
-          User.findOne({user_handle: userHandle}),
-          UnverifiedUser.findOne({user_handle: userHandle}),
-          adminModel.findOne({user_handle: userHandle})
+        User.findOne({ user_handle: userHandle }),
+        UnverifiedUser.findOne({ user_handle: userHandle }),
+        adminModel.findOne({ user_handle: userHandle })
       ])
-      
 
-      if(user || unverifiedUser || admin){
-        return res.status(200).json({status: true, message: "User handle already exists"});
+
+      if (user || unverifiedUser || admin) {
+        return res.status(200).json({ status: true, message: "User handle already exists" });
       }
 
       return res.status(200).json({ status: false, message: 'User handle is available.' });
 
-    }catch(err){
+    } catch (err) {
       console.error("Error checking user handle:", err);
-      return res.status(500).json({error: "Internal server error"});
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
 )
@@ -201,38 +202,38 @@ module.exports.getUserProfile = async (req, res) => {
     const userId = req.query.id;
     const userHandle = req.query.handle;
 
-    if(!userHandle && !userId){
-      return res.status(400).json({error: "User handle or id is required."});
+    if (!userHandle && !userId) {
+      return res.status(400).json({ error: "User handle or id is required." });
     }
 
     let user;
 
-    if(userId){
+    if (userId) {
 
-     user = await User.findById(userId)
-      .populate({
-        path: "articles",
-        match: { status: 'published' },
-        populate: { path: "tags" }, // Populate tags for articles
-      })
-      .populate({
-        path: "repostArticles",
-        populate: { path: "tags" }, // Populate tags for saved articles
-      })
-      .exec();
+      user = await User.findById(userId)
+        .populate({
+          path: "articles",
+          match: { status: 'published' },
+          populate: { path: "tags" }, // Populate tags for articles
+        })
+        .populate({
+          path: "repostArticles",
+          populate: { path: "tags" }, // Populate tags for saved articles
+        })
+        .exec();
     }
-    else if(userHandle){
+    else if (userHandle) {
 
-      user = await User.findOne({user_handle: userHandle}).populate({
+      user = await User.findOne({ user_handle: userHandle }).populate({
         path: "articles",
         match: { status: 'published' },
         populate: { path: "tags" }, // Populate tags for articles
       })
-      .populate({
-        path: "repostArticles",
-        populate: { path: "tags" }, // Populate tags for saved articles
-      })
-      .exec();
+        .populate({
+          path: "repostArticles",
+          populate: { path: "tags" }, // Populate tags for saved articles
+        })
+        .exec();
     }
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -257,78 +258,158 @@ module.exports.getUserProfile = async (req, res) => {
 
 
 
-module.exports.sendOTPForForgotPassword = async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
+module.exports.sendOTPForForgotPassword = expressAsyncHandler(
+  async (req, res) => {
 
-  if (!user) {
-    return res
-      .status(400)
-      .json({ message: "User with this email does not exist." });
-  }
+    try {
 
-  const otp = generateOTP();
-  const otpExpires = Date.now() + 10 * 60 * 60; // 10 minutes
+      const { email } = req.body;
 
-  user.otp = otp;
-  user.otpExpires = otpExpires;
-  await user.save();
+      const [user, admin] = await Promise.all([
 
-  const mailOptions = {
-    from: process.env.EMAIL,
-    to: user.email,
-    subject: "Password Reset OTP",
-    text: `Your OTP for password reset is: ${otp}`,
-  };
+        User.findOne({ email }),
+        adminModel.findOne({ email }),
+      ]);
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error("Error sending email:", error);
-      return res
-        .status(500)
-        .json({ message: `Error sending email.`, error: `${error}` });
+
+      if (!user && !admin) {
+        return res
+          .status(400)
+          .json({ message: "User with this email does not exist." });
+      }
+
+      const otp = generateOTP();
+      const otpExpires = Date.now() + 10 * 60 * 60; // 10 minutes
+
+      if (user) {
+        user.otp = otp;
+        user.otpExpires = otpExpires;
+        await user.save();
+      } else {
+
+        if(!admin.isVerified){
+          return res.status(400).json({ message: "Admin is not verified." });
+        }
+        admin.otp = otp;
+        admin.otpExpires = otpExpires;
+        await admin.save();
+      }
+
+      const mailOptions = {
+        from: process.env.EMAIL,
+        to: user.email,
+        subject: "Password Reset OTP",
+        text: `Your OTP for password reset is: ${otp}`,
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error("Error sending email:", error);
+          return res
+            .status(500)
+            .json({ message: `Error sending email.`, error: `${error}` });
+        }
+        res.status(200).json({ message: "OTP sent to your email.", otp: otp });
+      });
+    } catch (err) {
+
+      console.log(err);
+      res.status(500).json({ message: "Internal server error" });
     }
-    res.status(200).json({ message: "OTP sent to your email.", otp: otp });
-  });
-};
-
-module.exports.verifyOtpForForgotPassword = async (req, res) => {
-  const { email, newPassword } = req.body;
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return res.status(400).json({ message: "User not found" });
   }
+);
 
-  const isPasswordSame = await bcrypt.compare(newPassword, user.password);
-  if (isPasswordSame) {
-    return res
-      .status(402)
-      .json({ message: "New password should not be same as old password." });
+module.exports.verifyOtpForForgotPassword = expressAsyncHandler(
+  async (req, res) => {
+    const { email, newPassword } = req.body;
+
+    try {
+
+      const [user, admin] = await Promise.all([
+        User.findOne({ email }),
+        adminModel.findOne({ email })
+      ]);
+
+      //const user = await User.findOne({ email });
+
+      if (!user && !admin) {
+        return res.status(400).json({ message: "User not found" });
+      }
+
+      if (user) {
+
+        const isPasswordSame = await bcrypt.compare(newPassword, user.password);
+        if (isPasswordSame) {
+          return res
+            .status(402)
+            .json({ message: "New password should not be same as old password." });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        user.password = hashedPassword;
+        user.otp = null;
+        user.otpExpires = null;
+        await user.save();
+      } else {
+        const isPasswordSame = await bcrypt.compare(newPassword, admin.password);
+        if (isPasswordSame) {
+          return res
+            .status(402)
+            .json({ message: "New password should not be same as old password." });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        admin.password = hashedPassword;
+        admin.otp = null;
+        admin.otpExpires = null;
+        await admin.save();
+      }
+
+
+      res.status(200).json({ message: "Password reset successful." });
+    } catch (err) {
+
+      console.log(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   }
+)
 
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(newPassword, salt);
-  user.password = hashedPassword;
-  user.otp = null;
-  user.otpExpires = null;
-  await user.save();
+module.exports.checkOtp = expressAsyncHandler(
+  async (req, res) => {
+    const { email, otp } = req.body;
 
-  res.status(200).json({ message: "Password reset successful." });
-};
+    try {
 
-module.exports.checkOtp = async (req, res) => {
-  const { email, otp } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(401).json({ message: "User not found" });
+      const [user, admin] = await Promise.all([
+        User.findOne({ email }),
+        adminModel.findOne({email})
+      ])
+  
+      if (!user && !admin) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      if(user){
+
+        if ( user.otp !== otp || user.otpExpires < Date.now()) {
+          return res.status(400).json({ message: "Invalid or expired OTP." });
+        }
+      }else{
+        if (!admin || admin.otp !== otp || admin.otpExpires < Date.now()) {
+          return res.status(400).json({ message: "Invalid or expired OTP." });
+        }
+      }
+      
+
+      res.status(200).json({ message: "OTP is valid." });
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   }
-  if (!user || user.otp !== otp || user.otpExpires < Date.now()) {
-    return res.status(400).json({ message: "Invalid or expired OTP." });
-  }
-
-  res.status(200).json({ message: "OTP is valid." });
-};
+);
 
 module.exports.login = async (req, res) => {
   try {
@@ -361,8 +442,8 @@ module.exports.login = async (req, res) => {
     }
 
     // Blacklist the token
-    if(user.refreshToken != null){
-      const blacklistedToken = new BlacklistedToken({ token:  user.refreshToken });
+    if (user.refreshToken != null) {
+      const blacklistedToken = new BlacklistedToken({ token: user.refreshToken });
       await blacklistedToken.save();
     }
 
@@ -408,12 +489,12 @@ module.exports.login = async (req, res) => {
 };
 
 module.exports.logout = async (req, res) => {
-  
- // const { refreshToken } = req.userId;
 
-//  if (!refreshToken) {
-//    return res.status(400).json({ error: "Refresh token required" });
- // }
+  // const { refreshToken } = req.userId;
+
+  //  if (!refreshToken) {
+  //    return res.status(400).json({ error: "Refresh token required" });
+  // }
 
   try {
     // Find the user and remove the refresh token
@@ -423,7 +504,7 @@ module.exports.logout = async (req, res) => {
     if (user) {
 
       // BlackList the token first
-      const blacklistedToken = new BlacklistedToken({ token:  user.refreshToken });
+      const blacklistedToken = new BlacklistedToken({ token: user.refreshToken });
       await blacklistedToken.save();
 
       user.refreshToken = null;
@@ -536,7 +617,7 @@ module.exports.deleteByUser = async (req, res) => {
 module.exports.deleteByAdmin = async (req, res) => {
   try {
     const { adminEmail, adminPassword, userEmail } = req.body;
-    const admin = await adminModel.findOne({email: adminEmail });
+    const admin = await adminModel.findOne({ email: adminEmail });
     if (!admin) res.status(404).json({ message: "user not found" });
     else {
       console.log(admin);
@@ -604,7 +685,7 @@ module.exports.follow = async (req, res) => {
       );
       userToFollow.followerCount = Math.max(0, userToFollow.followerCount - 1);
       await userToFollow.save();
-      res.json({ message: "Unfollow successfully", followStatus: false});
+      res.json({ message: "Unfollow successfully", followStatus: false });
     } else {
       // Follow
       user.followings.push(followUserId);
@@ -640,7 +721,7 @@ module.exports.getProfileImage = async (req, res) => {
   if (!author) {
     return res.status(404).json({ error: 'Author not found' });
   }
-  
+
   return res.status(200).json({ profile_image: author.Profile_image });
 
 }
@@ -872,7 +953,7 @@ module.exports.updateUserGeneralDetails = async (req, res) => {
         .json({ error: "Please provide all required fields" });
     }
 
-    
+
     // Find the user by ID
     const user = await User.findById(userId);
     if (!user) {
@@ -1041,57 +1122,59 @@ module.exports.updateUserProfessionalDetails = async (req, res) => {
 };
 
 // update user password
-module.exports.updateUserPassword = async (req, res) => {
-  try {
-    const userId = req?.user?.userId;
-    const { old_password, new_password } = req.body;
-
-    // Check if both old and new passwords are provided
-    if (!old_password || !new_password) {
-      return res.status(400).json({ error: "Missing passwords" });
+module.exports.updateUserPassword = expressAsyncHandler(
+  async (req, res) => {
+    try {
+      const userId = req?.userId;
+      const { old_password, new_password } = req.body;
+  
+      // Check if both old and new passwords are provided
+      if (!old_password || !new_password) {
+        return res.status(400).json({ error: "Missing passwords" });
+      }
+  
+      // Check if the new password is long enough
+      if (new_password.length < 6) {
+        return res.status(400).json({ error: "Password too short" });
+      }
+  
+      // Find the user by ID
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+  
+      // Check if the old password matches the stored password
+      const isOldPasswordValid = await bcrypt.compare(
+        old_password,
+        user.password
+      );
+      if (!isOldPasswordValid) {
+        return res.status(401).json({ error: "Invalid old password" });
+      }
+  
+      // Ensure the new password is not the same as the old password
+      const isSameAsOldPassword = await bcrypt.compare(
+        new_password,
+        user.password
+      );
+      if (isSameAsOldPassword) {
+        return res.status(400).json({ error: "Same as old password" });
+      }
+  
+      // Hash the new password
+      const salt = await bcrypt.genSalt(10);
+      const newHashedPassword = await bcrypt.hash(new_password, salt);
+  
+      // Update the user's password
+      user.password = newHashedPassword;
+      await user.save();
+      res.json({ status: true, message: "Password updated" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error" });
     }
-
-    // Check if the new password is long enough
-    if (new_password.length < 6) {
-      return res.status(400).json({ error: "Password too short" });
-    }
-
-    // Find the user by ID
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Check if the old password matches the stored password
-    const isOldPasswordValid = await bcrypt.compare(
-      old_password,
-      user.password
-    );
-    if (!isOldPasswordValid) {
-      return res.status(401).json({ error: "Invalid old password" });
-    }
-
-    // Ensure the new password is not the same as the old password
-    const isSameAsOldPassword = await bcrypt.compare(
-      new_password,
-      user.password
-    );
-    if (isSameAsOldPassword) {
-      return res.status(400).json({ error: "Same as old password" });
-    }
-
-    // Hash the new password
-    const salt = await bcrypt.genSalt(10);
-    const newHashedPassword = await bcrypt.hash(new_password, salt);
-
-    // Update the user's password
-    user.password = newHashedPassword;
-    await user.save();
-    res.json({ status: true, message: "Password updated" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server error" });
   }
-};
+);
 
 
