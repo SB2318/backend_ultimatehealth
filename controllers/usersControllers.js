@@ -399,6 +399,7 @@ module.exports.checkOtp = expressAsyncHandler(
           return res.status(400).json({ message: "Invalid or expired OTP." });
         }
       }else{
+      
         if (!admin || admin.otp !== otp || admin.otpExpires < Date.now()) {
           return res.status(400).json({ message: "Invalid or expired OTP." });
         }

@@ -27,6 +27,15 @@ const adminSchema = new Schema({
           isAsync: false,
         },
     },
+
+    otp: {
+        type: String,
+        default: null,
+    },
+    otpExpires: {
+        type: Date,
+        default: null,
+    },
     password: {
        type: String,
        required: true,
