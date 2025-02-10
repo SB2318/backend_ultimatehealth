@@ -265,6 +265,8 @@ module.exports.sendOTPForForgotPassword = expressAsyncHandler(
 
       const { email } = req.body;
 
+      console.log("Email", req.body);
+
       const [user, admin] = await Promise.all([
 
         User.findOne({ email }),
@@ -297,7 +299,7 @@ module.exports.sendOTPForForgotPassword = expressAsyncHandler(
 
       const mailOptions = {
         from: process.env.EMAIL,
-        to: user.email,
+        to: email,
         subject: "Password Reset OTP",
         text: `Your OTP for password reset is: ${otp}`,
       };
