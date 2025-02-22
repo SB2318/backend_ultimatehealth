@@ -64,6 +64,10 @@ module.exports.getAllArticles = async (req, res) => {
       .populate('likedUsers', 'Profile_image') 
       .exec();
       //console.log(articles);
+
+      articles.forEach(article => {
+        article.likedUsers.reverse(); // to get most recent like users
+      });
     res.status(200).json({ articles });
   } catch (error) {
     res
