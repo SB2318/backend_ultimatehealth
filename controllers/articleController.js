@@ -11,8 +11,12 @@ const mongoose = require('mongoose');
 // Create a new article
 module.exports.createArticle = async (req, res) => {
   try {
-    const { authorId, title, authorName, content, tags, imageUtils } = req.body; // Destructure required fields from req.body
+    const { authorId, title, authorName, description, content, tags, imageUtils } = req.body; // Destructure required fields from req.body
 
+
+    if(!authorId || !title || !authorName || !description || !content || !tags || !imageUtils){
+      return res.status(400).json({ message: "Please fill in all fields: authorId, title, authorName, description, content, tags, imageUtils" });
+    }
     // Find the user by ID
     const user = await User.findById(authorId);
 
@@ -56,7 +60,8 @@ module.exports.getAllArticles = async (req, res) => {
    // console.log('status enum', statusEnum);
     const articles = await Article.find({ status: statusEnum.statusEnum.PUBLISHED })
       .populate('tags')
-      .populate('mentionedUsers', 'user_handle user_name Profile_image') // This populates the mentioned users data
+      .populate('mentionedUsers', 'user_handle user_name Profile_image')
+      .populate('likedUsers', 'Profile_image') 
       .exec();
       //console.log(articles);
     res.status(200).json({ articles });

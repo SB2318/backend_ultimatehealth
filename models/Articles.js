@@ -13,6 +13,11 @@ const articleSchema = new Schema({
     type: String,
     required: true,
   },
+  description: {
+    type: String,
+    required: true,
+    default:''
+  },
   authorName: {
     type: String,
     required: true,
