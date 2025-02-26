@@ -23,6 +23,42 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
         }
     }
 )
+
+module.exports.getAllInProgressArticles = expressAsyncHandler(
+    async (req, res) => {
+        const {reviewer_id} = req.params;
+        if(!reviewer_id){
+            return res.status(400).json({message: 'Reviewer ID is required.'});
+        }
+        try {
+            const articles = await Article.find({ reviewer_id: reviewer_id,  status:{
+                $in: [statusEnum.statusEnum.IN_PROGRESS, statusEnum.statusEnum.AWAITING_USER, statusEnum.statusEnum.REVIEW_PENDING]
+            }});
+            res.status(200).json(articles);
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
+
+module.exports.getAllReviewCompletedArticles =  expressAsyncHandler(
+    async (req, res) => {
+        const {reviewer_id} = req.params;
+        if(!reviewer_id){
+            return res.status(400).json({message: 'Reviewer ID is required.'});
+        }
+        try {
+            const articles = await Article.find({ reviewer_id: reviewer_id,  status:{
+                $in: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
+            }});
+            res.status(200).json(articles);
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
 // assignModerator or startReview
 module.exports.assignModerator = expressAsyncHandler(
 
@@ -58,6 +94,7 @@ module.exports.assignModerator = expressAsyncHandler(
             article.status = statusEnum.statusEnum.IN_PROGRESS;
             article.reviewer_id = moderator._id;
             article.assigned_at = new Date();
+           // article.lastUpdated = new Date();
 
             await article.save();
             // send Notification
@@ -118,6 +155,7 @@ module.exports.submitReview = expressAsyncHandler(
             article.reviewComments.push(comment._id);
 
             article.status = statusEnum.statusEnum.AWAITING_USER;
+            article.lastUpdated = new Date();
 
             await article.save();
 
@@ -166,6 +204,7 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
             article.title = title;
             article.imageUtils = imageUtils;
             article.status = statusEnum.statusEnum.REVIEW_PENDING;
+            article.lastUpdated = new Date();
 
             await article.save();
 
@@ -201,7 +240,8 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
     }
 )
 
-// get all articles for assigned moderator
+// get all articles for assigned moderator, wrong, it will be for author
+/*
 module.exports.getAllArticlesForAssignModerator = expressAsyncHandler(
 
     async (req, res) => {
@@ -221,6 +261,7 @@ module.exports.getAllArticlesForAssignModerator = expressAsyncHandler(
         }
     }
 )
+    */
 
 // publish article
 module.exports.publishArticle = expressAsyncHandler(
