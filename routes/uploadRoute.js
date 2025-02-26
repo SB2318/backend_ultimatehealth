@@ -6,7 +6,7 @@ const authenticateToken = require('../middleware/authentcatetoken');
 const uploadRoute = express.Router();
 
 // For Storage Server
-uploadRoute.post('/upload-storage', upload.single('recFile'), controller.uploadFile);
+uploadRoute.post('/upload-storage', upload.single('file'), controller.uploadFile);
 uploadRoute.get('/getFile/:key', controller.getFile);
 uploadRoute.delete('/deleteFile/:key',authenticateToken, controller.deleteFile);
 

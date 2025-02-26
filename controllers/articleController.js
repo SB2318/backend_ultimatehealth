@@ -30,6 +30,7 @@ module.exports.createArticle = async (req, res) => {
       authorName,
       content,
       tags,
+      description,
       imageUtils,
       authorId: user._id, // Set authorId to the user's ObjectId
     });
