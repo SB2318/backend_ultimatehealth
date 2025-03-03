@@ -629,25 +629,29 @@ module.exports.deleteByAdmin = async (req, res) => {
 
 module.exports.follow = async (req, res) => {
   try {
-    const { followUserId } = req.body;
+    const { articleId } = req.body;
 
     // Check if user is trying to follow themselves
-    if (req.userId === followUserId) {
+    if(!articleId){
+      return res.status(400).json({ error: "Article id is required" });
+    }
+    const article = await Article.findById(Number(articleId));
+
+    if(!article){
+      return res.status(404).json({ error: "Article not found" });
+    }
+    if (req.userId === article.authorId) {
       return res
         .status(400)
         .json({ message: "You cannot follow or unfollow yourself" });
     }
 
-    // Convert user IDs to ObjectId
-    const userId = new mongoose.Types.ObjectId(req.userId);
-    const followId = new mongoose.Types.ObjectId(followUserId);
-
     // Find the user who is following
-    const user = await User.findById(userId);
+    const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Find the user to be followed
-    const userToFollow = await User.findById(followId);
+    const userToFollow = await User.findById(article.authorId);
     if (!userToFollow)
       return res.status(404).json({ message: "User to follow not found" });
 
@@ -659,26 +663,32 @@ module.exports.follow = async (req, res) => {
       user.followings.filter((id) => id).map((id) => id.toString())
     );
 
+    //console.log("USER ID", req.userId.toString());
+   // console.log("AUTHOR ID", article.authorId.toString());
+   // console.log("Follower User Set", followerUserset);
+   // console.log("Following User Set", followingUserSet);
+   // console.log("Condition 1 ", followerUserset.has(req.userId.toString()));
+   // console.log("Condition 2 ", followingUserSet.has(article.authorId.toString()));
     if (
-      followerUserset.has(req.userId) ||
-      followingUserSet.has(followUserId)
+      followerUserset.has(req.userId.toString()) ||
+      followingUserSet.has(article.authorId.toString())
     ) {
       // Unfollow
       user.followings = user.followings.filter(
-        (id) => id && id.toString() !== followUserId
+        (id) => id.toString() !== article.authorId.toString()
       );
       user.followingCount = Math.max(0, user.followingCount - 1);
       await user.save();
 
       userToFollow.followers = userToFollow.followers.filter(
-        (id) => id && id.toString() !== req.userId
+        (id) => id && id.toString() !== req.userId.toString()
       );
       userToFollow.followerCount = Math.max(0, userToFollow.followerCount - 1);
       await userToFollow.save();
       res.json({ message: "Unfollow successfully", followStatus: false });
     } else {
       // Follow
-      user.followings.push(followUserId);
+      user.followings.push(article.authorId);
       user.followingCount += 1;
       await user.save();
 
