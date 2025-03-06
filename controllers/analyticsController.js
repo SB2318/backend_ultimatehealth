@@ -119,13 +119,13 @@ module.exports.getMostViewedArticles = expressAsyncHandler(
         }
         try{
 
-            const articles = await Article.find({ authorId: userId }) 
+            const user = await User.findById(userId) 
             //.sort({ 'viewUsers.length': -1 }) // Sort by viewCount in descending order
             //.limit(5)
-            .populate('tags')
+            .populate('articles')
             .select('imageUtils title viewUsers lastUpdated'); 
 
-            const sortedArticles = articles.sort((a, b) => b.viewUsers.length - a.viewUsers.length);
+            const sortedArticles = user.articles.sort((a, b) => b.viewUsers.length - a.viewUsers.length);
 
             // Limit to top 5 articles
             const topArticles = sortedArticles.slice(0, 5);
