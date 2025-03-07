@@ -181,6 +181,14 @@ module.exports.getprofile = async (req, res) => {
         path: "repostArticles",
         populate: { path: "tags" }, // Populate tags for saved articles
       })
+      .populate({
+        path: "followers",
+        select: "user_id user_name followers Profile_image", // Select specific fields
+      })
+      .populate({
+        path: "followings",
+        select: "user_id user_name followers Profile_image", // Select specific fields for followings
+      })
       .exec();
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -220,6 +228,14 @@ module.exports.getUserProfile = async (req, res) => {
           path: "repostArticles",
           populate: { path: "tags" }, // Populate tags for saved articles
         })
+        .populate({
+          path: "followers",
+          select: "user_id user_name followers Profile_image", // Select specific fields
+        })
+        .populate({
+          path: "followings",
+          select: "user_id user_name followers Profile_image", // Select specific fields for followings
+        })
         .exec();
     }
     else if (userHandle) {
@@ -232,6 +248,14 @@ module.exports.getUserProfile = async (req, res) => {
         .populate({
           path: "repostArticles",
           populate: { path: "tags" }, // Populate tags for saved articles
+        })
+        .populate({
+          path: "followers",
+          select: "user_id user_name followers Profile_image", // Select specific fields
+        })
+        .populate({
+          path: "followings",
+          select: "user_id user_name followers Profile_image", // Select specific fields for followings
         })
         .exec();
     }
