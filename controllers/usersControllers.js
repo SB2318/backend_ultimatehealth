@@ -653,18 +653,23 @@ module.exports.deleteByAdmin = async (req, res) => {
 
 module.exports.follow = async (req, res) => {
   try {
-    const { articleId } = req.body;
+    const { articleId, followUserId } = req.body;
 
     // Check if user is trying to follow themselves
-    if(!articleId){
-      return res.status(400).json({ error: "Article id is required" });
+    if(!articleId && !followUserId){
+      return res.status(400).json({ error: "Article id or follow user id are required" });
     }
-    const article = await Article.findById(Number(articleId));
 
-    if(!article){
-      return res.status(404).json({ error: "Article not found" });
+    let article;
+    if(articleId){
+       article = await Article.findById(Number(articleId));
+       if(!article){
+        return res.status(404).json({ error: "Article not found" });
+      }
     }
-    if (req.userId === article.authorId) {
+    
+    
+    if (article && req.userId === article.authorId) {
       return res
         .status(400)
         .json({ message: "You cannot follow or unfollow yourself" });
@@ -675,7 +680,16 @@ module.exports.follow = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Find the user to be followed
-    const userToFollow = await User.findById(article.authorId);
+
+    let userToFollow ;
+
+    if(article){
+      userToFollow = await User.findById(article.authorId);
+    }
+    else{
+      userToFollow = await User.findById(followUserId);
+    }
+
     if (!userToFollow)
       return res.status(404).json({ message: "User to follow not found" });
 
@@ -695,11 +709,11 @@ module.exports.follow = async (req, res) => {
    // console.log("Condition 2 ", followingUserSet.has(article.authorId.toString()));
     if (
       followerUserset.has(req.userId.toString()) ||
-      followingUserSet.has(article.authorId.toString())
+      followingUserSet.has(userToFollow._id.toString())
     ) {
       // Unfollow
       user.followings = user.followings.filter(
-        (id) => id.toString() !== article.authorId.toString()
+        (id) => id.toString() !== userToFollow._id.toString()
       );
       user.followingCount = Math.max(0, user.followingCount - 1);
       await user.save();
@@ -712,7 +726,7 @@ module.exports.follow = async (req, res) => {
       res.json({ message: "Unfollow successfully", followStatus: false });
     } else {
       // Follow
-      user.followings.push(article.authorId);
+      user.followings.push(userToFollow._id);
       user.followingCount += 1;
       await user.save();
 
