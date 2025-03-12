@@ -379,11 +379,13 @@ exports.updateReadEvents = async (req, res) => {
 
   try {
     // New Read Event Entry
-
+ // console.log("Today", today);
+ // console.log("Read event post", req.userId);
     const readEvent = await ReadAggregate.findOne({ userId: req.userId, date:today});
 
     if(!readEvent){
       // Create New
+    //  console.log("Enter if block");
       const newReadEvent = new ReadAggregate({ userId: req.userId, date:today});
       newReadEvent.dailyReads =1;
       newReadEvent.monthlyReads =1;
@@ -410,8 +412,8 @@ exports.updateReadEvents = async (req, res) => {
 // GET ALL READ EVENTS STATUS DAILY, WEEKLY, MONTHLY
 exports.getReadDataForGraphs = async (req, res) => {
 
-  const { userId } = req.userId;
-
+  const  userId  = req.userId;
+  //console.log("Read event", userId);
   try {
     const today = new Date();
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -447,7 +449,7 @@ exports.getReadDataForGraphs = async (req, res) => {
 // GET ALL Write EVENTS STATUS DAILY, WEEKLY, MONTHLY
 exports.getWriteDataForGraphs = async (req, res) => {
 
-  const { userId } = req.userId;
+  const  userId  = req.userId;
 
   try {
     const today = new Date();
