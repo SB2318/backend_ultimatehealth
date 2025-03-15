@@ -40,11 +40,11 @@ module.exports.createArticle = async (req, res) => {
     await newArticle.save();
 
     // Update the user's articles field
-    //user.articles.push(newArticle._id);
+    user.articles.push(newArticle._id);
 
     // await updateWriteEvents(newArticle._id, user.id);
 
-    //await user.save();
+    await user.save();
 
     // Respond with a success message and the new article
     res.status(201).json({ message: "Article under reviewed", newArticle });

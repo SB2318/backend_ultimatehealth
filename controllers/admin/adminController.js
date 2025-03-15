@@ -273,7 +273,6 @@ module.exports.publishArticle = expressAsyncHandler(
         }
 
         try {
-
             const [article, reviewer] = await Promise.all([
                 Article.findById(Number(articleId)),
                 admin.findById(reviewerId)
@@ -295,10 +294,10 @@ module.exports.publishArticle = expressAsyncHandler(
             article.lastUpdated = new Date();
 
             await article.save();
-            user.articles.push(article._id);
+           // user.articles.push(article._id);
 
             await updateWriteEvents(article._id, user.id);
-            await user.save();
+            //await user.save();
 
             // send mail to user
             sendArticlePublishedEmail(user.email, "", article.title);
