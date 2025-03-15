@@ -179,10 +179,10 @@ module.exports.submitReview = expressAsyncHandler(
 module.exports.submitSuggestedChanges = expressAsyncHandler(
     async (req, res) => {
 
-        const { userId, articleId, content, aditionalNote, title, imageUtils } = req.body;
+        const { userId, articleId, content, title, description, tags, authorName, imageUtils } = req.body;
 
-        if (!userId || !articleId || !content || !title || !imageUtils) {
-            res.status(400).json({ message: "Missing required fields: articleId, content, aditionalNote, title, imageUtils" });
+        if (!userId || !articleId || !content || !title || !imageUtils || !description || !tags || !authorName) {
+            res.status(400).json({ message: "Missing required fields: userId, articleId, content, title, imageUtils, description,tags, authorName" });
             return;
         }
 
@@ -205,9 +205,13 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
             article.imageUtils = imageUtils;
             article.status = statusEnum.statusEnum.REVIEW_PENDING;
             article.lastUpdated = new Date();
+            article.description = description;
+            article.tags = tags;
+            article.authorName = authorName;
 
             await article.save();
 
+            /*
             if (aditionalNote) {
                 // create comment object and notify moderator
                 const comment = new Comment({
@@ -229,6 +233,7 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
                 })
 
             }
+                */
 
             res.status(200).json({ message: "Article submitted" });
 
