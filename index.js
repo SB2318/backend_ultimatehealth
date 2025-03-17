@@ -4,10 +4,13 @@ const expressAsyncHandler = require('express-async-handler');
 const compression = require('compression');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const articleReviewNotificationsToUser = require('./controllers/notifications/notificationHelper');
+const sendArticleFeedbackEmail = require('./controllers/emailService');
 
 const Article = require('./models/Articles');
 const User = require('./models/UserModel');
 const Comment = require('./models/commentSchema');
+const admin = require('./models/admin/adminModel');
 const dotenv = require('dotenv');
 const db = require("./config/database");
 const userRoutes = require("./routes/usersRoutes");
@@ -470,13 +473,135 @@ io.on('connection', (socket) => {
         }
     ));
 
-    socket.on('disconnect', () => {
+   // add-review-comment
+   socket.on('add-review-comment', expressAsyncHandler(
+
+     async (data) => {
+            const { articleId, reviewerId, feedback, isReview, isNote } = data;
+    
+            if (!articleId || !reviewerId || !feedback) {
+                socket.emit('error',{ error: 'Please fill all fields: articleId, reviewerId, reviewContent' });
+                return;
+            }
+
+            if(!isReview && !isNote){
+                // res.status(400).json({ message: 'Please select either isReview or isNote'});
+                socket.emit('error',{ error: 'Please select a category: Review or Note' });
+                return;
+            }
+    
+            try {
+    
+                const [article, reviewer] = await Promise.all([
+    
+                    Article.findById(Number(articleId))
+                        .populate('authorId')
+                        .exec(),
+                    admin.findById(reviewerId),
+                ]);
+    
+                if (!article || !reviewer) {
+                    res.status(404).json({ message: 'Article or Moderator not found' });
+                    return;
+                }
+    
+                if (article.reviewer_id !== reviewer._id) {
+                    res.status(403).json({ message: 'You are not authorized to access this article' });
+                }
+    
+               if(isReview){
+                const comment = new Comment({
+                    adminId: reviewer._id,
+                    articleId: article._id,
+                    parentCommentId: parentCommentId || null,
+                    content: feedback,
+                    isReview: true,
+                    isNote: false
+                });
+
+                await comment.save();
+                article.review_comments.push(comment._id);
+    
+                article.status = statusEnum.statusEnum.AWAITING_USER;
+                article.lastUpdated = new Date();
+    
+                await article.save();
+
+                socket.emit('new-feedback', comment);
+                articleReviewNotificationsToUser(article.authorId._id, article._id, {
+                    title: "New feedback received on your Article : " + article.title,
+                    body: feedback
+                });
+                // send mail
+                sendArticleFeedbackEmail(article.authorId.email, feedback, article.title);
+    
+               }else if(isNote){
+
+                const comment = new Comment({
+                    userId: article.authorId,
+                    articleId: article._id,
+                    parentCommentId:  null,
+                    content: feedback,
+                    isNote: true,
+                    isReview: false
+                });
+                await comment.save();
+
+                article.review_comments.push(comment._id);
+
+                await article.save();
+
+                socket.emit('new-feedback', comment);
+                sendCommentNotification(article.reviewer_id, article._id, {
+                    title: "New Additional Note from Author",
+                    body: `An author has added a new note to the article titled ${article.title}.`
+                });
+
+                socket.emit('new-feedback', comment);
+               }
+               
+            } catch (err) {
+                console.log(err);
+                socket.emit('error',{ message: err.message });
+            }
+        }
+
+   ));
+   // load-review-comments
+
+   socket.on('load-review-comments', expressAsyncHandler(
+
+    async(data) =>{
+
+        const {articleId} = data;
+
+        if(!articleId){
+            socket.emit('error',{message:"Article Id required"});
+            return;
+        }
+
+        try{
+            const article = await Article.findById(Number(articleId)).populate('review_comments');
+            if(article){
+                socket.emit('review-comments', article.review_comments);
+            }
+            else{
+                socket.emit('error',{message:"Article not found"});
+            }
+            
+        }catch(err){
+            console.log(err);
+            socket.emit('error',{ message: err.message });
+        }
+    }
+     
+   ));
+
+   socket.on('disconnect', () => {
         console.log('User disconnected');
        // removeUser(socket.id);
-    });
+   });
 
 });
-
-
 
 module.exports = app;

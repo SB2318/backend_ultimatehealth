@@ -152,7 +152,7 @@ module.exports.submitReview = expressAsyncHandler(
             });
 
             await comment.save();
-            article.reviewComments.push(comment._id);
+            article.review_comments.push(comment._id);
 
             article.status = statusEnum.statusEnum.AWAITING_USER;
             article.lastUpdated = new Date();
@@ -206,7 +206,9 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
             article.content = content;
             article.title = title;
             article.imageUtils = imageUtils;
-            article.status = statusEnum.statusEnum.REVIEW_PENDING;
+            if(article.status !== statusEnum.statusEnum.UNASSIGNED){
+                article.status = statusEnum.statusEnum.REVIEW_PENDING;
+            }   
             article.lastUpdated = new Date();
             article.description = description;
             article.tags = tags;
@@ -226,7 +228,7 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
                 });
                 await comment.save();
 
-                article.reviewComments.push(comment._id);
+                article.review_comments.push(comment._id);
 
                 await article.save();
 
