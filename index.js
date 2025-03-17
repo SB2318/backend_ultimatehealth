@@ -477,10 +477,10 @@ io.on('connection', (socket) => {
    socket.on('add-review-comment', expressAsyncHandler(
 
      async (data) => {
-            const { articleId, reviewerId, feedback, isReview, isNote } = data;
+            const { articleId, reviewer_id, feedback, isReview, isNote } = data;
     
-            if (!articleId || !reviewerId || !feedback) {
-                socket.emit('error',{ error: 'Please fill all fields: articleId, reviewerId, reviewContent' });
+            if (!articleId || !reviewer_id || !feedback) {
+                socket.emit('error',{ error: 'Please fill all fields: articleId, reviewer_id, reviewContent' });
                 return;
             }
 
@@ -497,7 +497,7 @@ io.on('connection', (socket) => {
                     Article.findById(Number(articleId))
                         .populate('authorId')
                         .exec(),
-                    admin.findById(reviewerId),
+                    admin.findById(reviewer_id),
                 ]);
     
                 if (!article || !reviewer) {

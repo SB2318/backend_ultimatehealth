@@ -116,10 +116,10 @@ module.exports.assignModerator = expressAsyncHandler(
 module.exports.submitReview = expressAsyncHandler(
 
     async (req, res) => {
-        const { articleId, reviewerId, feedback } = req.body;
+        const { articleId, reviewer_id, feedback } = req.body;
 
-        if (!articleId || !reviewerId || !feedback) {
-            res.status(400).json({ message: 'Please fill all fields: articleId, reviewerId, reviewContent' });
+        if (!articleId || !reviewer_id || !feedback) {
+            res.status(400).json({ message: 'Please fill all fields: articleId, reviewer_id, reviewContent' });
             return;
         }
 
@@ -130,7 +130,7 @@ module.exports.submitReview = expressAsyncHandler(
                 Article.findById(Number(articleId))
                     .populate('authorId')
                     .exec(),
-                admin.findById(reviewerId),
+                admin.findById(reviewer_id),
             ]);
 
             if (!article || !reviewer) {
@@ -276,23 +276,23 @@ module.exports.getAllArticlesForAssignModerator = expressAsyncHandler(
 // publish article
 module.exports.publishArticle = expressAsyncHandler(
     async (req, res) => {
-        const { articleId, reviewerId } = req.body;
+        const { articleId, reviewer_id } = req.body;
 
-        if (!articleId || !reviewerId) {
+        if (!articleId || !reviewer_id) {
             return res.status(400).json({ message: "Article ID and Reviewer ID are required" });
         }
 
         try {
             const [article, reviewer] = await Promise.all([
                 Article.findById(Number(articleId)),
-                admin.findById(reviewerId)
+                admin.findById(reviewer_id)
             ]);
 
             if (!article || !reviewer) {
                 return res.status(404).json({ message: "Article or Reviewer not found" });
             }
 
-            if (article.reviewer_id !== reviewerId) {
+            if (article.reviewer_id !== reviewer_id) {
                 return res.status(403).json({ message: "Article is not assigned to this reviewer" });
             }
             const user = await User.findById(article.authorId);
