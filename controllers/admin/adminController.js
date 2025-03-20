@@ -26,14 +26,16 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
 
 module.exports.getAllInProgressArticles = expressAsyncHandler(
     async (req, res) => {
-        const {reviewer_id} = req.params;
-        if(!reviewer_id){
-            return res.status(400).json({message: 'Reviewer ID is required.'});
+        const { reviewer_id } = req.params;
+        if (!reviewer_id) {
+            return res.status(400).json({ message: 'Reviewer ID is required.' });
         }
         try {
-            const articles = await Article.find({ reviewer_id: reviewer_id,  status:{
-                $in: [statusEnum.statusEnum.IN_PROGRESS, statusEnum.statusEnum.AWAITING_USER, statusEnum.statusEnum.REVIEW_PENDING]
-            }});
+            const articles = await Article.find({
+                reviewer_id: reviewer_id, status: {
+                    $in: [statusEnum.statusEnum.IN_PROGRESS, statusEnum.statusEnum.AWAITING_USER, statusEnum.statusEnum.REVIEW_PENDING]
+                }
+            });
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -42,16 +44,18 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
     }
 )
 
-module.exports.getAllReviewCompletedArticles =  expressAsyncHandler(
+module.exports.getAllReviewCompletedArticles = expressAsyncHandler(
     async (req, res) => {
-        const {reviewer_id} = req.params;
-        if(!reviewer_id){
-            return res.status(400).json({message: 'Reviewer ID is required.'});
+        const { reviewer_id } = req.params;
+        if (!reviewer_id) {
+            return res.status(400).json({ message: 'Reviewer ID is required.' });
         }
         try {
-            const articles = await Article.find({ reviewer_id: reviewer_id,  status:{
-                $in: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
-            }});
+            const articles = await Article.find({
+                reviewer_id: reviewer_id, status: {
+                    $in: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
+                }
+            });
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -94,7 +98,7 @@ module.exports.assignModerator = expressAsyncHandler(
             article.status = statusEnum.statusEnum.IN_PROGRESS;
             article.reviewer_id = moderator._id;
             article.assigned_at = new Date();
-           // article.lastUpdated = new Date();
+            // article.lastUpdated = new Date();
 
             await article.save();
             // send Notification
@@ -197,7 +201,7 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
 
             //console.log("Author Id", article.authorId);
             //console.log("User Id", userId);
-            
+
             if (article.authorId.toString() !== userId) {
                 res.status(403).json({ message: "You are not the author of this article" });
                 return;
@@ -206,9 +210,9 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
             article.content = content;
             article.title = title;
             article.imageUtils = imageUtils;
-            if(article.status !== statusEnum.statusEnum.UNASSIGNED){
+            if (article.status !== statusEnum.statusEnum.UNASSIGNED) {
                 article.status = statusEnum.statusEnum.REVIEW_PENDING;
-            }   
+            }
             article.lastUpdated = new Date();
             article.description = description;
             article.tags = tags;
@@ -304,7 +308,7 @@ module.exports.publishArticle = expressAsyncHandler(
             article.lastUpdated = new Date();
 
             await article.save();
-           // user.articles.push(article._id);
+            // user.articles.push(article._id);
 
             await updateWriteEvents(article._id, user.id);
             //await user.save();
@@ -328,6 +332,40 @@ module.exports.publishArticle = expressAsyncHandler(
 )
 
 
+module.exports.discardChanges = expressAsyncHandler(
+    async (req, res) => {
+
+        const { articleId, discardReason } = req.body;
+
+        if (!articleId || !discardReason) {
+            return res.status(400).json({ message: "Invalid request, please provide discard reason and article id" });
+        }
+
+        try {
+
+            const article = await Article.findById(Number(articleId));
+
+            if (!article) {
+                return res.status(404).json({ message: "Article not found" });
+            }
+
+            const user = await User.findById(article.authorId);
+            let status = article.status;
+            article.reviewer_id = null;
+            article.assigned_at = null;
+            article.status = statusEnum.statusEnum.DISCARDED;
+
+            await article.save();
+            if (user){
+                sendArticleDiscardEmail(user.email, status, article.title)
+            }        
+
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
 // Update Write Event Tasks (Once article published)
 
 async function updateWriteEvents(articleId, userId) {
@@ -360,46 +398,49 @@ async function updateWriteEvents(articleId, userId) {
         console.log('Article Write Event Update Error', err);
     }
 }
-// cron job for article unassigned
+// cron job for article crounassigned
 async function unassignArticle() {
 
-   try{
+    try {
 
-    const articles = await Article.find({
-        status: {
-            $in: [statusEnum.statusEnum.IN_PROGRESS]
-        }
-    });
-    articles.forEach(async (article) => {
+        const articles = await Article.find({
+            status: {
+                $in: [statusEnum.statusEnum.IN_PROGRESS]
+            }
+        });
+        articles.forEach(async (article) => {
 
-        const assignedDate = new Date(article.assigned_date);
-        const currentDate = new Date();
-        const timeDifference = currentDate - assignedDate;
-        const daysDifference = timeDifference / (1000 * 3600 * 24);
+            if (article.assigned_date !== null) {
 
-        if (daysDifference > 4) {
+                const assignedDate = new Date(article.assigned_date);
+                const currentDate = new Date();
+                const timeDifference = currentDate - assignedDate;
+                const daysDifference = timeDifference / (1000 * 3600 * 24);
 
-            let reviewer_id = article.reviewer_id;
-            article.reviewer_id = null;
-            article.assigned_at = null;
-            article.status = statusEnum.statusEnum.UNASSIGNED;
+                if (daysDifference > 4) {
 
-            await article.save();
-        }
+                    let reviewer_id = article.reviewer_id;
+                    article.reviewer_id = null;
+                    article.assigned_at = null;
+                    article.status = statusEnum.statusEnum.UNASSIGNED;
 
-    });
+                    await article.save();
+                }
+            }
 
-   }catch(err){
+        });
 
-     console.error(err);
-    
-   }
+    } catch (err) {
+
+        console.error(err);
+
+    }
 }
 // cron job for article discarded
 
 async function discardArticle() {
 
-    try{
+    try {
 
         const articles = await Article.find({
             status: {
@@ -407,28 +448,30 @@ async function discardArticle() {
             }
         });
         articles.forEach(async (article) => {
-    
-    
-            const assignedDate = new Date(article.assigned_date);
-            const currentDate = new Date();
-            const timeDifference = currentDate - assignedDate;
-            const daysDifference = timeDifference / (1000 * 3600 * 24);
-    
-            // Discard all unassigned and review pending articles after 30 days
-            if (daysDifference > 30) {
-                const user = await User.findById(article.authorId);
-                let status = article.status;
-                article.reviewer_id = null;
-                article.assigned_at = null;
-                article.status = statusEnum.statusEnum.DISCARDED;
-    
-                await article.save();
-                if(user)
-                sendArticleDiscardEmail(user.email, status, article.title)
+
+
+            if (article.assigned_date !== null) {
+                const assignedDate = new Date(article.assigned_date);
+                const currentDate = new Date();
+                const timeDifference = currentDate - assignedDate;
+                const daysDifference = timeDifference / (1000 * 3600 * 24);
+
+                // Discard all unassigned and review pending articles after 30 days
+                if (daysDifference > 30) {
+                    const user = await User.findById(article.authorId);
+                    let status = article.status;
+                    article.reviewer_id = null;
+                    article.assigned_at = null;
+                    article.status = statusEnum.statusEnum.DISCARDED;
+
+                    await article.save();
+                    if (user)
+                        sendArticleDiscardEmail(user.email, status, article.title)
+                }
             }
-    
+
         });
-    }catch(err){
+    } catch (err) {
         console.error(err);
     }
 }

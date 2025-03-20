@@ -127,6 +127,11 @@ const articleSchema = new Schema({
       default: []
   }
   ],
+
+  discardReason:{
+    type: String,
+    default: "Discarded by system"
+  }
 });
 
 // Apply the autoIncrement plugin to the schema
