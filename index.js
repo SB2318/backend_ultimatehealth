@@ -5,7 +5,7 @@ const compression = require('compression');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const articleReviewNotificationsToUser = require('./controllers/notifications/notificationHelper');
-const sendArticleFeedbackEmail = require('./controllers/emailService');
+const sendArticleFeedbackEmail = require('./controllers/emailservice');
 
 const Article = require('./models/Articles');
 const User = require('./models/UserModel');
