@@ -15,7 +15,7 @@ const jwt = require("jsonwebtoken");
 module.exports.getAllArticleForReview = expressAsyncHandler(
     async (req, res) => {
         try {
-            const articles = await Article.find({ status: statusEnum.statusEnum.UNASSIGNED });
+            const articles = await Article.find({ status: statusEnum.statusEnum.UNASSIGNED }).populate('tags').exec();
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -356,9 +356,9 @@ module.exports.discardChanges = expressAsyncHandler(
             article.status = statusEnum.statusEnum.DISCARDED;
 
             await article.save();
-            if (user){
+            if (user) {
                 sendArticleDiscardEmail(user.email, status, article.title)
-            }        
+            }
 
         } catch (err) {
             console.error(err);
