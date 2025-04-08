@@ -1,5 +1,5 @@
-module.exports.emailBody = {
-    ARTICLE_PUBLISH : `<html>
+
+module.exports.ARTICLE_PUBLISH = `<html>
     <head>
         <style>
             body {
@@ -80,9 +80,9 @@ module.exports.emailBody = {
             </div>
         </div>
     </body>
-</html>`,
+</html>`;
 
-  ARTICLE_FEEDBACK: `<html>
+module.exports.ARTICLE_FEEDBACK= `<html>
                 <head>
                     <style>
                         body {
@@ -168,9 +168,9 @@ module.exports.emailBody = {
                         </div>
                     </div>
                 </body>
-            </html>`,
+            </html>`;
 
-  ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION:  `<html>
+ module.exports.ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION =  `<html>
   <head>
       <style>
           body {
@@ -254,9 +254,9 @@ module.exports.emailBody = {
       </div>
   </body>
 </html>
-`,
+`;
 
- ARTICLE_DISCARDED_FROM_SYSTEM: `<html>
+ module.exports.ARTICLE_DISCARDED_FROM_SYSTEM = `<html>
   <head>
       <style>
           body {
@@ -340,7 +340,8 @@ module.exports.emailBody = {
       </div>
   </body>
 </html>
-`
+`;
+
+
 
  
-}

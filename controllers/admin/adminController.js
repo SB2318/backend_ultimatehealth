@@ -5,7 +5,7 @@ const User = require('../../models/UserModel');
 const { articleReviewNotificationsToUser, sendCommentNotification } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
 const WriteAggregate = require("../../models/events/writeEventSchema");
-const { sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail } = require('../emailservice');
+const { sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail, sendMailArticleDiscardByAdmin } = require('../emailservice');
 const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
 const jwt = require("jsonwebtoken");
@@ -350,15 +350,18 @@ module.exports.discardChanges = expressAsyncHandler(
             }
 
             const user = await User.findById(article.authorId);
-            let status = article.status;
+       
             article.reviewer_id = null;
             article.assigned_at = null;
             article.status = statusEnum.statusEnum.DISCARDED;
 
             await article.save();
             if (user) {
-                sendArticleDiscardEmail(user.email, status, article.title)
+              
+                sendMailArticleDiscardByAdmin(user.email, article.title, discardReason);
             }
+
+            return res.status(200).json({message:"Article Discarded"});
 
         } catch (err) {
             console.error(err);
