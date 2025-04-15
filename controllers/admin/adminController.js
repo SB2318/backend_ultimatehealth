@@ -35,7 +35,7 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
                 reviewer_id: reviewer_id, status: {
                     $in: [statusEnum.statusEnum.IN_PROGRESS, statusEnum.statusEnum.AWAITING_USER, statusEnum.statusEnum.REVIEW_PENDING]
                 }
-            });
+            }).populate('tags').exec();
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -55,7 +55,7 @@ module.exports.getAllReviewCompletedArticles = expressAsyncHandler(
                 reviewer_id: reviewer_id, status: {
                     $in: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
                 }
-            });
+            }).populate('tags').exec();
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);

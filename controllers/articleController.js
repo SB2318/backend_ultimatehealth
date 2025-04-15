@@ -58,16 +58,16 @@ module.exports.createArticle = async (req, res) => {
 module.exports.getAllArticles = async (req, res) => {
   try {
 
-   // console.log('status enum', statusEnum);
+  
     const articles = await Article.find({ status: statusEnum.statusEnum.PUBLISHED })
       .populate('tags')
       .populate('mentionedUsers', 'user_handle user_name Profile_image')
       .populate('likedUsers', 'Profile_image') 
       .exec();
-      //console.log(articles);
+   
 
       articles.forEach(article => {
-        article.likedUsers.reverse(); // to get most recent like users
+        article.likedUsers.reverse(); 
       });
     res.status(200).json({ articles });
   } catch (error) {
