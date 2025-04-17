@@ -105,7 +105,7 @@ module.exports.assignModerator = expressAsyncHandler(
             articleReviewNotificationsToUser(article.authorId, article._id, {
                 title: `Congrats!Your Article : ${article.title} is Under Review`,
                 body: "Our team has started reviewing your article. Stay tuned!"
-            })
+            },2);
 
             res.status(200).json({ message: "Article status updated" });
 
@@ -166,7 +166,7 @@ module.exports.submitReview = expressAsyncHandler(
             articleReviewNotificationsToUser(article.authorId._id, article._id, {
                 title: "New feedback received on your Article : " + article.title,
                 body: feedback
-            });
+            },2);
             // send mail
             sendArticleFeedbackEmail(article.authorId.email, feedback, article.title);
 
@@ -244,6 +244,17 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
             }
                 */
 
+            // notify reviewer
+            if (article.reviewer_id) {
+
+                articleReviewNotificationsToUser(article.reviewer_id, article._id, {
+                    title: ` New changes from author on : ${article.title} `,
+                    body: "Please reach out"
+                },1);
+            }
+
+            
+
             res.status(200).json({ message: "Article submitted" });
 
         } catch (err) {
@@ -320,7 +331,7 @@ module.exports.publishArticle = expressAsyncHandler(
             articleReviewNotificationsToUser(user._id, article._id, {
                 title: ` Your Article : ${article.title} is Live now!`,
                 body: "Keep contributing!  We encourage you to keep sharing valuable content with us."
-            });
+            },2);
 
             res.status(200).json({ message: "Article Published" });
 

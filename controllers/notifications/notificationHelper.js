@@ -28,7 +28,7 @@ const Admin = require('../../models/admin/adminModel');
   (IV) Comment Reply
   (V) Comment Mention
 */
-const sendPushNotification = (deviceToken, message, data, id) => {
+const sendPushNotification = (deviceToken, message, data, id, role) => {
     // Ensure all values in data are strings
     const formattedData = {
         action: String(data.action),
@@ -58,6 +58,7 @@ const sendPushNotification = (deviceToken, message, data, id) => {
                 title: message.title,
                 message: message.body,
                 userId: id,
+                role: Number(role)
             });
 
             console.log("Notification", notification);
@@ -91,7 +92,7 @@ module.exports.sendPostNotification = async (postId, message, authorId) => {
                             authorId: authorId
                         },
                         
-                    }, u._id);
+                    }, u._id, 2);
                 }
             });
         }
@@ -111,7 +112,7 @@ module.exports.sendPostLikeNotification = async (authorId, message) => {
     try {
         const user = await User.findById(authorId);
 
-        console.log(user);
+       // console.log(user);
         if (user && user.fcmToken) {
 
             console.log("Push Notification sending");
@@ -122,7 +123,7 @@ module.exports.sendPostLikeNotification = async (authorId, message) => {
                     authorId: null
                 },
                
-            }, user._id)
+            }, user._id, 2)
 
 
         }
@@ -146,14 +147,16 @@ module.exports.sendCommentNotification = async (authorId, postId, message, isAdm
 
     try {
 
-
         let user;
+        let role = 0;
 
         if(isAdmin){
 
             user = await Admin.findById(authorId);
+            role =1 ;
         }else{
             user = await User.findById(authorId);
+            role = 2;
         }
 
         if (user && user.fcmToken) {
@@ -163,7 +166,7 @@ module.exports.sendCommentNotification = async (authorId, postId, message, isAdm
                     postId: postId,
                     authorId: null,
                 }
-            }, user._id)
+            }, user._id, role)
         }
     } catch (err) {
         console.error(err);
@@ -190,7 +193,7 @@ module.exports.sendCommentLikeNotification = async (userId, postId, message) => 
                     postId: null,
                     authorId: null
                 }
-            }, user._id)
+            }, user._id, 2)
         }
     } catch (err) {
         console.error(err);
@@ -214,7 +217,7 @@ module.exports.userFollowNotification = async (userId, message) => {
                     postId: null,
                     authorId: null
                 }
-            }, user._id)
+            }, user._id, 2);
         }
     } catch (err) {
         console.error(err);
@@ -240,7 +243,7 @@ module.exports.repostNotification = async (userId, authorId, postId, message, au
                         authorId: authorId
                     },
                     
-                }, u._id);
+                }, u._id, 2);
             }
         });
     }
@@ -255,7 +258,7 @@ module.exports.repostNotification = async (userId, authorId, postId, message, au
                 authorId: authorId
             },
             
-        }, author._id);
+        }, author._id, 2);
     }
 
    }catch(err){
@@ -280,7 +283,7 @@ module.exports.mentionNotification = async (mentionedUsers, postId, message) =>{
                     postId: postId,
                     authorId: null
                 }
-            }, user._id)
+            }, user._id, 2)
         }
             
         });
@@ -291,7 +294,7 @@ module.exports.mentionNotification = async (mentionedUsers, postId, message) =>{
 }
 
 
-module.exports.articleReviewNotificationsToUser = async (userId, postId, message) => {
+module.exports.articleReviewNotificationsToUser = async (userId, postId, message, role) => {
 
     try {
         const user = await User.findById(userId);
@@ -304,7 +307,7 @@ module.exports.articleReviewNotificationsToUser = async (userId, postId, message
                     postId: postId,
                     authorId: user._id
                 }
-            }, user._id)
+            }, user._id, role)
         }
     } catch (err) {
         console.error(err);

@@ -531,7 +531,7 @@ io.on('connection', (socket) => {
                 articleReviewNotificationsToUser(article.authorId._id, article._id, {
                     title: "New feedback received on your Article : " + article.title,
                     body: feedback
-                });
+                }, 2);
                 // send mail
                 sendArticleFeedbackEmail(article.authorId.email, feedback, article.title);
     

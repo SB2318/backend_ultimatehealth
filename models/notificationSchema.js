@@ -6,6 +6,11 @@ const notifcationSchema = new mongoose.Schema({
         ref:'User',
         required:true
     },
+    role:{
+      type : Number,
+      required:true,
+      default: 2 // 1-> admin or reviewr , 2-> User
+    },
     title: {
         type: String,
         required: true

@@ -7,29 +7,29 @@ const Notification = require('../../models/notificationSchema');
 const User = require('../../models/UserModel');
 
 module.exports.createNotification = expressAsyncHandler(
-    async(req, res)=>{
-        const {title, message, userId} = req.body;
+    async (req, res) => {
+        const { title, message, userId } = req.body;
 
-        if(!title || !message || !userId){
-           res.status(400).json({message:"Insufficient field"});
-           return;
+        if (!title || !message || !userId) {
+            res.status(400).json({ message: "Insufficient field" });
+            return;
         }
 
-        try{
-         
+        try {
+
             const notification = new Notification({
-                title:title,
-                message:message,
-                userId:userId,
+                title: title,
+                message: message,
+                userId: userId,
             });
 
             await notification.save();
-                  
-           res.status(200).json({message:"Notification created"});
 
-        }catch(err){
+            res.status(200).json({ message: "Notification created" });
+
+        } catch (err) {
             console.log(err);
-            res.status(500).json({message:err.message});
+            res.status(500).json({ message: err.message });
         }
     }
 )
@@ -37,24 +37,25 @@ module.exports.createNotification = expressAsyncHandler(
 
 module.exports.getAllNotifications = expressAsyncHandler(
 
-    async(req, res)=>{
+    async (req, res) => {
 
         const userId = req.userId;
+        const {role} = req.query;
         console.log("User Id", userId);
 
-        if(!userId){
-            res.status(400).json({message:"User ID is required"});
+        if (!userId) {
+            res.status(400).json({ message: "User ID is required" });
             return;
         }
 
-        try{
+        try {
 
-            const notifications = await Notification.find({userId:userId}).sort({timestamp:-1});
+            const notifications = await Notification.find({ userId: userId, role: role ? Number(role) : 2 }).sort({ timestamp: -1 });
             res.status(200).json(notifications);
 
-        }catch(err){
+        } catch (err) {
             console.log(err);
-            res.status(500).json({message:"Internal server error"});
+            res.status(500).json({ message: "Internal server error" });
         }
     }
 )
@@ -62,45 +63,49 @@ module.exports.getAllNotifications = expressAsyncHandler(
 module.exports.markNotifications = expressAsyncHandler(
     async (req, res) => {
 
-         const userId = req.userId;
-
-         if(!userId){
-            res.status(400).json({message:"User ID is required"});
+        const userId = req.userId;
+        const {role} = req.query;
+        if (!userId) {
+            res.status(400).json({ message: "User ID is required" });
             return;
-         }
+        }
 
-         try{
+        try {
 
             await Notification.updateMany(
-                { userId: userId },  
-                { $set: { read: true } }  
+                { userId: userId, role: role ? Number(role) : 2 },
+                { $set: { read: true } }
             );
-            res.status(200).json({message:"Notifications marked as read"});
+            res.status(200).json({ message: "Notifications marked as read" });
 
-         }catch(err){
+        } catch (err) {
             console.log(err);
-            res.status(500).json({message:"Internal server error"});
-         }
+            res.status(500).json({ message: "Internal server error" });
+        }
     }
 )
 // GET UNREAD NOTIFICATION COUNT FOR AN USER
 module.exports.getUnreadNotificationCount = expressAsyncHandler(
 
-    async (req, res)=>{
+    async (req, res) => {
         const userId = req.userId;
-
-        if(!userId){
-            res.status(400).json({message:"User ID is required"});
+        const {role} = req.query;
+        if (!userId) {
+            res.status(400).json({ message: "User ID is required" });
             return;
         }
 
-        try{
+        try {
 
-            const unreadCount = await Notification.countDocuments({userId:userId,read:false});
-            res.status(200).json({unreadCount});
-        }catch(err){
+            const unreadCount = await Notification.countDocuments({ 
+                userId: userId, 
+                role: role ? Number(role) : 2,
+                read: false 
+            });
+            res.status(200).json({ unreadCount });
+        } catch (err) {
             console.log(err);
-            res.status(500).json({message:"Internal server error"});
+            res.status(500).json({ message: "Internal server error" });
         }
     }
 )
@@ -108,58 +113,59 @@ module.exports.getUnreadNotificationCount = expressAsyncHandler(
 // DELETE NOTIFICATION BY ID
 module.exports.deleteNotificationById = expressAsyncHandler(
 
-    async (req, res)=>{
+    async (req, res) => {
         const notificationId = req.params.id;
         const userId = req.userId;
-        if(!notificationId || !userId){
-           res.status(400).json({message:"Notification id or User id are required"});
-           return;
+     
+        if (!notificationId || !userId) {
+            res.status(400).json({ message: "Notification id or User id are required" });
+            return;
         }
 
-        try{
-            const notification= await Notification.findById(notificationId);
+        try {
+            const notification = await Notification.findById(notificationId);
 
-           
-            if(!notification){
-                res.status(404).json({message:"Notification not found"});
+
+            if (!notification) {
+                res.status(404).json({ message: "Notification not found" });
                 return;
             }
-            if(!notification.userId.equals(new mongoose.Types.ObjectId(userId))){
-               res.status(403).json({message:" Request forbidden"});
-               return;
+            if (!notification.userId.equals(new mongoose.Types.ObjectId(userId))) {
+                res.status(403).json({ message: " Request forbidden" });
+                return;
             }
 
             await Notification.deleteOne({ _id: notification._id });
-            res.status(200).json({message:"Notification deleted"});
+            res.status(200).json({ message: "Notification deleted" });
 
-        }catch(err){
+        } catch (err) {
             console.log(err);
-            res.status(500).json({message:"Internal server error"});
+            res.status(500).json({ message: "Internal server error" });
         }
     }
 )
 
 // DELETE OLD NOTIFICATIONS -> CRON JOB
-const deleteOldNotifications = async()=>{
+const deleteOldNotifications = async () => {
 
     console.log("Running cron job to deleteing old notifications");
-    try{
+    try {
 
-         const onedayago = new Date();
-         onedayago.setDate(date.getDate()-1);
+        const onedayago = new Date();
+        onedayago.setDate(date.getDate() - 1);
 
-          await Notification.deleteMany({
+        await Notification.deleteMany({
             read: true,  // Only delete read notifications
             timestamp: { $lt: onedayago }  // Only delete those older than 1 day
-         });
+        });
 
-    }catch(err){
+    } catch (err) {
         console.log(err);
     }
 }
 
-cron.schedule('0 0 * * *',async()=>{
-     
+cron.schedule('0 0 * * *', async () => {
+
     console.log('running cron job delete notifications...');
     await deleteOldNotifications();
 });
