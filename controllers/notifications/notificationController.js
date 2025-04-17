@@ -64,14 +64,13 @@ module.exports.markNotifications = expressAsyncHandler(
     async (req, res) => {
 
         const userId = req.userId;
-        const {role} = req.query;
+        const {role} = req.body;
         if (!userId) {
             res.status(400).json({ message: "User ID is required" });
             return;
         }
 
         try {
-
             await Notification.updateMany(
                 { userId: userId, role: role ? Number(role) : 2 },
                 { $set: { read: true } }
