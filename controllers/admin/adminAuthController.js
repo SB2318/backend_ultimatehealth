@@ -10,6 +10,8 @@ const admin = require('../../models/admin/adminModel')
 const BlacklistedToken = require('../../models/blackListedToken');
 const jwt = require("jsonwebtoken");
 const User = require("../../models/UserModel");
+const Article = require('../../models/Articles');
+const statusEnum = require("../utils/StatusEnum");
 const UnverifiedUser = require('../../models/UnverifiedUserModel');
 
 
@@ -217,7 +219,10 @@ module.exports.getprofile = expressAsyncHandler(
           .json({ error: "Email not verified. Please check your email." });
       }
 
-      return res.json({ status: true, profile: user });
+      const articleContributed = await Article.countDocuments({ reviewer_id: user._id, status: statusEnum.statusEnum.PUBLISHED });
+
+      
+      return res.json({ status: true, profile: {...user, articleContributed: articleContributed }});
     }catch(err){
        console.error(err);
        res.status(500).json({error: "Internal server error"});
