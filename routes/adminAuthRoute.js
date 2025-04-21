@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const {register, login, logout, getprofile, updateAdminPassword} = require('../controllers/admin/adminAuthController');
+const {register, login, logout, getprofile, updateAdminPassword, editProfile} = require('../controllers/admin/adminAuthController');
 const {
     verifyEmail,
     sendVerificationEmail,
@@ -23,6 +23,7 @@ router.post("/admin/verifyEmail", Sendverifymail);
 router.post("/admin/resend-verification-mail", resendVerificationEmail);
 router.get('admin/getprofile', authenticateToken, getprofile);
 router.post('/admin/update-password',  updateAdminPassword);
+router.post('/admin/update-profile', authenticateToken, editProfile);
 
 module.exports = router;
 

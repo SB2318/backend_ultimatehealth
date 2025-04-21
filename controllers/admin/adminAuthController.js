@@ -254,16 +254,6 @@ module.exports.updateAdminPassword = expressAsyncHandler(
         return res.status(404).json({ error: "User not found" });
       }
   
-      // Check if the old password matches the stored password
-      /*
-      const isOldPasswordValid = await bcrypt.compare(
-        old_password,
-        user.password
-      );
-      if (!isOldPasswordValid) {
-        return res.status(401).json({ error: "Invalid old password" });
-      }
-        */
   
       // Ensure the new password is not the same as the old password
       const isSameAsOldPassword = await bcrypt.compare(
@@ -288,3 +278,54 @@ module.exports.updateAdminPassword = expressAsyncHandler(
     }
   }
 );
+
+// Edit profile: user_name, user_handle, password, profile_avtar
+
+module.exports.editProfile = expressAsyncHandler(
+  async (req, res) => {
+
+    const { user_name, user_handle, password, profile_avtar } = req.body;
+    const userId = req.userId;
+
+    if(!userId){
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try{
+       
+      const user = await admin.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      user.user_name = user_name || user.user_name;
+      user.user_handle = user_handle || user.user_handle;
+      user.profile_avtar = profile_avtar || user.profile_avtar;
+      // encrypt password
+      const isSameAsOldPassword = await bcrypt.compare(
+        password,
+        user.password
+      );
+      if (isSameAsOldPassword) {
+        return res.status(400).json({ error: "Same as old password" });
+      }
+
+        // Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        const newHashedPassword = await bcrypt.hash(password, salt);
+    
+        // Update the user's password
+        user.password = newHashedPassword;
+        await user.save();
+
+        res.status(200).json({ status: true, message: "Profile updated" });
+
+    }catch(err){
+      console.error(err);
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+)
+// Later: Delete  profile images from AWS
+
+// get contribution analytics for admin
