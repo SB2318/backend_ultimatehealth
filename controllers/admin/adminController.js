@@ -8,6 +8,8 @@ const WriteAggregate = require("../../models/events/writeEventSchema");
 const { sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail, sendMailArticleDiscardByAdmin } = require('../emailservice');
 const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
+const AdminAggregate = require('../../models/events/adminContributionEvent');
+
 const jwt = require("jsonwebtoken");
 // article review section
 
@@ -322,7 +324,14 @@ module.exports.publishArticle = expressAsyncHandler(
             // user.articles.push(article._id);
 
             await updateWriteEvents(article._id, user.id);
-            //await user.save();
+            
+            // Update admin contribution for publish new article
+            const aggregate = new AdminAggregate({
+                userId: article.reviewer_id,
+                contributionType: 1,
+            });
+
+            await  aggregate.save();
 
             // send mail to user
             sendArticlePublishedEmail(user.email, "", article.title);

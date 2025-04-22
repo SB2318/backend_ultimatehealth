@@ -3,6 +3,8 @@ const Article = require("../models/Articles");
 const User = require("../models/UserModel");
 const ReadAggregate = require("../models/events/readEventSchema");
 const WriteAggregate = require("../models/events/writeEventSchema");
+const AdminAggregate = require('../models/events/adminContributionEvent');
+const admin = require('../models/admin/adminModel')
 
 const targetReads = 100000
 const targetWrites = 5000
@@ -449,7 +451,141 @@ async (req, res) => {
 }
 );
 
-  
+
+// get contribution analytics for admin
+
+module.exports.getMonthlyBreakDownByYear = expressAsyncHandler(
+
+  async (req, res) => {
+    const { year, cType } = req.query;
+
+    if (!year || !cType) {
+      return res.status(400).json({ error: "Missing year or contribution type" });
+    }
+
+    if(isNaN(Number(year)) || year.length !== 4){
+      return res.status(400).json({ error: "Invalid year format" });
+    }
+
+    if(![1,2,3].includes(Number(cType))){
+      return res.status(400).json({ error: "Invalid contribution type" });
+    }
+
+    try {
+
+      const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
+      const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
+
+      const contributions = await AdminAggregate.aggregate([
+        {
+          $match: {
+            date: {
+              $gte: startDate,
+              $lte: endDate
+            },
+            contributionType: Number(cType)
+          },
+         
+        },
+      {
+         // Group by month
+         $group: { 
+          _id: "$month" , 
+          count: { $sum: 1 } 
+        }
+      },
+      // Reformat the output
+      {
+        $project:{
+          month: "$_id",
+          count: 1, // keep count field 
+          _id: 0 // remove id field
+        }
+      },
+
+      // Sort ascending by month
+      {
+        $sort:{
+          month: 1
+        }
+      }
+    
+    ]);
+
+     return res.status(200).json(contributions);
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+)
+
+module.exports.getDailyBreakdownByMonth = expressAsyncHandler(
+
+  async (req, res)=>{
+    const { year, month, cType } = req.query;
+
+    if (!year || !month || !cType) {
+      return res.status(400).json({ error: "Missing year, month or contribution type" });
+    }
+
+    if(isNaN(Number(month)) || Number(month) < 1 || Number(month) > 12){
+      return res.status(400).json({ error: "Invalid month format" });
+    }
+    if(isNaN(Number(year)) || year.length !== 4){
+      return res.status(400).json({ error: "Invalid year format" });
+    }
+    if(![1,2,3].includes(Number(cType))) {
+      return res.status(400).json({ error: "Invalid contribution type" });
+
+    }
+    
+     try{
+
+      const startDate = new Date(`${year}-${month.padStart(2, '0')}-01T00:00:00.000Z`);
+      const nextMonth = Number(month) + 1;
+      const endDate = new Date(`${year}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`);
+
+       const contributions = await AdminAggregate.aggregate([
+        {
+          $match: {
+            date: {
+              $gte: startDate,
+              $lt: endDate
+            },
+            contributionType: Number(cType)
+          }
+        },
+        {
+          $group: {
+            _id: { $dayOfMonth: "$date" },
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $project:{
+            day: "$_id", count: 1, _id: 0
+          }
+        },
+        
+          {
+            $sort:{
+              day: 1
+            }
+          }
+        
+       ]);
+
+       return res.status(200).json(contributions);
+
+     }catch(err){
+      console.error(err);
+      res.status(500).json({ error: "Server error" });
+     }
+    
+  }
+)
   
   
 

@@ -504,11 +504,6 @@ module.exports.login = async (req, res) => {
 
 module.exports.logout = async (req, res) => {
 
-  // const { refreshToken } = req.userId;
-
-  //  if (!refreshToken) {
-  //    return res.status(400).json({ error: "Refresh token required" });
-  // }
 
   try {
     // Find the user and remove the refresh token
