@@ -4,8 +4,8 @@ const User = require("../models/UserModel");
 const Admin = require("../models/admin/adminModel");
 
 const authenticateToken = async (req, res, next) => {
-  const token = req.cookies.token || req.headers['authorization']?.split(' ')[1];
-  console.log('Token', token);
+  const token = req.cookies.token || req.headers['authorization']?.split(' ')[1] || req.headers['authorization']?.split(' ')[2];
+ // console.log('Token', token);
   if (!token) return res.status(401).json({ error: 'No token provided' });
 
   // check for blacklist
