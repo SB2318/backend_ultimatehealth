@@ -21,7 +21,7 @@ router.post("/admin/logout", authenticateToken, logout);
 router.get("/admin/verifyEmail", verifyEmail);
 router.post("/admin/verifyEmail", Sendverifymail);
 router.post("/admin/resend-verification-mail", resendVerificationEmail);
-router.get('admin/getprofile', authenticateToken, getprofile);
+router.get('/admin/getprofile', authenticateToken, getprofile);
 router.post('/admin/update-password',  updateAdminPassword);
 router.post('/admin/update-profile', authenticateToken, editProfile);
 
