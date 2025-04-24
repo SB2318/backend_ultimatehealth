@@ -220,10 +220,10 @@ module.exports.getprofile = expressAsyncHandler(
           .json({ error: "Email not verified. Please check your email." });
       }
 
-      const articleContributed = await Article.countDocuments({ reviewer_id: user._id, status: statusEnum.statusEnum.PUBLISHED });
+      //const articleContributed = await Article.countDocuments({ reviewer_id: user._id, status: statusEnum.statusEnum.PUBLISHED });
 
 
-      return res.json({ status: true, profile: { ...user, articleContributed: articleContributed } });
+      return res.json(user);
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Internal server error" });
