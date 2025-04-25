@@ -15,7 +15,7 @@ router.get('/yearly-reads', authenticateToken, controller.getYearlyReadDataForGr
 router.get('/daily-writes',authenticateToken, controller.getDailyWriteDataForGraphs);
 router.get('/monthly-writes', authenticateToken, controller.getMonthlyWriteDataForGraphs);
 router.get('/yearly-writes', authenticateToken, controller.getYearlyWriteDataForGraphs);
-router.get('/analytics/admin/get-yearly-contribution', authenticateToken, controller.getMonthlyBreakDownByYear);
-router.get('/analytics/admin/get-monthly-contribution', authenticateToken, controller.getDailyBreakdownByMonth);
+router.get('/admin/get-yearly-contribution', authenticateToken, controller.getMonthlyBreakDownByYear);
+router.get('/admin/get-monthly-contribution', authenticateToken, controller.getDailyBreakdownByMonth);
 
 module.exports = router;
