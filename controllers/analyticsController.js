@@ -497,8 +497,8 @@ module.exports.getMonthlyBreakDownByYear = expressAsyncHandler(
       // Reformat the output
       {
         $project:{
-          month: "$_id",
-          count: 1, // keep count field 
+          label: "$_id",
+          value: "$count", // keep count field 
           _id: 0 // remove id field
         }
       },
@@ -506,7 +506,7 @@ module.exports.getMonthlyBreakDownByYear = expressAsyncHandler(
       // Sort ascending by month
       {
         $sort:{
-          month: 1
+          label: 1
         }
       }
     
@@ -565,13 +565,13 @@ module.exports.getDailyBreakdownByMonth = expressAsyncHandler(
         },
         {
           $project:{
-            day: "$_id", count: 1, _id: 0
+            label: "$_id", value: "$count", _id: 0
           }
         },
         
           {
             $sort:{
-              day: 1
+              label: 1
             }
           }
         
