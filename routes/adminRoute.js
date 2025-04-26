@@ -1,5 +1,5 @@
 const express = require("express");
-const { getAllArticleForReview, assignModerator, submitReview, submitSuggestedChanges, getAllArticlesForAssignModerator, publishArticle, getAllInProgressArticles, getAllReviewCompletedArticles, discardChanges } = require("../controllers/admin/adminController");
+const { getAllArticleForReview, assignModerator, submitReview, submitSuggestedChanges, getAllArticlesForAssignModerator, publishArticle, getAllInProgressArticles, getAllReviewCompletedArticles, discardChanges } = require("../controllers/admin/articleReviewController");
 const router = express.Router();
 
 router.get('/admin/articles-for-review', getAllArticleForReview);

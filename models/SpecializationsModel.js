@@ -17,13 +17,13 @@ const specializationSchema = new Schema({
     default: 0,
     min: [0, "Count of existing doctors cannot be negative"],
   },
-  doctor_ids: [
+  doctor_ids: 
     {
-      type: mongoose.Schema.Types.ObjectId,
+      type: [mongoose.Schema.Types.ObjectId],
       ref: "User", // Reference to the User model
       default: [],
     },
-  ],
+  
   last_updated_at: {
     type: Date,
     default: Date.now,

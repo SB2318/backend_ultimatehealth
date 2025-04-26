@@ -93,37 +93,37 @@ const userSchema = new mongoose.Schema({
     },
     refreshToken: { type: String, default: null } ,
     fcmToken: { type: String, default: null }, 
-    articles: [{
-        type: Number,
+    articles: {
+        type: [Number],
         ref: 'Article',
         default: []
-    }],
+    },
     
-    repostArticles: [{
-        type: Number,
+    repostArticles: {
+        type: [Number],
         ref: 'Article',
         default: []
-    }],
-    savedArticles: [{
-        type: Number,
+    },
+    savedArticles: {
+        type: [Number],
         ref: 'Article',
         default: []
-    }],
-    likedArticles: [{
-        type: Number,
+    },
+    likedArticles: {
+        type: [Number],
         ref: 'Article',
         default: []
-    }],
-    followers: [{
-        type: Schema.Types.ObjectId,
+    },
+    followers: {
+        type: [Schema.Types.ObjectId],
         ref: 'User',
         default: []
-    }],
-    followings: [{
-        type: Schema.Types.ObjectId,
+    },
+    followings: {
+        type: [Schema.Types.ObjectId],
         ref: 'User',
         default: []
-    }],
+    },
 
     followerCount: {
         type: Number,
@@ -136,19 +136,7 @@ const userSchema = new mongoose.Schema({
        // required: true,
         default: 0,
     },
-    /*
-    readArticles: [{
-        articleId: {
-            type: Number,
-            required: true,
-        },
-        readingDate: {
-            type: Date,
-            required: true,
-            default: Date.now,
-        },
-    }],
-    */
+    
     
 });
 
