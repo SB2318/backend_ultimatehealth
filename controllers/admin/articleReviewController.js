@@ -267,28 +267,6 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
     }
 )
 
-// get all articles for assigned moderator, wrong, it will be for author
-/*
-module.exports.getAllArticlesForAssignModerator = expressAsyncHandler(
-
-    async (req, res) => {
-
-        const { moderatorId } = req.params;
-
-        if (!moderatorId) {
-            return res.status(400).json({ message: "Moderator ID is required" });
-        }
-        try {
-
-            const articles = await Article.find({ reviewer_id: moderatorId, status: { $nin: [statusEnum.statusEnum.UNASSIGNED, statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED] } });
-            res.status(200).json(articles);
-        } catch (err) {
-            console.log(err);
-            res.status(500).json({ message: err.message });
-        }
-    }
-)
-    */
 
 // publish article
 module.exports.publishArticle = expressAsyncHandler(

@@ -24,6 +24,7 @@ router.post('/article/readEvent', authenticateToken, articleController.updateRea
 router.get('/article/read-status', authenticateToken, articleController.getReadDataForGraphs);
 router.get('/article/write-status', authenticateToken, articleController.getWriteDataForGraphs );
 router.post('/article/repost', authenticateToken, articleController.repostArticle);
+router.get('/article/improvements', authenticateToken, articleController.getAllImprovementsForUser);
 
 
 module.exports = router;

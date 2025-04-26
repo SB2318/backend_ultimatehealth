@@ -2,6 +2,7 @@ const expressAsyncHandler = require("express-async-handler");
 const ArticleTag = require("../models/ArticleModel");
 const Article = require("../models/Articles");
 const User = require("../models/UserModel");
+const EditRequest = require('../../models/admin/articleEditRequestModel');
 const ReadAggregate = require("../models/events/readEventSchema");
 const WriteAggregate = require("../models/events/writeEventSchema");
 const statusEnum = require("../utils/StatusEnum");
@@ -532,21 +533,22 @@ exports.repostArticle = expressAsyncHandler(
   }
 )
 
-/**
- * 
- * New Flow For Article Creation:
- *  (i) User will submit an article
- *  (ii) Article will be created with Review-Pending status (it will not visible to other users)
- * (iii) In the profile module, there will be a section where User can show their unpublished articles,
- *      reviewer comments, can add their feedback, can resubmit the article
- * (iv) Once article published, their read count updated
- * 
- * 
- * New Flow For Article Edit:
- * (i) User will submit an edit request
- * (ii) Reviewer will review the reason
- * (iii) Once they approved, the user can start their work (but they have only 4 days in that case)
- * (iv) In the profile module, one draft section will be available for them, there they can continue
- * (v) After submitting their existing work, rest flow will be same as article creation
- *  
- */
+module.exports.getAllImprovementsForUser = expressAsyncHandler(
+  async (req, res) => {
+      const userId  = req.userId;
+      if (!userId) {
+          return res.status(400).json({ message: 'User ID is required.' });
+      }
+      try {
+          const articles = await EditRequest.find({
+                user_id: userId, 
+                
+          }).populate('article').exec();
+
+          res.status(200).json(articles);
+      } catch (err) {
+          console.log(err);
+          res.status(500).json({ message: err.message });
+      }
+  }
+)

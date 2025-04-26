@@ -13,7 +13,7 @@ const editRequestSchema = new Schema(
             required: true,
             ref: 'User'
         },
-        article_id: {
+        article: {
             type: Number,
             required: true,
             ref: 'Article'

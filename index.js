@@ -21,6 +21,7 @@ const uploadRoute = require('./routes/uploadRoute');
 const notificationRoute = require('./routes/notificationRoute');
 const reportRoute = require('./routes/reportRoute');
 const adminAuthRoute = require('./routes/adminAuthRoute');
+const articleEditRoute = require('./routes/articleEditRequestRoute');
 const adminRoute = require('./routes/adminRoute');
 const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification, repostNotification, mentionNotification } = require('./controllers/notifications/notificationHelper');
 
@@ -48,6 +49,7 @@ app.use("/api", notificationRoute);
 app.use("/api", reportRoute);
 app.use("/api", adminAuthRoute);
 app.use("/api", adminRoute);
+app.use("/api", articleEditRoute);
 
 // Test route (can be removed later)
 app.get("/hello", (req, res) => {
