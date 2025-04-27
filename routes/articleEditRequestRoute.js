@@ -6,12 +6,21 @@ const{
     submitEditRequest,
     getAllImprovementsForReview,
     getAllInProgressImprovementsForAdmin,
-    getAllCompletedImprovementsForAdmin
+    getAllCompletedImprovementsForAdmin,
+    pickImprovementRequest,
+    submitReviewOnImprovement,
+    submitImprovement,
+    detectContentLoss 
 }= require('../controllers/admin/articleEditRequestController');
 
 router.post('/article/submit-edit-request', authenticateToken, submitEditRequest);
 router.get('/admin/available-improvements', authenticateToken, getAllImprovementsForReview);
 router.get('/admin/progress-improvements', authenticateToken, getAllInProgressImprovementsForAdmin);
 router.get('/admin/publish-improvements', authenticateToken, getAllCompletedImprovementsForAdmin);
+router.post('/article/approve-improvement-request', authenticateToken, pickImprovementRequest);
+router.post('/article/submit-review-on-improvement', authenticateToken, submitReviewOnImprovement);
+router.post('/article/submit-improvement', authenticateToken, submitImprovement);
+router.post('/article/detect-content-loss', authenticateToken, detectContentLoss);
+
 
 module.exports = router;
