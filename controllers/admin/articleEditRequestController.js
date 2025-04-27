@@ -283,7 +283,7 @@ module.exports.submitImprovement = expressAsyncHandler(
     }
 )
 
-// Detect content loss
+// Detect content loss, Later may replace with Python API
 module.exports.detectContentLoss = expressAsyncHandler(
 
      async(req, res)=>{
@@ -315,7 +315,8 @@ module.exports.detectContentLoss = expressAsyncHandler(
             if (removedParts.length > 0) {
                 return res.status(400).json({ 
                     message: "Some content from the original article was removed.",
-                    status: true
+                    status: true,
+                    parts: removedParts
                 });
             }else{
                 return res.status(400).json({ 
@@ -330,7 +331,102 @@ module.exports.detectContentLoss = expressAsyncHandler(
         }
      }
 )
+
+module.exports.discardImprovement = expressAsyncHandler(
+    async (req, res) => {
+
+        const { requestId, discardReason } = req.body;
+
+        if (!requestId || !discardReason) {
+            return res.status(400).json({ message: "Invalid request, please provide discard reason and request id" });
+        }
+
+        try {
+
+            const editRequest = await EditRequest.findById(requestId).populate('article')
+                                 .populate('user_id').exec();
+
+            if (!editRequest) {
+                return res.status(404).json({ message: "Request not found" });
+            }
+
+        
+       
+            editRequest.reviewer_id = null;
+            editRequest.status = statusEnum.statusEnum.DISCARDED;
+
+            await editRequest.save();
+           
+              
+            sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, discardReason);
+            
+
+            return res.status(200).json({message:"Improvement Discarded"});
+
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
 // Moderator will review the reason
+
+module.exports.publishArticle = expressAsyncHandler(
+    async (req, res) => {
+        const { requestId, reviewer_id } = req.body;
+
+        if (!requestId || !reviewer_id) {
+            return res.status(400).json({ message: "Request ID and Reviewer ID are required" });
+        }
+
+        try {
+            const [editRequest, reviewer] = await Promise.all([
+                EditRequest.findById(requestId).populate('article').populate('user_id').exec(),
+                admin.findById(reviewer_id)
+            ]);
+
+            if (!editRequest || !reviewer) {
+                return res.status(404).json({ message: "Request or Reviewer not found" });
+            }
+
+            if (editRequest.reviewer_id.toString() !== reviewer_id) {
+                return res.status(403).json({ message: "Article is not assigned to this reviewer" });
+            }
+            
+            article.status = statusEnum.statusEnum.PUBLISHED;
+            article.publishedDate = new Date();
+            article.lastUpdated = new Date();
+
+            await article.save();
+            // user.articles.push(article._id);
+
+            await updateWriteEvents(article._id, user.id);
+            
+            // Update admin contribution for publish new article
+            const aggregate = new AdminAggregate({
+                userId: article.reviewer_id,
+                contributionType: 1,
+            });
+
+            await  aggregate.save();
+
+            // send mail to user
+            sendArticlePublishedEmail(user.email, "", article.title);
+
+            // send notification
+            articleReviewNotificationsToUser(user._id, article._id, {
+                title: ` Your Article : ${article.title} is Live now!`,
+                body: "Keep contributing!  We encourage you to keep sharing valuable content with us."
+            },2);
+
+            res.status(200).json({ message: "Article Published" });
+
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
 // Moderator will assign the new contributor who has requested
 // Interaction Start
 // If all good moderator will published the article with changes, and User will be added as an

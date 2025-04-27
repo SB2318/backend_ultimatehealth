@@ -222,30 +222,7 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
 
             await article.save();
 
-            /*
-            if (aditionalNote) {
-                // create comment object and notify moderator
-                const comment = new Comment({
-                    userId: article.authorId,
-                    articleId: article._id,
-                    parentCommentId: parentCommentId || null,
-                    content: aditionalNote,
-                    isNote: true
-                });
-                await comment.save();
-
-                article.review_comments.push(comment._id);
-
-                await article.save();
-
-                sendCommentNotification(article.reviewer_id, article._id, {
-                    title: "New Additional Note from Author",
-                    body: `An author has added a new note to the article titled ${article.title}.`
-                })
-
-            }
-                */
-
+            
             // notify reviewer
             if (article.reviewer_id) {
 
@@ -254,8 +231,6 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
                     body: "Please reach out"
                 },1);
             }
-
-            
 
             res.status(200).json({ message: "Article submitted" });
 
@@ -488,6 +463,6 @@ cron.schedule('0 0 * * *', async () => {
     console.log('running cron job discard article...');
     await discardArticle();
 });
-// article edit request section
+
 // article and comment report section
-// moderator contribution section
+
