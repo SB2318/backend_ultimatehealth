@@ -3,10 +3,10 @@ const Article = require('../../models/Articles');
 const EditRequest = require('../../models/admin/articleEditRequestModel');
 const admin = require('../../models/admin/adminModel');
 const User = require('../../models/UserModel');
-const { articleReviewNotificationsToUser, sendCommentNotification } = require('../notifications/notificationHelper');
+const { articleReviewNotificationsToUser } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
 const WriteAggregate = require("../../models/events/writeEventSchema");
-const { sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail, sendMailArticleDiscardByAdmin } = require('../emailservice');
+const { sendMailOnEditRequestApproval} = require('../emailservice');
 const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
 const AdminAggregate = require('../../models/events/adminContributionEvent');
@@ -124,7 +124,6 @@ module.exports.pickImprovementRequest = expressAsyncHandler(
         }
 
         try {
-
             const [editRequest, moderator] = await Promise.all(
                 [
                     EditRequest.findById(requestId).populate('article').exec(),
@@ -132,9 +131,16 @@ module.exports.pickImprovementRequest = expressAsyncHandler(
                 ]
             );
 
+           
+
             if (!editRequest || !moderator) {
                 res.status(404).json({ message: 'Request or Reviewer not found' });
                 return;
+            }
+            const user = await User.findById(editRequest.user_id);
+
+            if(!user){
+                return res.status(400).json({message:"User not found"});
             }
 
             if (editRequest.status !== statusEnum.statusEnum.UNASSIGNED) {
@@ -149,9 +155,12 @@ module.exports.pickImprovementRequest = expressAsyncHandler(
             await editRequest.save();
             // send Notification
             articleReviewNotificationsToUser(editRequest.article.authorId, editRequest.article._id, {
-                title: `Congrats!Your Improvement Request has been accepted`,
+                title: `Congrats! Your Improvement Request has been accepted`,
                 body: `Article : ${editRequest.article.title}`
-            },2);
+            },1);
+
+            // Send email
+            sendMailOnEditRequestApproval()
 
             res.status(200).json({ message: "Article status updated" });
 

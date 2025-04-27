@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const { verifyToken, verifyUser } = require("../middleware/authMiddleware");
-const {ARTICLE_FEEDBACK, ARTICLE_PUBLISH, ARTICLE_DISCARDED_FROM_SYSTEM, ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION} = require("../utils/emailBody");
+const { ARTICLE_FEEDBACK, ARTICLE_PUBLISH, ARTICLE_DISCARDED_FROM_SYSTEM, ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION } = require("../utils/emailBody");
 const jwt = require('jsonwebtoken');
 const UnverifiedUser = require("../models/UnverifiedUserModel");
 const User = require("../models/UserModel");
@@ -310,7 +310,7 @@ const sendArticleDiscardEmail = (email, status, title) => {
     });
 };
 
-const sendMailArticleDiscardByAdmin = (email, title, discardReason)=>{
+const sendMailArticleDiscardByAdmin = (email, title, discardReason) => {
 
     const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -385,7 +385,88 @@ const sendMailArticleDiscardByAdmin = (email, title, discardReason)=>{
 
 }
 
-module.exports = { sendVerificationEmail, verifyEmail, Sendverifymail, resendVerificationEmail, sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail, sendMailArticleDiscardByAdmin };
+// send email on approval of edit request
+const sendMailOnEditRequestApproval = (email, title) => {
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: `Edit Request Accepted on article: ${title}`,
+        html: `<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Improvement Request Approved</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background-color: #f9f9f9;
+                    color: #333;
+                    padding: 20px;
+                }
+                .container {
+                    background-color: white;
+                    border-radius: 8px;
+                    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+                    padding: 30px;
+                    text-align: center;
+                    max-width: 600px;
+                    margin: 0 auto;
+                }
+                h1 {
+                    color: #4CAF50;
+                }
+                p {
+                    font-size: 16px;
+                    color: #555;
+                }
+                .highlight {
+                    font-weight: bold;
+                    color: #4CAF50;
+                }
+                .footer {
+                    font-size: 12px;
+                    color: #888;
+                    margin-top: 30px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Improvement Request Approved</h1>
+                <p>Dear Author,</p>
+                <p>Your edit request for the article titled <span class="highlight">"${title}"</span> has been accepted.</p>
+                <p>Please make the necessary improvements within <span class="highlight">4 days</span> from the date of this email.</p>
+                <p>If you have any questions or need clarification on the required changes, feel free to reach out.</p>
+                <div class="footer">
+                    <p>Best regards,</p>
+                    <p>UltimateHealth Team</p>
+                </div>
+            </div>
+        </body>
+        </html>`
+    };
+
+    transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+            console.error('Error sending email:', err);
+        } else {
+            console.log('Verification email sent:', info.response);
+        }
+    });
+}
+module.exports = { 
+    sendVerificationEmail, 
+    verifyEmail, 
+    Sendverifymail, 
+    resendVerificationEmail, 
+    sendArticleFeedbackEmail, 
+    sendArticlePublishedEmail, 
+    sendArticleDiscardEmail, 
+    sendMailArticleDiscardByAdmin,
+    sendMailOnEditRequestApproval
+ };
 
 
 
