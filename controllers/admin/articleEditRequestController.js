@@ -393,9 +393,9 @@ module.exports.publishArticle = expressAsyncHandler(
                 return res.status(403).json({ message: "Article is not assigned to this reviewer" });
             }
             
-            article.status = statusEnum.statusEnum.PUBLISHED;
-            article.publishedDate = new Date();
-            article.lastUpdated = new Date();
+            //article.status = statusEnum.statusEnum.PUBLISHED;
+          //  article.publishedDate = new Date();
+           // article.lastUpdated = new Date();
 
             await article.save();
             // user.articles.push(article._id);
