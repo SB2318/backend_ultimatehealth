@@ -51,6 +51,10 @@ const editRequestSchema = new Schema(
         discardReason: {
             type: String,
             default: "Discarded by system"
+        },
+        last_updated:{
+            type: Date,
+            default: Date.now 
         }
     }
 )

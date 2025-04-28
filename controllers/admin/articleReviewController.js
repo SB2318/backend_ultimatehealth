@@ -100,14 +100,14 @@ module.exports.assignModerator = expressAsyncHandler(
             article.status = statusEnum.statusEnum.IN_PROGRESS;
             article.reviewer_id = moderator._id;
             article.assigned_at = new Date();
-            // article.lastUpdated = new Date();
+            article.lastUpdated = new Date();
 
             await article.save();
             // send Notification
             articleReviewNotificationsToUser(article.authorId, article._id, {
                 title: `Congrats!Your Article : ${article.title} is Under Review`,
                 body: "Our team has started reviewing your article. Stay tuned!"
-            },2);
+            }, 2);
 
             res.status(200).json({ message: "Article status updated" });
 
@@ -168,7 +168,7 @@ module.exports.submitReview = expressAsyncHandler(
             articleReviewNotificationsToUser(article.authorId._id, article._id, {
                 title: "New feedback received on your Article : " + article.title,
                 body: feedback
-            },2);
+            }, 2);
             // send mail
             sendArticleFeedbackEmail(article.authorId.email, feedback, article.title);
 
@@ -222,14 +222,14 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
 
             await article.save();
 
-            
+
             // notify reviewer
             if (article.reviewer_id) {
 
                 articleReviewNotificationsToUser(article.reviewer_id, article._id, {
                     title: ` New changes from author on : ${article.title} `,
                     body: "Please reach out"
-                },1);
+                }, 1);
             }
 
             res.status(200).json({ message: "Article submitted" });
@@ -277,14 +277,14 @@ module.exports.publishArticle = expressAsyncHandler(
             // user.articles.push(article._id);
 
             await updateWriteEvents(article._id, user.id);
-            
+
             // Update admin contribution for publish new article
             const aggregate = new AdminAggregate({
                 userId: article.reviewer_id,
                 contributionType: 1,
             });
 
-            await  aggregate.save();
+            await aggregate.save();
 
             // send mail to user
             sendArticlePublishedEmail(user.email, "", article.title);
@@ -293,7 +293,7 @@ module.exports.publishArticle = expressAsyncHandler(
             articleReviewNotificationsToUser(user._id, article._id, {
                 title: ` Your Article : ${article.title} is Live now!`,
                 body: "Keep contributing!  We encourage you to keep sharing valuable content with us."
-            },2);
+            }, 2);
 
             res.status(200).json({ message: "Article Published" });
 
@@ -323,18 +323,19 @@ module.exports.discardChanges = expressAsyncHandler(
             }
 
             const user = await User.findById(article.authorId);
-       
+
             article.reviewer_id = null;
             article.assigned_at = null;
             article.status = statusEnum.statusEnum.DISCARDED;
+            article.lastUpdated = new Date();
 
             await article.save();
             if (user) {
-              
+
                 sendMailArticleDiscardByAdmin(user.email, article.title, discardReason);
             }
 
-            return res.status(200).json({message:"Article Discarded"});
+            return res.status(200).json({ message: "Article Discarded" });
 
         } catch (err) {
             console.error(err);
@@ -378,31 +379,25 @@ async function updateWriteEvents(articleId, userId) {
 async function unassignArticle() {
 
     try {
-
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 30);
         const articles = await Article.find({
             status: {
                 $in: [statusEnum.statusEnum.IN_PROGRESS]
+            },
+            lastUpdated: {
+                $lte: thirtyDaysAgo
             }
         });
+
         articles.forEach(async (article) => {
 
-            if (article.assigned_date !== null) {
+            article.reviewer_id = null;
+            article.assigned_at = null;
+            article.status = statusEnum.statusEnum.UNASSIGNED;
+            article.lastUpdated = new Date();
 
-                const assignedDate = new Date(article.assigned_date);
-                const currentDate = new Date();
-                const timeDifference = currentDate - assignedDate;
-                const daysDifference = timeDifference / (1000 * 3600 * 24);
-
-                if (daysDifference > 4) {
-
-                    let reviewer_id = article.reviewer_id;
-                    article.reviewer_id = null;
-                    article.assigned_at = null;
-                    article.status = statusEnum.statusEnum.UNASSIGNED;
-
-                    await article.save();
-                }
-            }
+            await article.save();
 
         });
 
@@ -418,33 +413,32 @@ async function discardArticle() {
 
     try {
 
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
         const articles = await Article.find({
             status: {
                 $in: [statusEnum.statusEnum.UNASSIGNED, statusEnum.statusEnum.REVIEW_PENDING]
+            },
+            lastUpdated: {
+
+                $lte: sixtyDaysAgo
+
             }
-        });
+        }).populate('authorId').exec();
+
         articles.forEach(async (article) => {
 
+            article.reviewer_id = null;
+            article.assigned_at = null;
+            article.status = statusEnum.statusEnum.DISCARDED;
 
-            if (article.assigned_date !== null) {
-                const assignedDate = new Date(article.assigned_date);
-                const currentDate = new Date();
-                const timeDifference = currentDate - assignedDate;
-                const daysDifference = timeDifference / (1000 * 3600 * 24);
+            await article.save();
 
-                // Discard all unassigned and review pending articles after 30 days
-                if (daysDifference > 30) {
-                    const user = await User.findById(article.authorId);
-                    let status = article.status;
-                    article.reviewer_id = null;
-                    article.assigned_at = null;
-                    article.status = statusEnum.statusEnum.DISCARDED;
-
-                    await article.save();
-                    if (user)
-                        sendArticleDiscardEmail(user.email, status, article.title)
-                }
+            if (article.authorId?.email && article.title) {
+                sendArticleDiscardEmail(article.authorId.email, previousStatus, article.title);
             }
+
 
         });
     } catch (err) {

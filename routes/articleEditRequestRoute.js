@@ -11,7 +11,8 @@ const{
     submitReviewOnImprovement,
     submitImprovement,
     detectContentLoss, 
-    discardImprovement
+    discardImprovement,
+    publishImprovement
 }= require('../controllers/admin/articleEditRequestController');
 
 router.post('/article/submit-edit-request', authenticateToken, submitEditRequest);
@@ -23,6 +24,7 @@ router.post('/article/submit-review-on-improvement', authenticateToken, submitRe
 router.post('/article/submit-improvement', authenticateToken, submitImprovement);
 router.post('/article/detect-content-loss', authenticateToken, detectContentLoss);
 router.post('/article/discard-improvement', authenticateToken, discardImprovement);
+router.post('/article/publish-improvement', authenticateToken, publishImprovement);
 
 
 module.exports = router;

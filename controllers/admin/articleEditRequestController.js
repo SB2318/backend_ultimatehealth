@@ -6,11 +6,11 @@ const User = require('../../models/UserModel');
 const { articleReviewNotificationsToUser } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
 const WriteAggregate = require("../../models/events/writeEventSchema");
-const { sendMailOnEditRequestApproval } = require('../emailservice');
+const { sendMailOnEditRequestApproval, sendMailArticleDiscardByAdmin, sendArticleFeedbackEmail,  sendArticlePublishedEmail } = require('../emailservice');
 const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
 const AdminAggregate = require('../../models/events/adminContributionEvent');
-const diff= require('diff');
+const diff = require('diff');
 // Flow
 
 // Submit Edit request
@@ -30,8 +30,8 @@ module.exports.submitEditRequest = expressAsyncHandler(
 
             const article = await Article.findById(Number(article_id));
 
-            if(!article){
-                return res.status(404).json({message:"Article not found"});
+            if (!article) {
+                return res.status(404).json({ message: "Article not found" });
             }
             // User can have 2 open edit request at  a time
             const count = await EditRequest.countDocuments({
@@ -156,6 +156,7 @@ module.exports.pickImprovementRequest = expressAsyncHandler(
             // Update article status and assign reviewer
             editRequest.status = statusEnum.statusEnum.IN_PROGRESS;
             editRequest.reviewer_id = moderator._id;
+            editRequest.last_updated = new Date();
 
             await editRequest.save();
             // send Notification
@@ -218,6 +219,7 @@ module.exports.submitReviewOnImprovement = expressAsyncHandler(
             await comment.save();
             editRequest.editComments.push(comment._id);
             editRequest.status = statusEnum.statusEnum.AWAITING_USER;
+            editRequest.last_updated = new Date();
             await editRequest.save();
 
             articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id, {
@@ -241,7 +243,7 @@ module.exports.submitImprovement = expressAsyncHandler(
 
     async (req, res) => {
 
-        const { requestId, edited_content} = req.body;
+        const { requestId, edited_content } = req.body;
 
         if (!requestId || !edited_content) {
             return res.status(400).json({ message: "Request Id, Edited Content, Author Id and Reviewer Id required" });
@@ -252,28 +254,29 @@ module.exports.submitImprovement = expressAsyncHandler(
             const editRequest = await EditRequest.findById(requestId).populate('article')
                 .populate('user_id').exec();
 
-            if(!editRequest){
-                return res.status(400).json({message:"Edit request not found"});
+            if (!editRequest) {
+                return res.status(400).json({ message: "Edit request not found" });
             }
-           if(editRequest.reviewer_id === null){
-              return res.status(403).json({message:"The request has not been approved yet"});
-           }
+            if (editRequest.reviewer_id === null) {
+                return res.status(403).json({ message: "The request has not been approved yet" });
+            }
 
-           editRequest.edited_content = edited_content;
-           editRequest.status = statusEnum.statusEnum.REVIEW_PENDING;
+            editRequest.edited_content = edited_content;
+            editRequest.status = statusEnum.statusEnum.REVIEW_PENDING;
+            editRequest.last_updated = new Date();
 
-           await editRequest.save();
+            await editRequest.save();
 
-        if (editRequest.reviewer_id) {
-           
-            articleReviewNotificationsToUser(editRequest.reviewer_id, editRequest.article._id, {
-            title: ` New changes from author on : ${editRequest.article.title} `,
-            body: "Please reach out"
-            },1);
-        
-         }
-         
-         res.status(200).json({ message: "Improvement submitted" });
+            if (editRequest.reviewer_id) {
+
+                articleReviewNotificationsToUser(editRequest.reviewer_id, editRequest.article._id, {
+                    title: ` New changes from author on : ${editRequest.article.title} `,
+                    body: "Please reach out"
+                }, 1);
+
+            }
+
+            res.status(200).json({ message: "Improvement submitted" });
 
         } catch (err) {
             console.log(err);
@@ -286,50 +289,50 @@ module.exports.submitImprovement = expressAsyncHandler(
 // Detect content loss, Later may replace with Python API
 module.exports.detectContentLoss = expressAsyncHandler(
 
-     async(req, res)=>{
-         
-        const {edited_content, requestId} = req.body;
+    async (req, res) => {
 
-        if(!edited_content  || !requestId){
-            res.status(400).json({message:"Missing edited content or request id"});
+        const { edited_content, requestId } = req.body;
+
+        if (!edited_content || !requestId) {
+            res.status(400).json({ message: "Missing edited content or request id" });
             return;
         }
 
-        try{
+        try {
 
             const editRequest = await EditRequest.findById(requestId).populate('article')
                 .populate('user_id').exec();
 
-            if(!editRequest){
-                return res.status(400).json({message:"Edit request not found"});
+            if (!editRequest) {
+                return res.status(400).json({ message: "Edit request not found" });
             }
             if (editRequest.reviewer_id === null) {
                 return res.status(403).json({ message: "The request has not been approved yet." });
             }
             const original_content = editRequest.article.content;
-            
+
 
             const differences = diff.diffWords(original_content, edited_content);
             const removedParts = differences.filter(part => part.removed);
 
             if (removedParts.length > 0) {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     message: "Some content from the original article was removed.",
                     status: true,
                     parts: removedParts
                 });
-            }else{
-                return res.status(400).json({ 
+            } else {
+                return res.status(400).json({
                     message: "No removed content",
                     status: false
-                }); 
+                });
             }
 
-        }catch(err){
+        } catch (err) {
             console.log(err);
-            res.status(500).json({message: "Internal server error"});
+            res.status(500).json({ message: "Internal server error" });
         }
-     }
+    }
 )
 
 module.exports.discardImprovement = expressAsyncHandler(
@@ -344,24 +347,25 @@ module.exports.discardImprovement = expressAsyncHandler(
         try {
 
             const editRequest = await EditRequest.findById(requestId).populate('article')
-                                 .populate('user_id').exec();
+                .populate('user_id').exec();
 
             if (!editRequest) {
                 return res.status(404).json({ message: "Request not found" });
             }
 
-        
-       
+
+
             editRequest.reviewer_id = null;
             editRequest.status = statusEnum.statusEnum.DISCARDED;
+            editRequest.last_updated = new Date();
 
             await editRequest.save();
-           
-              
-            sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, discardReason);
-            
 
-            return res.status(200).json({message:"Improvement Discarded"});
+
+            sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, discardReason);
+
+
+            return res.status(200).json({ message: "Improvement Discarded" });
 
         } catch (err) {
             console.error(err);
@@ -371,7 +375,7 @@ module.exports.discardImprovement = expressAsyncHandler(
 )
 // Moderator will review the reason
 
-module.exports.publishArticle = expressAsyncHandler(
+module.exports.publishImprovement = expressAsyncHandler(
     async (req, res) => {
         const { requestId, reviewer_id } = req.body;
 
@@ -381,43 +385,55 @@ module.exports.publishArticle = expressAsyncHandler(
 
         try {
             const [editRequest, reviewer] = await Promise.all([
-                EditRequest.findById(requestId).populate('article').populate('user_id').exec(),
+                EditRequest.findById(requestId),
                 admin.findById(reviewer_id)
             ]);
+
 
             if (!editRequest || !reviewer) {
                 return res.status(404).json({ message: "Request or Reviewer not found" });
             }
 
+
             if (editRequest.reviewer_id.toString() !== reviewer_id) {
                 return res.status(403).json({ message: "Article is not assigned to this reviewer" });
             }
-            
-            //article.status = statusEnum.statusEnum.PUBLISHED;
-          //  article.publishedDate = new Date();
-           // article.lastUpdated = new Date();
+
+            const [article, contributor] = await Promise.all([
+                Article.findById(editRequest.article),
+                User.findById(editRequest.user_id)
+            ])
+
+            if (!article || !contributor) {
+                return res.status(400).json({ message: "Article or contributor not found" });
+            }
+
+            article.status = statusEnum.statusEnum.PUBLISHED;
+            //  article.publishedDate = new Date();
+            article.content = editRequest.edited_content;
+            article.lastUpdated = new Date();
+            article.contributors.push(contributor._id);
 
             await article.save();
-            // user.articles.push(article._id);
+            // update user contribution
+            await updateWriteEvents(article._id, contributor.id);
 
-            await updateWriteEvents(article._id, user.id);
-            
             // Update admin contribution for publish new article
             const aggregate = new AdminAggregate({
                 userId: article.reviewer_id,
-                contributionType: 1,
+                contributionType: 2,
             });
 
-            await  aggregate.save();
+            await aggregate.save();
 
             // send mail to user
-            sendArticlePublishedEmail(user.email, "", article.title);
+            sendArticlePublishedEmail(contributor.email, "", article.title);
 
             // send notification
-            articleReviewNotificationsToUser(user._id, article._id, {
-                title: ` Your Article : ${article.title} is Live now!`,
-                body: "Keep contributing!  We encourage you to keep sharing valuable content with us."
-            },2);
+            articleReviewNotificationsToUser(contributor._id, article._id, {
+                title: ` Your Improvements on article : ${article.title} is Live now!`,
+                body: "Keep contributing! We encourage you to keep sharing valuable content with us."
+            }, 2);
 
             res.status(200).json({ message: "Article Published" });
 
@@ -427,7 +443,119 @@ module.exports.publishArticle = expressAsyncHandler(
         }
     }
 )
-// Moderator will assign the new contributor who has requested
-// Interaction Start
-// If all good moderator will published the article with changes, and User will be added as an
-// contributor to the article
+
+async function updateWriteEvents(articleId, userId) {
+
+    const now = new Date();
+    const today = new Date(now.setHours(0, 0, 0, 0));
+
+    try {
+
+        // Check for existing event entry
+        const writeEvent = await WriteAggregate.findOne({ userId: userId, date: today });
+
+        if (!writeEvent) {
+            // New Write Event Entry
+            const newWriteEvent = new WriteAggregate({ userId: userId, date: today });
+            newWriteEvent.dailyWrites = 1;
+            newWriteEvent.monthlyWrites = 1;
+            newWriteEvent.yearlyWrites = 1;
+
+            await newWriteEvent.save();
+        } else {
+
+            writeEvent.dailyWrites += 1;
+            writeEvent.monthlyWrites += 1;
+            writeEvent.yearlyWrites += 1;
+
+            await writeEvent.save();
+        }
+    } catch (err) {
+        console.log('Article Write Event Update Error', err);
+    }
+}
+
+async function discardImprovements() {
+
+    try {
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+        const editRequests = await EditRequest.find({
+            status: {
+                $in: [statusEnum.statusEnum.UNASSIGNED, statusEnum.statusEnum.REVIEW_PENDING,
+                statusEnum.statusEnum.AWAITING_USER]
+            },
+            last_updated: {
+                $lte: sixtyDaysAgo
+            },
+
+        }).populate('article').populate('user_id').exec();
+
+
+        for (const editRequest of editRequests) {
+
+            editRequest.reviewer_id = null;
+            editRequest.status = statusEnum.statusEnum.DISCARDED;
+
+            await editRequest.save();
+
+
+            sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, "Discarded by system");
+        }
+
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+
+async function unassignImprovements() {
+
+    try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 30);
+
+        const requests = await EditRequest.find({
+            status: {
+                $in: [statusEnum.statusEnum.IN_PROGRESS]
+            },
+            last_updated: {
+                $lte: thirtyDaysAgo
+            }
+        });
+
+        requests.forEach(async (request) => {
+
+            request.reviewer_id = null;
+            request.status = statusEnum.statusEnum.UNASSIGNED;
+            request.last_updated = new Date();
+
+            await request.save();
+
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+    }
+}
+
+
+cron.schedule('0 0 * * *', async () => {
+
+    console.log('running cron job unassign article...');
+    await  unassignImprovements();
+});
+
+cron.schedule('0 0 * * *', async () => {
+
+    console.log('running cron job discard article...');
+    await discardImprovements();
+});
+
+// Task Left
+// Socket events
+// Unassign yourself from improvement & article
+// Overall review
