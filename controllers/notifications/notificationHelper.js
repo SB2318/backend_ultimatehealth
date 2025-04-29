@@ -80,7 +80,7 @@ const sendPushNotification = (deviceToken, message, data, id, role) => {
 module.exports.sendPostNotification = async (postId, message, authorId) => {
 
     try {
-        const user = await User.findById(authorId).populate('followers');
+        const user = await User.findById(authorId).populate('followers').exec();
 
         if (user) {
             user.followers.forEach(u => {
@@ -231,7 +231,7 @@ module.exports.repostNotification = async (userId, authorId, postId, message, au
    try{
 
     // Notify to all followers
-    const user = await User.findById(userId).populate('followers');
+    const user = await User.findById(userId).populate('followers').exec();
 
     if (user) {
         user.followers.forEach(u => {

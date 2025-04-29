@@ -762,7 +762,7 @@ module.exports.getProfileImage = async (req, res) => {
 // get User Articles,
 module.exports.getUserWithArticles = async (req, res) => {
   try {
-    const user = await User.findById(req.userId).populate("articles"); // Populate  articles
+    const user = await User.findById(req.userId).populate("articles").exec(); // Populate  articles
 
     if (!user) {
       return res.status(400).json({ message: "user not found" });

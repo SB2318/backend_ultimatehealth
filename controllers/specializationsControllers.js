@@ -68,10 +68,10 @@ module.exports.getSpecializations = async (req, res) => {
 
     if (name) {
       // Find the specialization by name
-      specialization = await SpecializationsModel.findOne({ name }).populate('contributed_by');
+      specialization = await SpecializationsModel.findOne({ name }).populate('contributed_by').exec();
     } else if (id && mongoose.Types.ObjectId.isValid(id)) {
       // Find the specialization by ID
-      specialization = await SpecializationsModel.findById(id).populate('contributed_by');
+      specialization = await SpecializationsModel.findById(id).populate('contributed_by').exec();
     } else {
       return res
         .status(400)

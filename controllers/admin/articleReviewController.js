@@ -343,6 +343,43 @@ module.exports.discardChanges = expressAsyncHandler(
         }
     }
 )
+
+module.exports.unassignModerator = expressAsyncHandler(
+
+    async (req, res)=>{
+        const {articleId} = req.body;
+
+        if(!articleId){
+            return res.status(400).json({message:"Article id required"});
+        }
+
+        try{
+          
+            const article= await Article.findById(Number(articleId));
+
+            if(!article){
+                return res.status(404).json({message:"Article not found"});
+            }
+           if(article.status === statusEnum.statusEnum.PUBLISHED){
+            return res.status(403).json({message:"Article already published"}); 
+           }
+
+           
+           article.reviewer_id = null;
+           article.assigned_at = null;
+           article.status = statusEnum.statusEnum.UNASSIGNED;
+           article.lastUpdated = new Date();
+
+           await article.save();
+
+           res.status(200).json({message:"Article unassigned"});
+
+        }catch(err){
+            console.log(err);
+            res.status(500).json({message:"Internal server error"});
+        }
+    }
+)
 // Update Write Event Tasks (Once article published)
 
 async function updateWriteEvents(articleId, userId) {

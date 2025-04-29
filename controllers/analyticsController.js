@@ -125,7 +125,8 @@ module.exports.getMostViewedArticles = expressAsyncHandler(
         //.sort({ 'viewUsers.length': -1 }) // Sort by viewCount in descending order
         //.limit(5)
         .populate('articles')
-        .select('imageUtils title viewUsers lastUpdated');
+        .select('imageUtils title viewUsers lastUpdated')
+        .exec();
 
       const sortedArticles = user.articles.sort((a, b) => b.viewUsers.length - a.viewUsers.length);
 

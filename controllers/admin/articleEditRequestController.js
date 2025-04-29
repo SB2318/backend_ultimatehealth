@@ -6,7 +6,7 @@ const User = require('../../models/UserModel');
 const { articleReviewNotificationsToUser } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
 const WriteAggregate = require("../../models/events/writeEventSchema");
-const { sendMailOnEditRequestApproval, sendMailArticleDiscardByAdmin, sendArticleFeedbackEmail,  sendArticlePublishedEmail } = require('../emailservice');
+const { sendMailOnEditRequestApproval, sendMailArticleDiscardByAdmin, sendArticleFeedbackEmail, sendArticlePublishedEmail } = require('../emailservice');
 const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
 const AdminAggregate = require('../../models/events/adminContributionEvent');
@@ -160,13 +160,16 @@ module.exports.pickImprovementRequest = expressAsyncHandler(
 
             await editRequest.save();
             // send Notification
-            articleReviewNotificationsToUser(editRequest.article.authorId, editRequest.article._id, {
-                title: `Congrats! Your Improvement Request has been accepted`,
-                body: `Article : ${editRequest.article.title}`
-            }, 1);
+            if (editRequest.article._id && editRequest.article.title) {
 
-            // Send email
-            sendMailOnEditRequestApproval(user.email, editRequest.article.title);
+                articleReviewNotificationsToUser(editRequest.article.authorId, editRequest.article._id, {
+                    title: `Congrats! Your Improvement Request has been accepted`,
+                    body: `Article : ${editRequest.article.title}`
+                }, 1);
+
+                // Send email
+                sendMailOnEditRequestApproval(user.email, editRequest.article.title);
+            }
 
             res.status(200).json({ message: "Article status updated" });
 
@@ -208,28 +211,35 @@ module.exports.submitReviewOnImprovement = expressAsyncHandler(
                 return;
             }
 
-            const comment = new Comment({
-                adminId: reviewer._id,
-                articleId: editRequest.article._id,
-                parentCommentId: null,
-                content: feedback,
-                isReview: true
-            });
+            if (editRequest.article._id && editRequest.article.title && editRequest.user_id._id && editRequest.user_id.email) {
 
-            await comment.save();
-            editRequest.editComments.push(comment._id);
-            editRequest.status = statusEnum.statusEnum.AWAITING_USER;
-            editRequest.last_updated = new Date();
-            await editRequest.save();
+                const comment = new Comment({
+                    adminId: reviewer._id,
+                    articleId: editRequest.article._id,
+                    parentCommentId: null,
+                    content: feedback,
+                    isReview: true
+                });
 
-            articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id, {
-                title: "New feedback received on your Article : " + editRequest.article.title,
-                body: feedback
-            }, 2);
-            // send mail
-            sendArticleFeedbackEmail(editRequest.user_id.email, feedback, editRequest.article.title);
+                await comment.save();
+                editRequest.editComments.push(comment._id);
+                editRequest.status = statusEnum.statusEnum.AWAITING_USER;
+                editRequest.last_updated = new Date();
+                await editRequest.save();
 
-            res.status(200).json({ message: "Review submitted" });
+
+                articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id, {
+                    title: "New feedback received on your Article : " + editRequest.article.title,
+                    body: feedback
+                }, 2);
+                // send mail
+                sendArticleFeedbackEmail(editRequest.user_id.email, feedback, editRequest.article.title);
+
+                res.status(200).json({ message: "Review submitted" });
+
+            } else {
+                res.status(400).json({ message: "Article or author not found" });
+            }
 
         } catch (err) {
             console.log(err);
@@ -267,7 +277,7 @@ module.exports.submitImprovement = expressAsyncHandler(
 
             await editRequest.save();
 
-            if (editRequest.reviewer_id) {
+            if (editRequest.reviewer_id && editRequest.article._id && editRequest.article.title) {
 
                 articleReviewNotificationsToUser(editRequest.reviewer_id, editRequest.article._id, {
                     title: ` New changes from author on : ${editRequest.article.title} `,
@@ -362,9 +372,10 @@ module.exports.discardImprovement = expressAsyncHandler(
             await editRequest.save();
 
 
-            sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, discardReason);
-
-
+            if(editRequest.user_id.email && editRequest.article.title){
+                sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, discardReason);
+            }
+         
             return res.status(200).json({ message: "Improvement Discarded" });
 
         } catch (err) {
@@ -444,6 +455,45 @@ module.exports.publishImprovement = expressAsyncHandler(
     }
 )
 
+// moderator self unassign 
+module.exports.unassignModerator = expressAsyncHandler(
+    async (req, res) => {
+
+        const { requestId } = req.body;
+
+        if (!requestId) {
+            return res.status(400).json({ message: "Request id required" });
+        }
+
+        try {
+
+            const editRequest = await EditRequest.findById(requestId);
+
+            if (!editRequest) {
+                return res.status(400).json({ message: "request not found" });
+            }
+
+            if (editRequest.status === statusEnum.statusEnum.PUBLISHED) {
+                return res.status(403).json({ message: "Improvement already published" });
+            }
+
+            editRequest.reviewer_id = null;
+            editRequest.status = statusEnum.statusEnum.UNASSIGNED;
+            editRequest.last_updated = new Date();
+
+            await editRequest.save();
+
+            return res.status(200).json({ message: "Unassigned moderator" });
+
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ message: "Internal server error" });
+        }
+
+    }
+)
+
 async function updateWriteEvents(articleId, userId) {
 
     const now = new Date();
@@ -500,8 +550,10 @@ async function discardImprovements() {
 
             await editRequest.save();
 
-
+           if(editRequest.user_id.email && editRequest.article.title){
             sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, "Discarded by system");
+           }
+     
         }
 
     } catch (err) {
@@ -546,7 +598,7 @@ async function unassignImprovements() {
 cron.schedule('0 0 * * *', async () => {
 
     console.log('running cron job unassign article...');
-    await  unassignImprovements();
+    await unassignImprovements();
 });
 
 cron.schedule('0 0 * * *', async () => {
@@ -557,5 +609,4 @@ cron.schedule('0 0 * * *', async () => {
 
 // Task Left
 // Socket events
-// Unassign yourself from improvement & article
 // Overall review

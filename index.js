@@ -6,6 +6,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const articleReviewNotificationsToUser = require('./controllers/notifications/notificationHelper');
 const sendArticleFeedbackEmail = require('./controllers/emailservice');
+const EditRequest = require('./models/admin/articleEditRequestModel');
 
 const Article = require('./models/Articles');
 const User = require('./models/UserModel');
@@ -209,7 +210,8 @@ io.on('connection', (socket) => {
 
                     const populatedComment = await Comment.findById(newComment._id)
                     .populate('userId', 'user_handle Profile_image')
-                    .populate('replies'); 
+                    .populate('replies')
+                    .exec(); 
 
                     socket.emit("comment-processing", false);
                     socket.emit('comment', {
@@ -226,7 +228,8 @@ io.on('connection', (socket) => {
 
                     const populatedComment = await Comment.findById(newComment._id)
                     .populate('userId', 'user_handle Profile_image')
-                    .populate('replies'); 
+                    .populate('replies')
+                    .exec(); 
 
                     socket.emit("comment-processing", false);
                     socket.emit('comment', {
@@ -300,7 +303,8 @@ io.on('connection', (socket) => {
        
                 const populatedComment = await Comment.findById(comment._id)
                 .populate('userId', 'user_handle Profile_image')
-                .populate('replies'); 
+                .populate('replies')
+                .exec(); 
 
                 socket.emit("edit-comment-processing", false);
                 socket.emit('edit-comment', populatedComment); // Broadcast the edited comment
@@ -383,7 +387,7 @@ io.on('connection', (socket) => {
 
             try {
                 const [comment, article, user] = await Promise.all([
-                    Comment.findById(commentId).populate('likedUsers'),
+                    Comment.findById(commentId).populate('likedUsers').exec(),
                     Article.findById(Number(articleId)),
                     User.findById(userId)
                 ]);
@@ -414,7 +418,8 @@ io.on('connection', (socket) => {
 
                 const populatedComment = await Comment.findById(commentId)
                 .populate('userId', 'user_handle Profile_image')
-                .populate('replies'); 
+                .populate('replies')
+                .exec(); 
 
                if(!hasLiked){
                 sendCommentLikeNotification(populatedComment.userId, articleId, {
@@ -479,11 +484,15 @@ io.on('connection', (socket) => {
    socket.on('add-review-comment', expressAsyncHandler(
 
      async (data) => {
-            const { articleId, reviewer_id, feedback, isReview, isNote } = data;
+            const { articleId, reviewer_id, feedback, isReview, isNote, requestId } = data;
     
-            if (!articleId || !reviewer_id || !feedback) {
-                socket.emit('error',{ error: 'Please fill all fields: articleId, reviewer_id, reviewContent' });
+            if (!reviewer_id || !feedback) {
+                socket.emit('error',{ error: 'Please fill all fields: reviewer_id, reviewContent' });
                 return;
+            }
+            if(!articleId && !requestId){
+                socket.emit('error',{ error: 'Please provide either article id or improvement request id' });
+                return;  
             }
 
             if(!isReview && !isNote){
@@ -494,6 +503,8 @@ io.on('connection', (socket) => {
     
             try {
     
+
+              if(articleId){
                 const [article, reviewer] = await Promise.all([
     
                     Article.findById(Number(articleId))
@@ -503,12 +514,12 @@ io.on('connection', (socket) => {
                 ]);
     
                 if (!article || !reviewer) {
-                    res.status(404).json({ message: 'Article or Moderator not found' });
+                    socket.emit('error',{ message: 'Article or Moderator not found' });
                     return;
                 }
     
                 if (article.reviewer_id !== reviewer._id) {
-                    res.status(403).json({ message: 'You are not authorized to access this article' });
+                    socket.emit('error',{ message: 'You are not authorized to access this article' });
                 }
     
                if(isReview){
@@ -540,7 +551,7 @@ io.on('connection', (socket) => {
                }else if(isNote){
 
                 const comment = new Comment({
-                    userId: article.authorId,
+                    userId: article.authorId._id,
                     articleId: article._id,
                     parentCommentId:  null,
                     content: feedback,
@@ -561,6 +572,78 @@ io.on('connection', (socket) => {
 
                 socket.emit('new-feedback', comment);
                }
+              }else if(requestId){
+
+                const [editRequest, reviewer] = await Promise.all([
+    
+                    EditRequest.findById(requestId)
+                        .populate('article')
+                        .populate('user_id')
+                        .exec(),
+                    admin.findById(reviewer_id),
+                ]);
+    
+                if (!editRequest || !reviewer) {
+                    socket.emit('error', { message: 'Request or Moderator not found' });
+                    return;
+                }
+    
+                if (editRequest.reviewer_id !== reviewer._id) {
+                    socket.emit('error', { message: 'You are not authorized to access this article' });
+                    return;
+                }
+    
+               if(isReview){
+                const comment = new Comment({
+                    adminId: reviewer._id,
+                    articleId: editRequest.article._id,
+                    parentCommentId:  null,
+                    content: feedback,
+                    isReview: true,
+                    isNote: false
+                });
+
+                await comment.save();
+                editRequest.editComments.push(comment._id);
+    
+                editRequest.status = statusEnum.statusEnum.AWAITING_USER;
+                editRequest.last_updated = new Date();
+    
+                await editRequest.save();
+
+                socket.emit('new-feedback', comment);
+                articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id, {
+                    title: "New feedback received on your Article : " + editRequest.article.title,
+                    body: feedback
+                }, 2);
+                // send mail
+                sendArticleFeedbackEmail(editRequest.user_id.email, feedback, editRequest.article.title);
+    
+               }else if(isNote){
+
+                const comment = new Comment({
+                    userId: editRequest.user_id._id,
+                    articleId: editRequest.article._id,
+                    parentCommentId:  null,
+                    content: feedback,
+                    isNote: true,
+                    isReview: false
+                });
+                await comment.save();
+
+                editRequest.editComments.push(comment._id);
+
+                await editRequest.save();
+
+                socket.emit('new-feedback', comment);
+                sendCommentNotification(editRequest.reviewer_id, editRequest.article._id, {
+                    title: "New Additional Note from Author",
+                    body: `An author has added a new note to the article titled ${editRequest.article.title}.`
+                });
+
+                socket.emit('new-feedback', comment);
+               }
+              }
                
             } catch (err) {
                 console.log(err);
@@ -575,20 +658,32 @@ io.on('connection', (socket) => {
 
     async(data) =>{
 
-        const {articleId} = data;
+        const {articleId, requestId} = data;
 
-        if(!articleId){
-            socket.emit('error',{message:"Article Id required"});
+        if(!articleId && !requestId){
+            socket.emit('error',{message:"Either Article Id or improvement request id required"});
             return;
         }
 
         try{
-            const article = await Article.findById(Number(articleId)).populate('review_comments');
-            if(article){
-                socket.emit('review-comments', article.review_comments);
-            }
-            else{
-                socket.emit('error',{message:"Article not found"});
+           
+            if(articleId){
+                const article = await Article.findById(Number(articleId)).populate('review_comments').exec();
+                if(article && article.review_comments){
+                    socket.emit('review-comments', article.review_comments);
+                }
+                else{
+                    socket.emit('error',{message:"Article not found"});
+                }
+            }else if(requestId){
+               
+                const requests = await EditRequest.findById(requestId).populate('editComments').exec();
+                if(requests && requests.editComments){
+                    socket.emit('review-comments', requests.editComments);
+                }
+                else{
+                    socket.emit('error',{message:"Improvement request not found"});
+                }
             }
             
         }catch(err){
