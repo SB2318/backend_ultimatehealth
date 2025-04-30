@@ -11,10 +11,10 @@ const {
 const authenticateToken = require("../middleware/authentcatetoken");
 
 // Register New User
-router.post("/admin/register", register);
+router.post("/admin/register",  register);
 
 // Login User Route
-router.post("/admin/login", login);
+router.post("/admin/login",authenticateToken, login);
 
 router.post("/admin/logout", authenticateToken, logout);
 
@@ -22,7 +22,7 @@ router.get("/admin/verifyEmail", verifyEmail);
 router.post("/admin/verifyEmail", Sendverifymail);
 router.post("/admin/resend-verification-mail", resendVerificationEmail);
 router.get('/admin/getprofile', authenticateToken, getprofile);
-router.post('/admin/update-password',  updateAdminPassword);
+router.post('/admin/update-password', authenticateToken, updateAdminPassword);
 router.post('/admin/update-profile', authenticateToken, editProfile);
 
 
