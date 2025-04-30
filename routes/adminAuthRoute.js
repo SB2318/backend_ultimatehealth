@@ -14,7 +14,7 @@ const authenticateToken = require("../middleware/authentcatetoken");
 router.post("/admin/register",  register);
 
 // Login User Route
-router.post("/admin/login",authenticateToken, login);
+router.post("/admin/login", login);
 
 router.post("/admin/logout", authenticateToken, logout);
 
