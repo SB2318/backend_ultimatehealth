@@ -142,7 +142,7 @@ io.on('connection', (socket) => {
 
             socket.emit("comment-processing", true);
 
-            console.log('Add Event called');
+           // console.log('Add Event called');
             const { userId, articleId, content, parentCommentId, mentionedUsers} = data;
 
             if (!userId || !articleId || !content || content.trim() === '') {
