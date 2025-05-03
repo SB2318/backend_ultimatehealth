@@ -78,6 +78,29 @@ module.exports.getAllArticles = async (req, res) => {
   }
 };
 
+// Get all articles for user
+module.exports.getAllArticlesForUser = async (req, res) => {
+  try {
+
+   
+    const articles = await Article.find({ authorId: req.userId })
+      .populate('tags')
+      .populate('mentionedUsers', 'user_handle user_name Profile_image')
+      .populate('likedUsers', 'Profile_image') 
+      .exec();
+   
+
+      articles.forEach(article => {
+        article.likedUsers.reverse(); 
+      });
+    res.status(200).json({ articles });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Error fetching articles", details: error.message });
+  }
+};
+
 // Get an article by ID
 module.exports.getArticleById = async (req, res) => {
   try {
