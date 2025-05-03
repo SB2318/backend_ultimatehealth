@@ -568,7 +568,12 @@ module.exports.getAllImprovementsForUser = expressAsyncHandler(
           const articles = await EditRequest.find({
                 user_id: userId, 
                 
-          }).populate('article').exec();
+          }).populate({
+            path: 'article',
+            populate: {
+                path: 'tags',
+            },
+        }).exec();
 
           res.status(200).json(articles);
       } catch (err) {
