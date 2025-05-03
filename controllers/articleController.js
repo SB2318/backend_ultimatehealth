@@ -78,6 +78,8 @@ module.exports.getAllArticles = async (req, res) => {
   }
 };
 
+
+
 // Get all articles for user
 module.exports.getAllArticlesForUser = async (req, res) => {
   try {
