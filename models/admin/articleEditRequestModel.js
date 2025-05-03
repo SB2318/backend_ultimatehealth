@@ -5,7 +5,8 @@ const editRequestSchema = new Schema(
     {
         _id: {
             type: Schema.Types.ObjectId,
-            required: true,
+           // required: true,
+            auto: true,
             unique: true
         },
         user_id: {

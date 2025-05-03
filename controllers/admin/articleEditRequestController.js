@@ -36,7 +36,7 @@ module.exports.submitEditRequest = expressAsyncHandler(
             // User can have 2 open edit request at  a time
             const count = await EditRequest.countDocuments({
                 user_id: userId, status: {
-                    $ne: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
+                    $nin: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
                 }
             });
 
@@ -52,7 +52,7 @@ module.exports.submitEditRequest = expressAsyncHandler(
             });
             await editRequest.save();
 
-            return res.status(200).json({ message: "Your edit request has been successfully created and is being processed." });
+            return res.status(200).json({ message: "Your edit request has been successfully created and is being processed." ,data: editRequest});
 
         } catch (err) {
             console.log("Error", err);
