@@ -65,7 +65,12 @@ module.exports.submitEditRequest = expressAsyncHandler(
 module.exports.getAllImprovementsForReview = expressAsyncHandler(
     async (req, res) => {
         try {
-            const articles = await EditRequest.find({ status: statusEnum.statusEnum.UNASSIGNED }).populate('article').exec();
+            const articles = await EditRequest.find({ status: statusEnum.statusEnum.UNASSIGNED }).populate({
+                path: 'article',
+                populate: {
+                    path: 'tags',
+                },
+            }).exec();
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -87,7 +92,12 @@ module.exports.getAllInProgressImprovementsForAdmin = expressAsyncHandler(
                 reviewer_id: reviewer_id, status: {
                     $in: [statusEnum.statusEnum.IN_PROGRESS, statusEnum.statusEnum.AWAITING_USER, statusEnum.statusEnum.REVIEW_PENDING]
                 }
-            }).populate('article').exec();
+            }).populate({
+                path: 'article',
+                populate: {
+                    path: 'tags',
+                },
+            }).exec();
 
             res.status(200).json(articles);
         } catch (err) {
@@ -108,7 +118,12 @@ module.exports.getAllCompletedImprovementsForAdmin = expressAsyncHandler(
                 reviewer_id: reviewer_id, status: {
                     $in: [statusEnum.statusEnum.PUBLISHED]
                 }
-            }).populate('article').exec();
+            }).populate({
+                path: 'article',
+                populate: {
+                    path: 'tags',
+                },
+            }).exec();
 
             res.status(200).json(articles);
         } catch (err) {
@@ -372,10 +387,10 @@ module.exports.discardImprovement = expressAsyncHandler(
             await editRequest.save();
 
 
-            if(editRequest.user_id.email && editRequest.article.title){
+            if (editRequest.user_id.email && editRequest.article.title) {
                 sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, discardReason);
             }
-         
+
             return res.status(200).json({ message: "Improvement Discarded" });
 
         } catch (err) {
@@ -550,10 +565,10 @@ async function discardImprovements() {
 
             await editRequest.save();
 
-           if(editRequest.user_id.email && editRequest.article.title){
-            sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, "Discarded by system");
-           }
-     
+            if (editRequest.user_id.email && editRequest.article.title) {
+                sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, "Discarded by system");
+            }
+
         }
 
     } catch (err) {
