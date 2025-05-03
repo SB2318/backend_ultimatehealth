@@ -25,7 +25,7 @@ router.get('/article/read-status', authenticateToken, articleController.getReadD
 router.get('/article/write-status', authenticateToken, articleController.getWriteDataForGraphs );
 router.post('/article/repost', authenticateToken, articleController.repostArticle);
 router.get('/article/improvements', authenticateToken, articleController.getAllImprovementsForUser);
-router.get('/user-articles',articleController.getAllArticlesForUser);
+router.get('/user-articles',authenticateToken,articleController.getAllArticlesForUser);
 
 
 

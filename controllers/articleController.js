@@ -82,7 +82,7 @@ module.exports.getAllArticles = async (req, res) => {
 module.exports.getAllArticlesForUser = async (req, res) => {
   try {
 
-   
+   // console.log("User Id", req.userId);
     const articles = await Article.find({ authorId: req.userId })
       .populate('tags')
       .populate('mentionedUsers', 'user_handle user_name Profile_image')
