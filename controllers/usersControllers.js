@@ -37,7 +37,7 @@ module.exports.register = async (req, res) => {
 
     // Check if user already exists in User or UnverifiedUser collections
 
-    const [existingUser,  existingUserHandle, existingUnverifiedUser, existingUnverifiedUserHandle, existingAdmin] =
+    const [existingUser, existingUserHandle, existingUnverifiedUser, existingUnverifiedUserHandle, existingAdmin] =
       await Promise.all([
         await User.findOne({ email }),
         await User.findOne({ user_handle }),
@@ -181,14 +181,6 @@ module.exports.getprofile = async (req, res) => {
         path: "repostArticles",
         populate: { path: "tags" }, // Populate tags for saved articles
       })
-      .populate({
-        path: "followers",
-        select: "user_id user_name followers Profile_image", // Select specific fields
-      })
-      .populate({
-        path: "followings",
-        select: "user_id user_name followers Profile_image", // Select specific fields for followings
-      })
       .exec();
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -228,14 +220,6 @@ module.exports.getUserProfile = async (req, res) => {
           path: "repostArticles",
           populate: { path: "tags" }, // Populate tags for saved articles
         })
-        .populate({
-          path: "followers",
-          select: "user_id user_name followers Profile_image", // Select specific fields
-        })
-        .populate({
-          path: "followings",
-          select: "user_id user_name followers Profile_image", // Select specific fields for followings
-        })
         .exec();
     }
     else if (userHandle) {
@@ -248,14 +232,6 @@ module.exports.getUserProfile = async (req, res) => {
         .populate({
           path: "repostArticles",
           populate: { path: "tags" }, // Populate tags for saved articles
-        })
-        .populate({
-          path: "followers",
-          select: "user_id user_name followers Profile_image", // Select specific fields
-        })
-        .populate({
-          path: "followings",
-          select: "user_id user_name followers Profile_image", // Select specific fields for followings
         })
         .exec();
     }
@@ -313,7 +289,7 @@ module.exports.sendOTPForForgotPassword = expressAsyncHandler(
         await user.save();
       } else {
 
-        if(!admin.isVerified){
+        if (!admin.isVerified) {
           return res.status(400).json({ message: "Admin is not verified." });
         }
         admin.otp = otp;
@@ -351,10 +327,10 @@ module.exports.verifyOtpForForgotPassword = expressAsyncHandler(
 
     try {
 
-    //  const [user] = await Promise.all([
-    //    User.findOne({ email }),
-       // adminModel.findOne({ email })
-    //  ]);
+      //  const [user] = await Promise.all([
+      //    User.findOne({ email }),
+      // adminModel.findOne({ email })
+      //  ]);
 
       const user = await User.findOne({ email });
 
@@ -362,23 +338,23 @@ module.exports.verifyOtpForForgotPassword = expressAsyncHandler(
         return res.status(400).json({ message: "User not found" });
       }
 
-   //   if (user) {
+      //   if (user) {
 
-        const isPasswordSame = await bcrypt.compare(newPassword, user.password);
-        if (isPasswordSame) {
-          return res
-            .status(402)
-            .json({ message: "New password should not be same as old password." });
-        }
+      const isPasswordSame = await bcrypt.compare(newPassword, user.password);
+      if (isPasswordSame) {
+        return res
+          .status(402)
+          .json({ message: "New password should not be same as old password." });
+      }
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-        user.password = hashedPassword;
-        user.otp = null;
-        user.otpExpires = null;
-        await user.save();
-    //  } else {
-       
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      user.password = hashedPassword;
+      user.otp = null;
+      user.otpExpires = null;
+      await user.save();
+      //  } else {
+
       //}
 
       res.status(200).json({ message: "Password reset successful." });
@@ -398,24 +374,24 @@ module.exports.checkOtp = expressAsyncHandler(
 
       const [user, admin] = await Promise.all([
         User.findOne({ email }),
-        adminModel.findOne({email})
+        adminModel.findOne({ email })
       ])
-  
+
       if (!user && !admin) {
         return res.status(401).json({ message: "User not found" });
       }
-      if(user){
+      if (user) {
 
-        if ( user.otp !== otp || user.otpExpires < Date.now()) {
+        if (user.otp !== otp || user.otpExpires < Date.now()) {
           return res.status(400).json({ message: "Invalid or expired OTP." });
         }
-      }else{
-      
+      } else {
+
         if (!admin || admin.otp !== otp || admin.otpExpires < Date.now()) {
           return res.status(400).json({ message: "Invalid or expired OTP." });
         }
       }
-      
+
 
       res.status(200).json({ message: "OTP is valid." });
     } catch (err) {
@@ -651,19 +627,19 @@ module.exports.follow = async (req, res) => {
     const { articleId, followUserId } = req.body;
 
     // Check if user is trying to follow themselves
-    if(!articleId && !followUserId){
+    if (!articleId && !followUserId) {
       return res.status(400).json({ error: "Article id or follow user id are required" });
     }
 
     let article;
-    if(articleId){
-       article = await Article.findById(Number(articleId));
-       if(!article){
+    if (articleId) {
+      article = await Article.findById(Number(articleId));
+      if (!article) {
         return res.status(404).json({ error: "Article not found" });
       }
     }
-    
-    
+
+
     if (article && req.userId === article.authorId) {
       return res
         .status(400)
@@ -676,12 +652,12 @@ module.exports.follow = async (req, res) => {
 
     // Find the user to be followed
 
-    let userToFollow ;
+    let userToFollow;
 
-    if(article){
+    if (article) {
       userToFollow = await User.findById(article.authorId);
     }
-    else{
+    else {
       userToFollow = await User.findById(followUserId);
     }
 
@@ -697,11 +673,11 @@ module.exports.follow = async (req, res) => {
     );
 
     //console.log("USER ID", req.userId.toString());
-   // console.log("AUTHOR ID", article.authorId.toString());
-   // console.log("Follower User Set", followerUserset);
-   // console.log("Following User Set", followingUserSet);
-   // console.log("Condition 1 ", followerUserset.has(req.userId.toString()));
-   // console.log("Condition 2 ", followingUserSet.has(article.authorId.toString()));
+    // console.log("AUTHOR ID", article.authorId.toString());
+    // console.log("Follower User Set", followerUserset);
+    // console.log("Following User Set", followingUserSet);
+    // console.log("Condition 1 ", followerUserset.has(req.userId.toString()));
+    // console.log("Condition 2 ", followingUserSet.has(article.authorId.toString()));
     if (
       followerUserset.has(req.userId.toString()) ||
       followingUserSet.has(userToFollow._id.toString())
@@ -738,13 +714,32 @@ module.exports.follow = async (req, res) => {
 // Get Follower
 
 module.exports.getFollowers = async (req, res) => {
-  const userId = req.params.userId;
-  const author = await User.findById(userId);
+  const userId = req.userId;
+  const author = await User.findById(userId).
+    populate({
+      path: "followers",
+      select: "user_id user_name followers Profile_image",
+    }).exec();
 
   if (!author) {
     return res.status(404).json({ error: "Author not found" });
   }
   return res.status(200).json({ followers: author.followers });
+};
+
+// GET followings
+module.exports.getFollowings = async (req, res) => {
+  const userId = req.userId;
+  const author = await User.findById(userId).
+                            populate({
+                            path: "followings",
+                            select: "user_id user_name followers Profile_image",
+                            }).exec();
+
+  if (!author) {
+    return res.status(404).json({ error: "Author not found" });
+  }
+  return res.status(200).json({ followers: author.followings });
 };
 
 module.exports.getProfileImage = async (req, res) => {
@@ -1158,25 +1153,25 @@ module.exports.updateUserProfessionalDetails = async (req, res) => {
 module.exports.updateUserPassword = expressAsyncHandler(
   async (req, res) => {
     try {
-    //  const userId = req?.userId;
+      //  const userId = req?.userId;
       const { old_password, new_password, userId } = req.body;
-  
+
       // Check if both old and new passwords are provided
       if (!old_password || !new_password || !userId) {
         return res.status(400).json({ error: "Missing passwords and user id" });
       }
-  
+
       // Check if the new password is long enough
       if (new_password.length < 6) {
         return res.status(400).json({ error: "Password too short" });
       }
-  
+
       // Find the user by ID
       const user = await User.findById(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-  
+
       // Check if the old password matches the stored password
       const isOldPasswordValid = await bcrypt.compare(
         old_password,
@@ -1185,7 +1180,7 @@ module.exports.updateUserPassword = expressAsyncHandler(
       if (!isOldPasswordValid) {
         return res.status(401).json({ error: "Invalid old password" });
       }
-  
+
       // Ensure the new password is not the same as the old password
       const isSameAsOldPassword = await bcrypt.compare(
         new_password,
@@ -1194,11 +1189,11 @@ module.exports.updateUserPassword = expressAsyncHandler(
       if (isSameAsOldPassword) {
         return res.status(400).json({ error: "Same as old password" });
       }
-  
+
       // Hash the new password
       const salt = await bcrypt.genSalt(10);
       const newHashedPassword = await bcrypt.hash(new_password, salt);
-  
+
       // Update the user's password
       user.password = newHashedPassword;
       await user.save();

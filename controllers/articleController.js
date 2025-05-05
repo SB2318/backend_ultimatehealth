@@ -15,7 +15,7 @@ module.exports.createArticle = async (req, res) => {
     const { authorId, title, authorName, description, content, tags, imageUtils } = req.body; // Destructure required fields from req.body
 
 
-    if(!authorId || !title || !authorName || !description || !content || !tags || !imageUtils){
+    if (!authorId || !title || !authorName || !description || !content || !tags || !imageUtils) {
       return res.status(400).json({ message: "Please fill in all fields: authorId, title, authorName, description, content, tags, imageUtils" });
     }
     // Find the user by ID
@@ -59,17 +59,17 @@ module.exports.createArticle = async (req, res) => {
 module.exports.getAllArticles = async (req, res) => {
   try {
 
-  
+
     const articles = await Article.find({ status: statusEnum.statusEnum.PUBLISHED })
       .populate('tags')
       .populate('mentionedUsers', 'user_handle user_name Profile_image')
-      .populate('likedUsers', 'Profile_image') 
+      .populate('likedUsers', 'Profile_image')
       .exec();
-   
 
-      articles.forEach(article => {
-        article.likedUsers.reverse(); 
-      });
+
+    articles.forEach(article => {
+      article.likedUsers.reverse();
+    });
     res.status(200).json({ articles });
   } catch (error) {
     res
@@ -84,17 +84,17 @@ module.exports.getAllArticles = async (req, res) => {
 module.exports.getAllArticlesForUser = async (req, res) => {
   try {
 
-   // console.log("User Id", req.userId);
+    // console.log("User Id", req.userId);
     const articles = await Article.find({ authorId: req.userId })
       .populate('tags')
       .populate('mentionedUsers', 'user_handle user_name Profile_image')
-      .populate('likedUsers', 'Profile_image') 
+      .populate('likedUsers', 'Profile_image')
       .exec();
-   
 
-      articles.forEach(article => {
-        article.likedUsers.reverse(); 
-      });
+
+    articles.forEach(article => {
+      article.likedUsers.reverse();
+    });
     res.status(200).json({ articles });
   } catch (error) {
     res
@@ -258,10 +258,12 @@ module.exports.likeArticle = async (req, res) => {
       articleDb.likeCount = Math.max(articleDb.likeCount - 1, 0); // Decrement like count
       await articleDb.save();
 
-      return res.status(200).json({ message: 'Article unliked successfully', data:{
-        article: articleDb,
-        likeStatus: false
-      } });
+      return res.status(200).json({
+        message: 'Article unliked successfully', data: {
+          article: articleDb,
+          likeStatus: false
+        }
+      });
 
     } else {
       await Promise.all([
@@ -276,10 +278,12 @@ module.exports.likeArticle = async (req, res) => {
       articleDb.likeCount++;
       await articleDb.save();
 
-      return res.status(200).json({ message: 'Article liked successfully', data:{
-        article: articleDb,
-        likeStatus: true
-      } });
+      return res.status(200).json({
+        message: 'Article liked successfully', data: {
+          article: articleDb,
+          likeStatus: true
+        }
+      });
     }
 
   } catch (error) {
@@ -405,29 +409,29 @@ exports.updateReadEvents = async (req, res) => {
 
   try {
     // New Read Event Entry
- // console.log("Today", today);
- // console.log("Read event post", req.userId);
-    const readEvent = await ReadAggregate.findOne({ userId: req.userId, date:today});
+    // console.log("Today", today);
+    // console.log("Read event post", req.userId);
+    const readEvent = await ReadAggregate.findOne({ userId: req.userId, date: today });
 
-    if(!readEvent){
+    if (!readEvent) {
       // Create New
-    //  console.log("Enter if block");
-      const newReadEvent = new ReadAggregate({ userId: req.userId, date:today});
-      newReadEvent.dailyReads =1;
-      newReadEvent.monthlyReads =1;
-      newReadEvent.yearlyReads =1;
+      //  console.log("Enter if block");
+      const newReadEvent = new ReadAggregate({ userId: req.userId, date: today });
+      newReadEvent.dailyReads = 1;
+      newReadEvent.monthlyReads = 1;
+      newReadEvent.yearlyReads = 1;
       newReadEvent.date = today;
       await newReadEvent.save();
-      
-    res.status(201).json({ message: 'Read Event Saved', event:newReadEvent });
-    }else{
-      readEvent.dailyReads +=1;
-      readEvent.monthlyReads +=1;
-      readEvent.yearlyReads +=1;
-     
+
+      res.status(201).json({ message: 'Read Event Saved', event: newReadEvent });
+    } else {
+      readEvent.dailyReads += 1;
+      readEvent.monthlyReads += 1;
+      readEvent.yearlyReads += 1;
+
       await readEvent.save();
-      
-    res.status(201).json({ message: 'Read Event Saved', event:readEvent });
+
+      res.status(201).json({ message: 'Read Event Saved', event: readEvent });
     }
   } catch (err) {
     console.log('Article Read Event Update Error', err);
@@ -438,7 +442,7 @@ exports.updateReadEvents = async (req, res) => {
 // GET ALL READ EVENTS STATUS DAILY, WEEKLY, MONTHLY
 exports.getReadDataForGraphs = async (req, res) => {
 
-  const  userId  = req.userId;
+  const userId = req.userId;
   //console.log("Read event", userId);
   try {
     const today = new Date();
@@ -453,15 +457,15 @@ exports.getReadDataForGraphs = async (req, res) => {
       dailyReads: {
         date: today.toISOString().slice(0, 10), // Today's date
         count: dailyData ? dailyData.dailyReads : 0 // Reads today
-    },
-    monthlyReads: monthlyData.map(entry => ({
+      },
+      monthlyReads: monthlyData.map(entry => ({
         date: entry.date.toISOString().slice(0, 10), // Date of the month
         count: entry.monthlyReads // Reads on that day
-    })),
-    yearlyReads: yearlyData.map(entry => ({
+      })),
+      yearlyReads: yearlyData.map(entry => ({
         month: entry.date.toISOString().slice(0, 7), // Month formatted as YYYY-MM
         count: entry.yearlyReads // Reads for that month
-    })),
+      })),
     });
   } catch (error) {
     res.status(500).json({ error: 'An error occurred while fetching read data' });
@@ -475,7 +479,7 @@ exports.getReadDataForGraphs = async (req, res) => {
 // GET ALL Write EVENTS STATUS DAILY, WEEKLY, MONTHLY
 exports.getWriteDataForGraphs = async (req, res) => {
 
-  const  userId  = req.userId;
+  const userId = req.userId;
 
   try {
     const today = new Date();
@@ -490,15 +494,15 @@ exports.getWriteDataForGraphs = async (req, res) => {
       dailyWrites: {
         date: today.toISOString().slice(0, 10), // Today's date
         count: dailyData ? dailyData.dailyWrites : 0 // Writes today
-    },
-    monthlyWrites: monthlyData.map(entry => ({
+      },
+      monthlyWrites: monthlyData.map(entry => ({
         date: entry.date.toISOString().slice(0, 10), // Date of the month
         count: entry.monthlyWrites // Writes on that day
-    })),
-    yearlyWrites: yearlyData.map(entry => ({
+      })),
+      yearlyWrites: yearlyData.map(entry => ({
         month: entry.date.toISOString().slice(0, 7), // Month formatted as YYYY-MM
         count: entry.yearlyWrites // Writes for that month
-    })),
+      })),
     });
   } catch (error) {
     res.status(500).json({ error: 'An error occurred while fetching read data' });
@@ -509,76 +513,102 @@ exports.getWriteDataForGraphs = async (req, res) => {
 exports.repostArticle = expressAsyncHandler(
   async (req, res) => {
 
-    try{
-  
-      const {articleId} = req.body;
-      const userId  = req.userId;
-  
-      if(!articleId){
-         res.status(400).json({error: 'Article ID is required.'});
-         return;
+    try {
+
+      const { articleId } = req.body;
+      const userId = req.userId;
+
+      if (!articleId) {
+        res.status(400).json({ error: 'Article ID is required.' });
+        return;
       }
-  
+
       const [article, user] = await Promise.all([
         Article.findById(Number(articleId)),
         User.findById(userId),
       ]);
-  
-      if(!article || !user){
-        res.status(404).json({error: 'Article or user not found.'});
+
+      if (!article || !user) {
+        res.status(404).json({ error: 'Article or user not found.' });
         return;
       }
-      
+
       if (article.status !== statusEnum.statusEnum.PUBLISHED) {
         return res.status(400).json({ message: 'Article is not published' });
       }
       // Check if user has already reposted the article
-         // Check if the article is already liked
-         const repostArticlesSet = new Set(user.repostArticles);
-         const isArticleRepost = repostArticlesSet.has(article._id);
-  
-        if(isArticleRepost){
-          user.repostArticles = user.repostArticles.filter(id => id !== article._id);
-          user.repostArticles.unshift(article._id); // unshift will add one element at the beginning of the array
-          await user.save();
-        }else{
-          user.repostArticles.push(article._id);
-          await user.save();
-          article.repostUsers.push(user._id);
-          await article.save();
-        }
-  
-        res.status(200).json({message:"Article reposted successfully"});
-  
-    }catch(err){
+      // Check if the article is already liked
+      const repostArticlesSet = new Set(user.repostArticles);
+      const isArticleRepost = repostArticlesSet.has(article._id);
+
+      if (isArticleRepost) {
+        user.repostArticles = user.repostArticles.filter(id => id !== article._id);
+        user.repostArticles.unshift(article._id); // unshift will add one element at the beginning of the array
+        await user.save();
+      } else {
+        user.repostArticles.push(article._id);
+        await user.save();
+        article.repostUsers.push(user._id);
+        await article.save();
+      }
+
+      res.status(200).json({ message: "Article reposted successfully" });
+
+    } catch (err) {
       console.log('Error reposting article', err);
-      res.status(500).json({message:"Internal server error"});
+      res.status(500).json({ message: "Internal server error" });
     }
-  
+
   }
 )
 
 module.exports.getAllImprovementsForUser = expressAsyncHandler(
   async (req, res) => {
-      const userId  = req.userId;
-      if (!userId) {
-          return res.status(400).json({ message: 'User ID is required.' });
-      }
-      try {
-          const articles = await EditRequest.find({
-                user_id: userId, 
-                
-          }).populate({
-            path: 'article',
-            populate: {
-                path: 'tags',
-            },
-        }).exec();
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required.' });
+    }
+    try {
+      const articles = await EditRequest.find({
+        user_id: userId,
 
-          res.status(200).json(articles);
-      } catch (err) {
-          console.log(err);
-          res.status(500).json({ message: err.message });
-      }
+      }).populate({
+        path: 'article',
+        populate: {
+          path: 'tags',
+        },
+      }).exec();
+
+      res.status(200).json(articles);
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: err.message });
+    }
+  }
+)
+
+module.exports.getImprovementById = expressAsyncHandler(
+
+  async (req, res) => {
+
+    const reqid = req.params.reqid;
+    if (!reqid) {
+      return res.status(400).json({ message: "Request ID is required" });
+    }
+    try {
+
+      const improvement = await EditRequest.findById(reqid).populate({
+        path: 'article',
+        populate: {
+          path: 'tags',
+        },
+      }).exec();
+
+      res.status(200).json(improvement);
+
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   }
 )

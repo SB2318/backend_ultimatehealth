@@ -20,6 +20,7 @@ const {
  // collectMonthlyRecordsForReading,
   //collectMonthlyRecordsForWriting,
   getUserByHandle,
+  getFollowings,
   checkOtp,
   refreshToken,
   updateProfileImage,
@@ -63,7 +64,8 @@ router.get("/user/getuserprofile", authenticateToken, getUserProfile);
 
 // Follow and Unfollow Routes
 router.post("/user/follow", authenticateToken, follow);
-router.get("/user/:userId/followers", authenticateToken, getFollowers);
+router.get("/user/followers", authenticateToken, getFollowers);
+router.get("/user/followings", authenticateToken, getFollowings);
 
 // Forget password
 router.post("/user/forgotpassword", sendOTPForForgotPassword);

@@ -26,7 +26,7 @@ router.get('/article/write-status', authenticateToken, articleController.getWrit
 router.post('/article/repost', authenticateToken, articleController.repostArticle);
 router.get('/article/improvements', authenticateToken, articleController.getAllImprovementsForUser);
 router.get('/user-articles',authenticateToken,articleController.getAllArticlesForUser);
-
+router.get('/get-improvement/:reqid', authenticateToken, articleController.getImprovementById);
 
 
 module.exports = router;
