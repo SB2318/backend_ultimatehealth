@@ -108,7 +108,8 @@ module.exports.getArticleById = async (req, res) => {
   try {
     const article = await Article.findById(req.params.id)
       .populate('tags')
-      .populate('likedUsers') // This populates the tag data
+      .populate('likedUsers')
+      .populate('contributors', 'user_handle user_name Profile_image')
       .exec();
     if (!article) {
       return res.status(404).json({ message: "Article not found" });

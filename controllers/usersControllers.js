@@ -214,11 +214,15 @@ module.exports.getUserProfile = async (req, res) => {
         .populate({
           path: "articles",
           match: { status: 'published' },
-          populate: { path: "tags" }, // Populate tags for articles
+          populate: { path: "tags" }, 
         })
         .populate({
           path: "repostArticles",
-          populate: { path: "tags" }, // Populate tags for saved articles
+          populate: { path: "tags" }, 
+        })
+        .populate({
+          path: "improvements",
+          populate: { path: "tags" },
         })
         .exec();
     }
@@ -938,6 +942,7 @@ module.exports.updateProfileImage = async (req, res) => {
 module.exports.getUserDetails = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
+    
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -958,6 +963,7 @@ module.exports.getUserDetails = async (req, res) => {
       readArticles,
       savedArticles,
       repostArticles,
+      improvements,
       created_at,
       ...publicProfile
     } = user._doc;

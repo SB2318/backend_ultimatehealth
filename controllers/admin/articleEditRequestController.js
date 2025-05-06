@@ -439,8 +439,11 @@ module.exports.publishImprovement = expressAsyncHandler(
             article.content = editRequest.edited_content;
             article.lastUpdated = new Date();
             article.contributors.push(contributor._id);
+            // update contributor improvement section
+            contributor.improvements.push(article._id); 
 
             await article.save();
+            await contributor.save();
             // update user contribution
             await updateWriteEvents(article._id, contributor.id);
 

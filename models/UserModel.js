@@ -114,6 +114,12 @@ const userSchema = new mongoose.Schema({
         ref: 'Article',
         default: []
     },
+
+    improvements: {
+        type: [Number],
+        ref: 'Article',
+        default: []
+    },
     followers: {
         type: [Schema.Types.ObjectId],
         ref: 'User',
