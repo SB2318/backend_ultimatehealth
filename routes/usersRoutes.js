@@ -12,15 +12,16 @@ const {
   getprofile,
   getProfileImage,
   follow,
-  getFollowers,
+  //getFollowers,
   getUserProfile,
+  getSocials,
   getUserWithArticles,
   getUserLikeAndSaveArticles,
   //updateReadArticles,
  // collectMonthlyRecordsForReading,
   //collectMonthlyRecordsForWriting,
   getUserByHandle,
-  getFollowings,
+  //getFollowings,
   checkOtp,
   refreshToken,
   updateProfileImage,
@@ -64,9 +65,9 @@ router.get("/user/getuserprofile", authenticateToken, getUserProfile);
 
 // Follow and Unfollow Routes
 router.post("/user/follow", authenticateToken, follow);
-router.get("/user/followers", authenticateToken, getFollowers);
-router.get("/user/followings", authenticateToken, getFollowings);
-
+//router.get("/user/followers", authenticateToken, getFollowers);
+//router.get("/user/followings", authenticateToken, getFollowings);
+router.get("/user/socials", authenticateToken, getSocials);
 // Forget password
 router.post("/user/forgotpassword", sendOTPForForgotPassword);
 router.post("/user/verifyOtp", checkOtp);

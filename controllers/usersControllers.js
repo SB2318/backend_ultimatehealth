@@ -214,11 +214,11 @@ module.exports.getUserProfile = async (req, res) => {
         .populate({
           path: "articles",
           match: { status: 'published' },
-          populate: { path: "tags" }, 
+          populate: { path: "tags" },
         })
         .populate({
           path: "repostArticles",
-          populate: { path: "tags" }, 
+          populate: { path: "tags" },
         })
         .populate({
           path: "improvements",
@@ -735,15 +735,57 @@ module.exports.getFollowers = async (req, res) => {
 module.exports.getFollowings = async (req, res) => {
   const userId = req.userId;
   const author = await User.findById(userId).
-                            populate({
-                            path: "followings",
-                            select: "user_id user_name followers Profile_image",
-                            }).exec();
+    populate({
+      path: "followings",
+      select: "user_id user_name followers Profile_image",
+    }).exec();
 
   if (!author) {
     return res.status(404).json({ error: "Author not found" });
   }
   return res.status(200).json({ followers: author.followings });
+};
+
+// GET socials
+// type : 1 for followers, 2 for followings, 3 for contributors
+module.exports.getSocials = async (req, res) => {
+
+  const { type } = req.query;
+  const author = await User.findById(req.userId).
+    populate({
+      path: "followings",
+      select: "user_id user_name followers Profile_image",
+    })
+  populate({
+    path: "followers",
+    select: "user_id user_name followers Profile_image",
+  })
+  populate({
+    path: "contributors",
+    select: "user_id user_name followers Profile_image",
+  })
+    .exec();
+
+  if (!author) {
+    return res.status(404).json({ error: "Author not found" });
+  }
+
+  if (Number(type) === 1){
+    return res.status(200).json({ followers: author.followers });
+  }
+   
+  else if (Number(type) == 2){
+    return res.status(200).json({ followers: author.followings });
+  }
+  
+  else if (Number(type) == 3){
+    return res.status(200).json({ followers: author.contributors });
+  }
+   
+  else{
+    return res.status(404).json({ error: "Invalid type" });
+  }
+    
 };
 
 module.exports.getProfileImage = async (req, res) => {
@@ -942,7 +984,7 @@ module.exports.updateProfileImage = async (req, res) => {
 module.exports.getUserDetails = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
-    
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
