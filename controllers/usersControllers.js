@@ -750,7 +750,7 @@ module.exports.getFollowings = async (req, res) => {
 // type : 1 for followers, 2 for followings, 3 for contributors
 module.exports.getSocials = async (req, res) => {
 
-  const { type, articleId } = req.query;
+  const { type, articleId, social_user_id } = req.query;
 
   if (articleId) {
     const article = await 
@@ -763,7 +763,8 @@ module.exports.getSocials = async (req, res) => {
 
     return res.status(200).json({followers: article.contributors});
   }
-  const author = await User.findById(req.userId).
+  let id = social_user_id? social_user_id:req.userId;
+  const author = await User.findById(id).
     populate({
       path: "followings",
       select: "user_id user_name followers Profile_image",
