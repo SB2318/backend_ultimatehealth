@@ -750,42 +750,50 @@ module.exports.getFollowings = async (req, res) => {
 // type : 1 for followers, 2 for followings, 3 for contributors
 module.exports.getSocials = async (req, res) => {
 
-  const { type } = req.query;
+  const { type, articleId } = req.query;
+
+  if (articleId) {
+    const article = await 
+    Article.findById(Number(articleId))
+    .populate({
+      path: "contributors",
+      select: "user_id user_name followers Profile_image",
+    }).
+    exec();
+
+    return res.status(200).json({followers: article.contributors});
+  }
   const author = await User.findById(req.userId).
     populate({
       path: "followings",
       select: "user_id user_name followers Profile_image",
     })
-  populate({
-    path: "followers",
-    select: "user_id user_name followers Profile_image",
-  })
-  populate({
-    path: "contributors",
-    select: "user_id user_name followers Profile_image",
-  })
+    .populate({
+      path: "followers",
+      select: "user_id user_name followers Profile_image",
+    })
     .exec();
 
   if (!author) {
     return res.status(404).json({ error: "Author not found" });
   }
 
-  if (Number(type) === 1){
+  if (Number(type) === 1) {
     return res.status(200).json({ followers: author.followers });
   }
-   
-  else if (Number(type) == 2){
+
+  else if (Number(type) == 2) {
     return res.status(200).json({ followers: author.followings });
   }
-  
-  else if (Number(type) == 3){
+
+  else if (Number(type) == 3) {
     return res.status(200).json({ followers: author.contributors });
   }
-   
-  else{
+
+  else {
     return res.status(404).json({ error: "Invalid type" });
   }
-    
+
 };
 
 module.exports.getProfileImage = async (req, res) => {
