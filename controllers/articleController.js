@@ -110,6 +110,7 @@ module.exports.getArticleById = async (req, res) => {
       .populate('tags')
       .populate('likedUsers')
       .populate('contributors', 'user_handle user_name Profile_image')
+      .populate('authorId','followers')
       .exec();
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
