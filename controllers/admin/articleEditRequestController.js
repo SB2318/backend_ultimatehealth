@@ -316,10 +316,10 @@ module.exports.detectContentLoss = expressAsyncHandler(
 
     async (req, res) => {
 
-        const { edited_content, requestId } = req.query;
+        const { requestId } = req.query;
 
-        if (!edited_content || !requestId) {
-            res.status(400).json({ message: "Missing edited content or request id" });
+        if (!requestId) {
+            res.status(400).json({ message: "Missing  request id" });
             return;
         }
 
@@ -336,7 +336,7 @@ module.exports.detectContentLoss = expressAsyncHandler(
             }
             const original_content = editRequest.article.content;
 
-            const differences = diff.diffWords(original_content, edited_content);
+            const differences = diff.diffWords(original_content, editRequest.edited_content);
 
             const htmlDiff = differences.map((part) => {
 
