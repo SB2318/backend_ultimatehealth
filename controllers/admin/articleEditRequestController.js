@@ -316,7 +316,7 @@ module.exports.detectContentLoss = expressAsyncHandler(
 
     async (req, res) => {
 
-        const { edited_content, requestId } = req.body;
+        const { edited_content, requestId } = req.query;
 
         if (!edited_content || !requestId) {
             res.status(400).json({ message: "Missing edited content or request id" });

@@ -23,7 +23,7 @@ router.get('/admin/publish-improvements', authenticateToken, getAllCompletedImpr
 router.post('/admin/approve-improvement-request', authenticateToken, pickImprovementRequest);
 router.post('/admin/submit-review-on-improvement', authenticateToken, submitReviewOnImprovement);
 router.post('/article/submit-improvement', authenticateToken, submitImprovement);
-router.post('/article/detect-content-loss', authenticateToken, detectContentLoss);
+router.get('/article/detect-content-loss', authenticateToken, detectContentLoss);
 router.post('/admin/discard-improvement', authenticateToken, discardImprovement);
 router.post('/admin/publish-improvement', authenticateToken, publishImprovement);
 router.post('/admin/improvement/unassign-moderator', authenticateToken, unassignModerator);
