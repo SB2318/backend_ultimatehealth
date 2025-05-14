@@ -52,7 +52,7 @@ module.exports.submitEditRequest = expressAsyncHandler(
             });
             await editRequest.save();
 
-            return res.status(200).json({ message: "Your edit request has been successfully created and is being processed." ,data: editRequest});
+            return res.status(200).json({ message: "Your edit request has been successfully created and is being processed.", data: editRequest });
 
         } catch (err) {
             console.log("Error", err);
@@ -336,22 +336,19 @@ module.exports.detectContentLoss = expressAsyncHandler(
             }
             const original_content = editRequest.article.content;
 
-
             const differences = diff.diffWords(original_content, edited_content);
-            const removedParts = differences.filter(part => part.removed);
 
-            if (removedParts.length > 0) {
-                return res.status(400).json({
-                    message: "Some content from the original article was removed.",
-                    status: true,
-                    parts: removedParts
-                });
-            } else {
-                return res.status(400).json({
-                    message: "No removed content",
-                    status: false
-                });
-            }
+            const htmlDiff = differences.map((part) => {
+
+                const bg = part.added ? '#c8facc' : part.removed ? '#fdd' : 'transparent';
+                const tag = part.added ? 'ins' : part.removed ? 'del' : 'span';
+                return `<${tag} style="background-color:${bg}; padding:2px;">${escapeHtml(part.value)}</${tag}>`;
+            }).join('');
+
+            return res.status(200).json({
+                status: true,
+                diff: htmlDiff
+            });
 
         } catch (err) {
             console.log(err);
@@ -440,7 +437,7 @@ module.exports.publishImprovement = expressAsyncHandler(
             article.lastUpdated = new Date();
             article.contributors.push(contributor._id);
             // update contributor improvement section
-            contributor.improvements.push(article._id); 
+            contributor.improvements.push(article._id);
 
             await article.save();
             await contributor.save();
@@ -625,6 +622,12 @@ cron.schedule('0 0 * * *', async () => {
     await discardImprovements();
 });
 
-// Task Left
-// Socket events
-// Overall review
+
+function escapeHtml(text) {
+
+    return text.replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
