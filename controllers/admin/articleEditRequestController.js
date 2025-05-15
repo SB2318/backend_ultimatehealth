@@ -334,7 +334,14 @@ module.exports.detectContentLoss = expressAsyncHandler(
             if (editRequest.reviewer_id === null) {
                 return res.status(403).json({ message: "The request has not been approved yet." });
             }
-            const original_content = editRequest.article.content;
+
+            let original_content = '';
+            if(editRequest.article.content.endsWith('.html')){
+                  original_content = await getContent(editRequest.article.content);
+            }
+            else{
+                original_content = editRequest.article.content;
+            }
 
             const differences = diff.diffWords(original_content, editRequest.edited_content);
 
@@ -631,3 +638,15 @@ function escapeHtml(text) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
+
+const getContent = async content => {
+    try {
+      const response = await fetch(`http://51.20.1.81:8084/api/getFile/${content}`);
+      const text = await response.text();
+      return text;
+    } catch (error) {
+       console.error('Error fetching URI:', error);
+    return content;
+    }
+  };
+

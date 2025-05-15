@@ -7,3 +7,5 @@ module.exports.statusEnum = {
     DISCARDED: 'discarded',
     AWAITING_USER: 'awaiting-user'
   };
+
+  
