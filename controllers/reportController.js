@@ -160,7 +160,7 @@ module.exports.submitReport = expressAsyncHandler(
           title: article.title
         }
       }
-    
+
       const report = new ReportAction({
         articleId: Number(articleId),
         commentId: commentId,
@@ -398,42 +398,154 @@ const sendMailtoReportUser = async (email, details, reportType) => {
   });
 }
 
+/** To get all avilable reports */
 module.exports.getAllPendingReports = expressAsyncHandler(
   async (req, res) => {
 
-    try{
+    try {
 
       const pendingReports = await ReportAction.find(
-      { 
-        status: reportActionEnum.PENDING,
-        admin_id: null
-      })
-      .populate({
-        path: 'reportedBy',
-        select: 'user_name',
-      })
-      .populate({
-        path: 'reasonId',
-        select: 'reason',
-      }).
-      populate({
-        path: "articleId",
-        select: "title"
-      }).
-      populate({
-       path:"commentId",
-       select: "content"
-      }).
-      exec();
+        {
+          status: reportActionEnum.PENDING,
+          admin_id: null
+        })
+        .populate({
+          path: 'reportedBy',
+          select: 'user_name',
+        })
+        .populate({
+          path: 'reasonId',
+          select: 'reason',
+        }).
+        populate({
+          path: "articleId",
+          select: "title"
+        }).
+        populate({
+          path: "commentId",
+          select: "content"
+        }).
+        exec();
 
       return res.status(200).json(pendingReports);
 
-    }catch(err){
+    } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Error fetching pending reports' });
     }
   }
 )
+
+/** To get rest of reports */
+module.exports.getAllReportsForModerator = expressAsyncHandler(
+  async (req, res) => {
+
+    try {
+
+      const pendingReports = await ReportAction.find(
+        {
+          admin_id: req.userId
+        })
+        .populate({
+          path: 'reportedBy',
+          select: 'user_name',
+        })
+        .populate({
+          path: 'reasonId',
+          select: 'reason',
+        }).
+        populate({
+          path: "articleId",
+          select: "title"
+        }).
+        populate({
+          path: "commentId",
+          select: "content"
+        }).
+        exec();
+
+      return res.status(200).json(pendingReports);
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Error fetching pending reports' });
+    }
+  }
+)
+
+/** To get single report details */
+module.exports.getReportDetails = expressAsyncHandler(
+  async (req, res) => {
+
+    const id = req.params.id;
+
+    if (!id) {
+      return res.status(400).json({ message: 'Report id is required' });
+    }
+
+    try {
+      // view article or comment
+      const report = await ReportAction.findById(id)
+        .populate({
+          path: 'reportedBy',
+          select: 'user_name',
+        })
+        .populate({
+          path: 'reasonId',
+          select: 'reason',
+        }).
+        populate({
+          path: "articleId",
+          select: "title"
+        }).
+        populate({
+          path: "commentId",
+          select: "content"
+        }).
+        exec();
+
+      if (!report) {
+        return res.status(404).json({ message: 'Report not found' });
+      }
+
+      return res.status(200).json(report);
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Error fetching report details' });
+    }
+  }
+)
+
+/** Pick report or assign moderator */
+module.exports.pickReport = expressAsyncHandler(
+  async (req, res) =>{
+    const {reportId} = req.body;
+
+     if(!reportId){
+      return res.status(400).json({ message: 'Report id is required' });
+     }
+
+     try{
+
+      const report = await ReportAction.findById(reportId).exec();
+      if(!report){
+        return res.status(404).json({ message: 'Report not found' });
+      }
+      report.admin_id = req.userId;
+      report.action_taken = reportActionEnum.INVESTIGATION;
+
+      await report.save();
+
+      /** Send Mail to user */ // left
+      
+     }catch(err){
+      console.error(err);
+      res.status(500).json({ message: 'Error picking report' });
+     }
+  }
+)
+
 
 
 
