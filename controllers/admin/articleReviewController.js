@@ -495,5 +495,5 @@ cron.schedule('0 0 * * *', async () => {
     await discardArticle();
 });
 
-// article and comment report section
+
 
