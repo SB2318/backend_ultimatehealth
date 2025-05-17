@@ -14,5 +14,6 @@ router.get('/pending-reports', authenticateToken, controller.getAllPendingReport
 router.get('/all-assigned-reports', authenticateToken, controller.getAllReportsForModerator);
 router.get('/report-details/:id', authenticateToken, controller.getReportDetails);
 router.post('/pick-report-for-investigation', authenticateToken, controller.pickReport);
+router.post('/take-admin-action', authenticateToken, controller.takeAdminActionOnReport);
 
 module.exports = router;

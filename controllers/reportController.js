@@ -7,7 +7,7 @@ const Article = require('../models/Articles');
 const User = require("../models/UserModel");
 const Comment = require('../models/commentSchema');
 const Admin = require('../models/admin/adminModel');
-const { sendReportUndertakenEmail, sendInitialReportMailtoConvict, sendInitialReportMailtoVictim  } = require('./emailservice');
+const { sendReportUndertakenEmail, sendInitialReportMailtoConvict, sendInitialReportMailtoVictim } = require('./emailservice');
 
 
 
@@ -161,6 +161,7 @@ module.exports.submitReport = expressAsyncHandler(
         commentId: commentId,
         reportedBy: reportedBy,
         reasonId: reasonId,
+        convictId: authorId
       });
 
       await report.save();
@@ -196,6 +197,10 @@ module.exports.getAllPendingReports = expressAsyncHandler(
         })
         .populate({
           path: 'reportedBy',
+          select: 'user_name',
+        })
+        .populate({
+          path: 'convictId',
           select: 'user_name',
         })
         .populate({
@@ -236,6 +241,10 @@ module.exports.getAllReportsForModerator = expressAsyncHandler(
           select: 'user_name',
         })
         .populate({
+          path: 'convictId',
+          select: 'user_name',
+        })
+        .populate({
           path: 'reasonId',
           select: 'reason',
         }).
@@ -273,6 +282,10 @@ module.exports.getReportDetails = expressAsyncHandler(
       const report = await ReportAction.findById(id)
         .populate({
           path: 'reportedBy',
+          select: 'user_name',
+        })
+        .populate({
+          path: 'convictId',
           select: 'user_name',
         })
         .populate({
@@ -326,7 +339,7 @@ module.exports.pickReport = expressAsyncHandler(
       await report.save();
 
       /** Send Mail to user */
-       sendReportUndertakenEmail(report.reportedBy.email, report._id);
+      sendReportUndertakenEmail(report.reportedBy.email, report._id);
       return res.status(200).json({ message: 'Report picked successfully' });
 
     } catch (err) {
@@ -336,6 +349,158 @@ module.exports.pickReport = expressAsyncHandler(
   }
 )
 
+/** Take action */
+module.exports.takeAdminActionOnReport = expressAsyncHandler(
+  async (req, res) => {
+    const { reportId, action, admin_id } = req.body;
+
+    if (!reportId || !action || !admin_id) {
+      return res.status(400).json({ message: 'Missing required field: Report id, action and admin id' });
+    }
+
+    try {
+      const [report, admin] = await Promise.all([
+        ReportAction.findById(reportId),
+        Admin.findById(admin_id)
+      ]);
+
+      if (!report || !admin) {
+        return res.status(404).json({ message: 'Report or moderator not found' });
+      }
+
+
+      if (report.admin_id !== null && report.admin_id !== admin._id ) {
+        return res.status(403).json({ message: 'Report already picked by another moderator' });
+      }
+
+
+      // Check report status 
+      /**
+       *             
+       EDIT_CONTENT: "Content Edited",  // User action      
+       RESTORE_CONTENT: "Content Restored",  // User action     
+ 
+       */
+      if (
+        report.status === reportActionEnum.RESOLVED ||
+        report.status === reportActionEnum.DISMISSED ||
+        report.status === reportActionEnum.IGNORE ||
+        report.status === reportActionEnum.WARN_USER ||
+        report.status === reportActionEnum.REMOVE_CONTENT ||
+        report.status === reportActionEnum.BLOCK_USER
+
+      ) {
+
+        return res.status(400).json({
+          success: false,
+          message: `This report (Issue No. ${report.id}) has already been resolved with status: ${report.status}.`,
+        });
+      }
+
+      const [convict, victim] = await Promise.all([
+        User.findById(report.convictId),
+        User.findById(report.reportedBy)
+      ]);
+
+      if (!convict || !victim) {
+        report.status = reportActionEnum.IGNORE;
+        await report.save();
+        return res.status(404).json({ message: 'Convict or victim not found' });
+      }
+
+      switch (action.toString()) {
+
+        case reportActionEnum.RESOLVED: {
+          report.status = reportActionEnum.RESOLVED;
+          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          await report.save();
+          await convict.save();
+          // Increase moderator contribution count
+          // Send resolved mail to convict and victim
+          break;
+        }
+        case reportActionEnum.DISMISSED: {
+          report.status = reportActionEnum.DISMISSED;
+          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          await report.save();
+          await convict.save();
+          // Increase moderator contribution count
+          // Send resolved mail to convict and victim
+          break;
+        }
+        case reportActionEnum.IGNORE: {
+          report.status = reportActionEnum.IGNORE;
+          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          await report.save();
+          await convict.save();
+          // Increase moderator contribution count
+          // Send resolved mail to convict and victim
+          break;
+        }
+        case reportActionEnum.WARN_USER: {
+          report.status = reportActionEnum.WARN_USER;
+          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          await report.save();
+          await convict.save();
+          // send warn mail to convict, and resolve mail to victim
+          // Increase admin contribution count
+          break;
+        }
+        case reportActionEnum.REMOVE_CONTENT: {
+          report.status = reportActionEnum.REMOVE_CONTENT;
+
+          if (report.commentId) {
+            // Remove comment
+          } else {
+            // Remove post
+          }
+
+          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          await report.save();
+          await convict.save();
+          // Send mail to convict and victim
+          // increase moderator contribution count
+          break;
+        }
+
+        case reportActionEnum.BLOCK_USER: {
+
+          report.status = reportActionEnum.BLOCK_USER;
+          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          convict.isBlockUser = true; // Temporary block for 3 months
+          await report.save();
+          await convict.save();
+          // Send mail to convict and victim
+          // Increase moderator contribution count
+          break;
+        }
+        default:{
+          return res.status(400).json({message: "Invalid action"});
+        }
+      }
+
+      return res.status(200).json({message: "Action performed"});
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Error taking action on report' });
+    }
+
+  }
+)
+// Report Flow
+//  Convict will be temporarily block If he or she has at least 3 active reports in his bucket or admin block them
+// Block User means:
+// 1. User will be unable to post new content
+// 2. User will be unable to comment on existing content
+// 3. User will unable to make any reaction or repost on existing content
+// 4. User will not able to make any further edit request.
+// 5. But Yes, they can View and save existing content
+
+// BAN USER:
+// 1. User will be unable to post new content
+// 2. All content and comment of the particular user will be removed from the platform
+// 3. They even can't able to see any new or existing post or they can't make any changes.
 
 
 

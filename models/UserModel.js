@@ -142,7 +142,18 @@ const userSchema = new mongoose.Schema({
        // required: true,
         default: 0,
     },
-    
+    activeReportCount:{
+        type:Number,
+        default:0
+    },
+    isBannedUser:{
+        type:Boolean,
+        default:false
+    },
+    isBlockUser:{
+        type: Boolean,
+        default: false
+    }
     
 });
 

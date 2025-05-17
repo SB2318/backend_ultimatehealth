@@ -2,18 +2,18 @@ const mongoose = require('mongoose');
 const {Schema} = require('mongoose');
 
 const reportActionEnum = {
-    PENDING:"Pending",              // Report is awaiting review or action
-    IN_PROGRESS: "In Progress",          // Report is being reviewed or under investigation
-    RESOLVED: "Resolved",             // The report has been addressed or resolved
-    DISMISSED: "Dismissed",            // Report was found to be invalid or unnecessary
-    WARN_USER: "User Warned",            // The user who posted the content has been warned
-    REMOVE_CONTENT: "Content Removed",       // The reported content has been removed or deleted
-    EDIT_CONTENT: "Content Edited",         // The reported content has been edited for compliance
-    RESTORE_CONTENT: "Content Restored",      // The previously removed content is reinstated
-    BLOCK_USER: "User Blocked",           // The user has been temporarily or permanently blocked
-    ESCALATED: "Escalated",            // The issue has been escalated to higher authorities or support
-    INVESTIGATION: "Investigation",        // The report requires further investigation before any action
-    IGNORE: "Ignored"                // The report was deemed not actionable and ignored
+    PENDING:"Pending",                       
+    RESOLVED: "Resolved",             
+    DISMISSED: "Dismissed",           
+    WARN_USER: "User Warned",            
+    REMOVE_CONTENT: "Content Removed",       
+    EDIT_CONTENT: "Content Edited",         
+    RESTORE_CONTENT: "Content Restored",      
+    BLOCK_USER: "User Blocked",  
+    BAN_USER: "User Banned",        
+    ESCALATED: "Escalated",            
+    INVESTIGATION: "Investigation Start",        
+    IGNORE: "Ignored"                
 };
 const reportActionSchema = new Schema({
 
@@ -45,6 +45,11 @@ const reportActionSchema = new Schema({
        ref:'Comment'
     },
     reportedBy:{
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref:'User'
+    },
+    convictId:{
         type: Schema.Types.ObjectId,
         required: true,
         ref:'User'
