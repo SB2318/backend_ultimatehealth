@@ -695,7 +695,7 @@ const sendInitialReportMailtoConvict = async (email, details, reportType) => {
   });
 }
 
-const sendResolvedMailToVictim = async (email, details, reportType) => {
+const sendResolvedMailToVictim = async (email, details, reportType, resolution) => {
   const resolvedDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
        <h3 style="color: #32CD32;">Reported Content (Resolved):</h3>
@@ -757,7 +757,7 @@ const sendResolvedMailToVictim = async (email, details, reportType) => {
             <p>Hello,</p>
             <p>Thank you for reporting the following ${reportType}. Our moderation team has reviewed your report and resolved the issue.</p>
             ${resolvedDetails}
-            
+            <p><strong>Resolution: </strong> ${resolution}</p>
             <p>We appreciate your effort in helping us keep the community safe and respectful.</p>
           </div>
           <div class="footer">
@@ -1044,6 +1044,349 @@ const sendDismissedOrIgnoreMailToConvict = async (email, details, reportType) =>
   });
 };
 
+const sendWarningMailToConvict = async (email, details, reportType, reason, strikeCount = 1) => {
+  const warningDetails = reportType === 'content' ?
+    `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
+       <h3 style="color: #FF6347;">Violated Content:</h3>
+       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Description:</strong> ${details.content}</p>
+     </div>` :
+    `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
+       <h3 style="color: #FF6347;">Violated Comment:</h3>
+       <p><strong>Comment ID:</strong> ${details.commentId}</p>
+       <p><strong>Comment:</strong> ${details.content}</p>
+     </div>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `⚠️ Warning: Violation of Community Guidelines (${strikeCount}/3)`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #FF6347;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+          }
+          .content {
+            padding: 20px;
+          }
+          .reason {
+            background-color: #ffeaea;
+            padding: 10px;
+            border-left: 4px solid #FF6347;
+            margin: 15px 0;
+            font-style: italic;
+          }
+          .strike-warning {
+            background-color: #ffebee;
+            color: #b71c1c;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            border-left: 5px solid #f44336;
+            margin-top: 20px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            ⚠️ Warning Issued
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>Your ${reportType} was reviewed and found to be in violation of our community guidelines.</p>
+            ${warningDetails}
+            <div class="reason"><strong>Reason:</strong> ${reason}</div>
+
+            <div class="strike-warning">
+              This is warning ${strikeCount} of 3. Repeated violations may lead to permanent suspension of your account.
+            </div>
+
+            <p>Please review our <a href="#">community guidelines</a> to avoid further issues. Continued engagement must follow platform rules to ensure a respectful and safe space for everyone.</p>
+
+            <p>If you believe this warning was issued incorrectly, contact us at <a href="mailto:ultimate.health25@gmail.com">ultimate.health25@gmail.com</a>.</p>
+          </div>
+          <div class="footer">
+            <p>Best regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending warning email to convict:', err);
+    } else {
+      console.log('Warning email sent to convict:', info.response);
+    }
+  });
+};
+
+const  sendRemoveContentMailToConvict = async (email, details, reportType, reason) => {
+  const warningDetails = reportType === 'content' ?
+    `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
+       <h3 style="color: #FF6347;">Violated Content:</h3>
+       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Description:</strong> ${details.content}</p>
+     </div>` :
+    `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
+       <h3 style="color: #FF6347;">Violated Comment:</h3>
+       <p><strong>Comment ID:</strong> ${details.commentId}</p>
+       <p><strong>Comment:</strong> ${details.content}</p>
+     </div>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `⚠️ Warning: Content Removed, Violation of Community Guidelines`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #FF6347;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+          }
+          .content {
+            padding: 20px;
+          }
+          .reason {
+            background-color: #ffeaea;
+            padding: 10px;
+            border-left: 4px solid #FF6347;
+            margin: 15px 0;
+            font-style: italic;
+          }
+          .strike-warning {
+            background-color: #ffebee;
+            color: #b71c1c;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            border-left: 5px solid #f44336;
+            margin-top: 20px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            ⚠️ Warning Issued
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>Your ${reportType} was reviewed and found to be in violation of our community guidelines.</p>
+            ${warningDetails}
+            <div class="reason"><strong>Reason:</strong> ${reason}</div>
+
+            <div class="strike-warning">
+              This is a warning, not a strike. We are only removing your content, Repeated violations may lead to permanent suspension of your account.
+            </div>
+
+            <p>Please review our <a href="#">community guidelines</a> to avoid further issues. Continued engagement must follow platform rules to ensure a respectful and safe space for everyone.</p>
+
+            <p>If you believe this warning was issued incorrectly, contact us at <a href="mailto:ultimate.health25@gmail.com">ultimate.health25@gmail.com</a>.</p>
+          </div>
+          <div class="footer">
+            <p>Best regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending warning email to convict:', err);
+    } else {
+      console.log('Warning email sent to convict:', info.response);
+    }
+  });
+};
+
+const sendBlockConvictMail = async (email, details, reportType, reason) => {
+  const reportedItem = reportType === 'content'
+    ? `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
+         <h3 style="color: #DC143C;">Violated Content:</h3>
+         <p><strong>Content ID:</strong> ${details.articleId}</p>
+         <p><strong>Description:</strong> ${details.content}</p>
+       </div>`
+    : `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
+         <h3 style="color: #DC143C;">Violated Comment:</h3>
+         <p><strong>Comment ID:</strong> ${details.commentId}</p>
+         <p><strong>Comment:</strong> ${details.content}</p>
+       </div>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `🚫 Account Temporarily Blocked Due to Policy Violation`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #DC143C;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+          }
+          .content {
+            padding: 20px;
+          }
+          .reason {
+            background-color: #ffeaea;
+            padding: 10px;
+            border-left: 4px solid #DC143C;
+            margin: 15px 0;
+            font-style: italic;
+          }
+          .block-notice {
+            background-color: #ffebee;
+            color: #b71c1c;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            border-left: 5px solid #f44336;
+            margin-top: 20px;
+          }
+          .restrictions {
+            background-color: #fff8dc;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 5px solid #ffa500;
+            border-radius: 6px;
+          }
+          ul {
+            margin: 10px 0 10px 20px;
+            padding: 0;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            🚫 Your Account Has Been Temporarily Blocked
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>We have reviewed a report concerning the following ${reportType} associated with your account:</p>
+            ${reportedItem}
+            <div class="reason"><strong>Reason:</strong> ${reason}</div>
+
+            <div class="block-notice">
+              Your account has been temporarily blocked for 1 month due to violations of our community guidelines.
+            </div>
+
+            <div class="restrictions">
+              <h4 style="margin: 0 0 10px 0;">📌 Blocked User Restrictions:</h4>
+              <ul>
+                <li>You will be unable to post new content.</li>
+                <li>You will be unable to comment on existing content.</li>
+                <li>You will be unable to react to or repost any content.</li>
+                <li>You will be unable to submit edit requests.</li>
+                <li><strong>You can still view and save existing content.</strong></li>
+              </ul>
+            </div>
+
+            <p>Please take this time to review our <a href="#">community guidelines</a>. Respectful and responsible behavior is required to maintain access to the platform.</p>
+
+            <p>If you believe this block was issued in error, you may contact our support team at <a href="mailto:ultimate.health25@gmail.com">ultimate.health25@gmail.com</a> to appeal.</p>
+          </div>
+          <div class="footer">
+            <p>Best regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending block email to convict:', err);
+    } else {
+      console.log('Block email sent to convict:', info.response);
+    }
+  });
+};
+
 
 module.exports = {
     sendVerificationEmail,
@@ -1062,7 +1405,9 @@ module.exports = {
     sendResolvedMailToConvict,
     sendWarningMailToVictimOnReportDismissOrIgnore,
     sendDismissedOrIgnoreMailToConvict,
-
+    sendWarningMailToConvict,
+    sendRemoveContentMailToConvict,
+    sendBlockConvictMail
 };
 
 

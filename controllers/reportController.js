@@ -15,7 +15,10 @@ const {
   sendWarningMailToVictimOnReportDismissOrIgnore,
   sendDismissedOrIgnoreMailToConvict,
   sendInitialReportMailtoConvict,
-  sendInitialReportMailtoVictim
+  sendInitialReportMailtoVictim,
+  sendWarningMailToConvict,
+  sendRemoveContentMailToConvict,
+  sendBlockConvictMail
 } = require('./emailservice');
 
 
@@ -172,7 +175,7 @@ module.exports.submitReport = expressAsyncHandler(
         reasonId: reasonId,
         convictId: authorId
       });
-      author.activeReportCount+= 1;
+      author.activeReportCount += 1;
 
       await author.save();
 
@@ -413,9 +416,9 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
         report.status === reportActionEnum.RESOLVED ||
         report.status === reportActionEnum.DISMISSED ||
         report.status === reportActionEnum.IGNORE ||
-        report.status === reportActionEnum.WARN_USER ||
+        report.status === reportActionEnum.WARN_CONVICT ||
         report.status === reportActionEnum.REMOVE_CONTENT ||
-        report.status === reportActionEnum.BLOCK_USER
+        report.status === reportActionEnum.BLOCK_CONVICT
 
       ) {
 
@@ -458,10 +461,11 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           await aggregate.save();
           // Send resolved mail to convict and victim
           await sendResolvedMailToConvict(convict.email, details, reportType);
-          await sendResolvedMailToVictim(victim.email, details, reportType);
+          await sendResolvedMailToVictim(victim.email, details, reportType, action);
 
           break;
         }
+
         case reportActionEnum.DISMISSED: {
 
           report.status = reportActionEnum.DISMISSED;
@@ -477,7 +481,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           await report.save();
           await convict.save();
 
-          await sendWarningMailToVictimOnReportDismissOrIgnore(victim.email, details, reportType, report.reasonId.reason, victim.reportFeatureMisuse + 1);
+          await sendWarningMailToVictimOnReportDismissOrIgnore(victim.email, details, reportType, report.reasonId.reason, Math.max(victim.reportFeatureMisuse - 1, 0));
           await sendDismissedOrIgnoreMailToConvict(convict.email, details, reportType);
           // Increase moderator contribution count
           const aggregate = new AdminAggregate({
@@ -489,7 +493,9 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           // Send dismissed mail to convict and victim
           break;
         }
+
         case reportActionEnum.IGNORE: {
+
           report.status = reportActionEnum.IGNORE;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
 
@@ -511,17 +517,38 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           await aggregate.save();
           // Send resolved mail to convict and victim
 
-          await sendWarningMailToVictimOnReportDismissOrIgnore(victim.email, details, reportType, report.reasonId.reason, victim.reportFeatureMisuse + 1);
+          await sendWarningMailToVictimOnReportDismissOrIgnore(victim.email, details, reportType, report.reasonId.reason, Math.max(victim.reportFeatureMisuse - 1, 0));
           await sendDismissedOrIgnoreMailToConvict(convict.email, details, reportType);
           break;
         }
-        case reportActionEnum.WARN_USER: {
-          report.status = reportActionEnum.WARN_USER;
-          // convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+
+        case reportActionEnum.WARN_CONVICT: {
+
+          report.status = reportActionEnum.WARN_CONVICT;
+
+          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          convict.strikeCount = convict.strikeCount + 1;
+
+          if(convict.strikeCount >= 3){
+            // ban the user
+            convict.isBannedUser = true;
+          }
           // For warning will not decrease report count
-          await report.save();
           await convict.save();
-          // send warn mail to convict, and resolve mail to victim
+          await report.save();
+
+          // Remove that content
+          if (report.commentId) {
+            // Remove comment
+            await Comment.findByIdAndDelete(report.commentId._id);
+          } else {
+            // Remove post
+            await Article.findByIdAndDelete(report.articleId._id);
+          }
+
+          // send warn mail to convict, and resolve mail to victim 
+          sendWarningMailToConvict(convict.email, details, reportType, report.reasonId.reason, Math.max(0, convict.strikeCount - 1));
+          sendResolvedMailToVictim(victim.email, details, reportType, action);
           // Increase admin contribution count
           const aggregate = new AdminAggregate({
             userId: admin._id,
@@ -534,16 +561,24 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
         case reportActionEnum.REMOVE_CONTENT: {
           report.status = reportActionEnum.REMOVE_CONTENT;
 
+            // Remove that content
           if (report.commentId) {
             // Remove comment
+            await Comment.findByIdAndDelete(report.commentId._id);
           } else {
             // Remove post
+            await Article.findByIdAndDelete(report.articleId._id);
           }
-
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+
           await report.save();
           await convict.save();
-          // Send mail to convict and victim
+
+          // warn convict
+          sendRemoveContentMailToConvict(convict.email, details, reportType, report.reasonId.reason);
+          // send resolve mail to admin
+          sendResolvedMailToVictim(victim.email, details, reportType, action);
+
           // increase moderator contribution count
           const aggregate = new AdminAggregate({
             userId: admin._id,
@@ -554,21 +589,24 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           break;
         }
 
-        case reportActionEnum.BLOCK_USER: {
+        case reportActionEnum.BLOCK_CONVICT: {
 
-          report.status = reportActionEnum.BLOCK_USER;
+          report.status = reportActionEnum.BLOCK_CONVICT;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
-          convict.isBlockUser = true; // Temporary block for 1 months
+          convict.isBlockUser = true; // Temporary block for 1 month
           await report.save();
           await convict.save();
-          // Send mail to convict and victim
+        
           // Increase moderator contribution count
           const aggregate = new AdminAggregate({
             userId: admin._id,
             contributionType: 3,
           });
 
+          // Send mail to convict and victim
           await aggregate.save();
+          await sendBlockConvictMail(convict.email, details, reportType, report.reasonId.reason);
+          await sendResolvedMailToVictim(victim.email, details, reportType, action);
           break;
         }
         default: {

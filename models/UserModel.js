@@ -157,6 +157,10 @@ const userSchema = new mongoose.Schema({
     reportFeatureMisuse:{
         type: Number,
         default: 0
+    },
+    strikeCount:{
+        type:Number,
+        default:0
     }
     
 });
