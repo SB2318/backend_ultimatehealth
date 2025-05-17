@@ -62,6 +62,7 @@ const reportActionSchema = new Schema({
         type: Date,
         default: Date.now
     },
+   
 })
 
 const ReportAction = mongoose.model('ReportAction', reportActionSchema);

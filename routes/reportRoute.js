@@ -10,5 +10,9 @@ router.delete('/report/reason/:id', authenticateToken, controller.deleteReason);
 router.get('/report/reasons', authenticateToken, controller.getAllReasons);
 
 router.post('/report/submit', authenticateToken, controller.submitReport);
+router.get('/pending-reports', authenticateToken, controller.getAllPendingReports);
+router.get('/all-assigned-reports', authenticateToken, controller.getAllReportsForModerator);
+router.get('/report-details/:id', authenticateToken, controller.getReportDetails);
+router.post('/pick-report-for-investigation', authenticateToken, controller.pickReport);
 
 module.exports = router;
