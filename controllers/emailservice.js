@@ -694,6 +694,357 @@ const sendInitialReportMailtoConvict = async (email, details, reportType) => {
     }
   });
 }
+
+const sendResolvedMailToVictim = async (email, details, reportType) => {
+  const resolvedDetails = reportType === 'content' ?
+    `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
+       <h3 style="color: #32CD32;">Reported Content (Resolved):</h3>
+       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Description:</strong> ${details.content}</p>
+     </div>` :
+    `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
+       <h3 style="color: #32CD32;">Reported Comment (Resolved):</h3>
+       <p><strong>Comment ID:</strong> ${details.commentId}</p>
+       <p><strong>Comment:</strong> ${details.content}</p>
+     </div>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Update: Your Reported ${reportType} Has Been Reviewed`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #32CD32;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+          }
+          .content {
+            padding: 20px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>Report Reviewed and Resolved</h2>
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>Thank you for reporting the following ${reportType}. Our moderation team has reviewed your report and resolved the issue.</p>
+            ${resolvedDetails}
+            
+            <p>We appreciate your effort in helping us keep the community safe and respectful.</p>
+          </div>
+          <div class="footer">
+            <p>Best regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email to victim:', err);
+    } else {
+      console.log('Resolved report email sent to victim:', info.response);
+    }
+  });
+};
+
+const sendResolvedMailToConvict = async (email, details, reportType) => {
+  const resolvedDetails = reportType === 'content' ?
+    `<div style="padding: 15px; border: 2px solid #FFA500; background-color: #FFF8DC; border-radius: 8px;">
+       <h3 style="color: #FFA500;">Your Content Was Reported:</h3>
+       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Description:</strong> ${details.content}</p>
+     </div>` :
+    `<div style="padding: 15px; border: 2px solid #FFA500; background-color: #FFF8DC; border-radius: 8px;">
+       <h3 style="color: #FFA500;">Your Comment Was Reported:</h3>
+       <p><strong>Comment ID:</strong> ${details.commentId}</p>
+       <p><strong>Comment:</strong> ${details.content}</p>
+     </div>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Notice: Review of Reported ${reportType}`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #FFA500;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+          }
+          .content {
+            padding: 20px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>Reported ${reportType} Reviewed</h2>
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>This is to inform you that a report was reviewed concerning the following ${reportType} associated with your account.</p>
+            ${resolvedDetails}
+            <p><strong>Outcome:</strong> Resolved </p>
+            <p>Please ensure your future activity aligns with our <a href="#">community guidelines</a> to maintain a respectful and safe environment for everyone.</p>
+          </div>
+          <div class="footer">
+            <p>Best regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email to convict:', err);
+    } else {
+      console.log('Resolved report email sent to convict:', info.response);
+    }
+  });
+};
+
+// Misuse of report feature
+const sendWarningMailToVictimOnReportDismissOrIgnore = async (email, details, reportType, reason, misuseCount) => {
+  const reportSummary = reportType === 'content' ?
+    `<div style="padding: 15px; border: 2px solid #FFD700; background-color: #FFFACD; border-radius: 8px;">
+       <h3 style="color: #DAA520;">Reported Content:</h3>
+       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Description:</strong> ${details.content}</p>
+     </div>` :
+    `<div style="padding: 15px; border: 2px solid #FFD700; background-color: #FFFACD; border-radius: 8px;">
+       <h3 style="color: #DAA520;">Reported Comment:</h3>
+       <p><strong>Comment ID:</strong> ${details.commentId}</p>
+       <p><strong>Comment:</strong> ${details.content}</p>
+     </div>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `⚠️Warning: Inappropriate Use of Report Feature (${misuseCount}/3)`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #FFD700;
+            color: black;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+          }
+          .content {
+            padding: 20px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+          .reason {
+            background-color: #fff8e1;
+            padding: 10px;
+            border-left: 4px solid #FFD700;
+            margin: 15px 0;
+            font-style: italic;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            ⚠️ Warning: Misuse of Reporting Tool
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>We reviewed your recent report concerning the following ${reportType}, and we found it to be inappropriate or made in bad faith:</p>
+            ${reportSummary}
+            <div class="reason"><strong>Reason:</strong> ${reason}</div>
+            <p>Our reporting tool is meant to address real violations of our community guidelines. Misusing this tool can harm the experience for others and may result in restrictions on your account.</p>
+            <p>Please ensure that future reports are valid and made with sincere intent to improve the platform for all users.</p>
+            
+            <div class="warning">
+              This is warning ${misuseCount} of 3. After 3 confirmed misuses, your account may be blocked or suspended for 1 month.
+            </div>
+
+            <p>If you believe this warning was issued in error, feel free to contact our support team.</p>
+          </div>
+          <div class="footer">
+            <p>Best regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending warning email to victim:', err);
+    } else {
+      console.log('Warning email sent to victim:', info.response);
+    }
+  });
+};
+
+const sendDismissedOrIgnoreMailToConvict = async (email, details, reportType) => {
+  const dismissedDetails = reportType === 'content' ?
+    `<div style="padding: 15px; border: 2px solid #90EE90; background-color: #F0FFF0; border-radius: 8px;">
+       <h3 style="color: #228B22;">Content Report Dismissed:</h3>
+       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Description:</strong> ${details.content}</p>
+     </div>` :
+    `<div style="padding: 15px; border: 2px solid #90EE90; background-color: #F0FFF0; border-radius: 8px;">
+       <h3 style="color: #228B22;">Comment Report Dismissed:</h3>
+       <p><strong>Comment ID:</strong> ${details.commentId}</p>
+       <p><strong>Comment:</strong> ${details.content}</p>
+     </div>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Notice: Report on Your ${reportType} Has Been Dismissed`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #90EE90;
+            color: black;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+          }
+          .content {
+            padding: 20px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            ✅ Report Dismissed – No Action Taken
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>This is to inform you that a report was submitted regarding the following ${reportType}:</p>
+            ${dismissedDetails}
+            <p>After careful review, our moderation team has determined that your ${reportType} does not violate our community guidelines. As a result, no action has been taken against your account.</p>
+            <p>If you have any questions or concerns, feel free to reach out to our support team.</p>
+          </div>
+          <div class="footer">
+            <p>Best regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending dismissal email to convict:', err);
+    } else {
+      console.log('Dismissal email sent to convict:', info.response);
+    }
+  });
+};
+
+
 module.exports = {
     sendVerificationEmail,
     verifyEmail,
@@ -706,7 +1057,12 @@ module.exports = {
     sendMailOnEditRequestApproval,
     sendReportUndertakenEmail,
     sendInitialReportMailtoConvict,
-    sendInitialReportMailtoVictim 
+    sendInitialReportMailtoVictim,
+    sendResolvedMailToVictim,
+    sendResolvedMailToConvict,
+    sendWarningMailToVictimOnReportDismissOrIgnore,
+    sendDismissedOrIgnoreMailToConvict,
+
 };
 
 

@@ -7,7 +7,16 @@ const Article = require('../models/Articles');
 const User = require("../models/UserModel");
 const Comment = require('../models/commentSchema');
 const Admin = require('../models/admin/adminModel');
-const { sendReportUndertakenEmail, sendInitialReportMailtoConvict, sendInitialReportMailtoVictim } = require('./emailservice');
+const AdminAggregate = require('../models/events/adminContributionEvent');
+const {
+  sendReportUndertakenEmail,
+  sendResolvedMailToVictim,
+  sendResolvedMailToConvict,
+  sendWarningMailToVictimOnReportDismissOrIgnore,
+  sendDismissedOrIgnoreMailToConvict,
+  sendInitialReportMailtoConvict,
+  sendInitialReportMailtoVictim
+} = require('./emailservice');
 
 
 
@@ -163,6 +172,9 @@ module.exports.submitReport = expressAsyncHandler(
         reasonId: reasonId,
         convictId: authorId
       });
+      author.activeReportCount+= 1;
+
+      await author.save();
 
       await report.save();
 
@@ -329,7 +341,12 @@ module.exports.pickReport = expressAsyncHandler(
       const report = await ReportAction.findById(reportId).populate({
         path: 'reportedBy',
         select: 'user_name, email',
-      }).exec();
+      })
+        .populate({
+          path: 'reasonId',
+          select: 'reason',
+        })
+        .exec();
       if (!report) {
         return res.status(404).json({ message: 'Report not found' });
       }
@@ -360,7 +377,18 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
     try {
       const [report, admin] = await Promise.all([
-        ReportAction.findById(reportId),
+        ReportAction.findById(reportId).populate({
+          path: 'reasonId',
+          select: 'reason',
+        }).populate({
+          path: 'articleId',
+          select: 'title',
+        })
+          .populate({
+            path: 'commentId',
+            select: 'content',
+          })
+          .exec(),
         Admin.findById(admin_id)
       ]);
 
@@ -369,7 +397,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
       }
 
 
-      if (report.admin_id !== null && report.admin_id !== admin._id ) {
+      if (report.admin_id !== null && report.admin_id !== admin._id) {
         return res.status(403).json({ message: 'Report already picked by another moderator' });
       }
 
@@ -408,6 +436,12 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
         return res.status(404).json({ message: 'Convict or victim not found' });
       }
 
+      const details = {
+        articleId: report.articleId._id,
+        content: report.commentId ? report.commentId.content : report.articleId.title,
+        commentId: report.commentId ? report.commentId._id : null,
+      }
+      const reportType = report.commentId ? 'comment' : 'content';
       switch (action.toString()) {
 
         case reportActionEnum.RESOLVED: {
@@ -416,34 +450,85 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           await report.save();
           await convict.save();
           // Increase moderator contribution count
+          const aggregate = new AdminAggregate({
+            userId: admin._id,
+            contributionType: 3,
+          });
+
+          await aggregate.save();
           // Send resolved mail to convict and victim
+          await sendResolvedMailToConvict(convict.email, details, reportType);
+          await sendResolvedMailToVictim(victim.email, details, reportType);
+
           break;
         }
         case reportActionEnum.DISMISSED: {
+
           report.status = reportActionEnum.DISMISSED;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+
+          victim.reportFeatureMisuse = victim.reportFeatureMisuse + 1;
+
+          // If the victim has reported feature misuse 3 times, block them
+          if (victim.reportFeatureMisuse >= 3) {
+            victim.isBlockUser = true;
+          }
+          await victim.save();
           await report.save();
           await convict.save();
+
+          await sendWarningMailToVictimOnReportDismissOrIgnore(victim.email, details, reportType, report.reasonId.reason, victim.reportFeatureMisuse + 1);
+          await sendDismissedOrIgnoreMailToConvict(convict.email, details, reportType);
           // Increase moderator contribution count
-          // Send resolved mail to convict and victim
+          const aggregate = new AdminAggregate({
+            userId: admin._id,
+            contributionType: 3,
+          });
+
+          await aggregate.save();
+          // Send dismissed mail to convict and victim
           break;
         }
         case reportActionEnum.IGNORE: {
           report.status = reportActionEnum.IGNORE;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+
+          victim.reportFeatureMisuse = victim.reportFeatureMisuse + 1;
+
+          // If the victim has reported feature misuse 3 times, block them
+          if (victim.reportFeatureMisuse >= 3) {
+            victim.isBlockUser = true;
+          }
+          await victim.save();
           await report.save();
           await convict.save();
           // Increase moderator contribution count
+          const aggregate = new AdminAggregate({
+            userId: admin._id,
+            contributionType: 3,
+          });
+
+          await aggregate.save();
           // Send resolved mail to convict and victim
+
+          await sendWarningMailToVictimOnReportDismissOrIgnore(victim.email, details, reportType, report.reasonId.reason, victim.reportFeatureMisuse + 1);
+          await sendDismissedOrIgnoreMailToConvict(convict.email, details, reportType);
           break;
         }
         case reportActionEnum.WARN_USER: {
           report.status = reportActionEnum.WARN_USER;
-          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          // convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          // For warning will not decrease report count
           await report.save();
           await convict.save();
           // send warn mail to convict, and resolve mail to victim
           // Increase admin contribution count
+          const aggregate = new AdminAggregate({
+            userId: admin._id,
+            contributionType: 3,
+          });
+
+          await aggregate.save();
           break;
         }
         case reportActionEnum.REMOVE_CONTENT: {
@@ -460,6 +545,12 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           await convict.save();
           // Send mail to convict and victim
           // increase moderator contribution count
+          const aggregate = new AdminAggregate({
+            userId: admin._id,
+            contributionType: 3,
+          });
+
+          await aggregate.save();
           break;
         }
 
@@ -467,19 +558,25 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
           report.status = reportActionEnum.BLOCK_USER;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
-          convict.isBlockUser = true; // Temporary block for 3 months
+          convict.isBlockUser = true; // Temporary block for 1 months
           await report.save();
           await convict.save();
           // Send mail to convict and victim
           // Increase moderator contribution count
+          const aggregate = new AdminAggregate({
+            userId: admin._id,
+            contributionType: 3,
+          });
+
+          await aggregate.save();
           break;
         }
-        default:{
-          return res.status(400).json({message: "Invalid action"});
+        default: {
+          return res.status(400).json({ message: "Invalid action" });
         }
       }
 
-      return res.status(200).json({message: "Action performed"});
+      return res.status(200).json({ message: "Action performed" });
 
     } catch (err) {
       console.error(err);
@@ -488,6 +585,8 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
   }
 )
+
+
 // Report Flow
 //  Convict will be temporarily block If he or she has at least 3 active reports in his bucket or admin block them
 // Block User means:

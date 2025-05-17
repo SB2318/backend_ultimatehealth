@@ -449,7 +449,7 @@ module.exports.publishImprovement = expressAsyncHandler(
             await article.save();
             await contributor.save();
             // update user contribution
-            await updateWriteEvents(article._id, contributor.id);
+            await updateWriteEvents(article._id, contributor._id);
 
             // Update admin contribution for publish new article
             const aggregate = new AdminAggregate({

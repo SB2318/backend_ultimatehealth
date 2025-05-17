@@ -153,6 +153,10 @@ const userSchema = new mongoose.Schema({
     isBlockUser:{
         type: Boolean,
         default: false
+    },
+    reportFeatureMisuse:{
+        type: Number,
+        default: 0
     }
     
 });

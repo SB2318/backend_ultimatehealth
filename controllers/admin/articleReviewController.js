@@ -276,7 +276,7 @@ module.exports.publishArticle = expressAsyncHandler(
             await article.save();
             // user.articles.push(article._id);
 
-            await updateWriteEvents(article._id, user.id);
+            await updateWriteEvents(article._id, user._id);
 
             // Update admin contribution for publish new article
             const aggregate = new AdminAggregate({
