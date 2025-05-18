@@ -11,7 +11,7 @@ const reportActionEnum = {
     RESTORE_CONTENT: "Content Restored",      
     BLOCK_CONVICT: "User Blocked",  
     BAN_CONVICT: "User Banned",        
-    ESCALATED: "Escalated",            
+    ESCALATED: "Escalated",          
     INVESTIGATION: "Investigation Start",        
     IGNORE: "Ignored"                
 };

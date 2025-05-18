@@ -137,6 +137,16 @@ const articleSchema = new Schema({
   discardReason:{
     type: String,
     default: "Discarded by system"
+  },
+
+  is_removed:{
+    type: Boolean,
+    default: false
+  },
+  reportId:{
+    type: Schema.Types.ObjectId,
+    default: null,
+    ref:"ReportAction"
   }
 });
 

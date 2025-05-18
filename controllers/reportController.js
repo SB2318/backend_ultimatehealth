@@ -499,26 +499,26 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           report.status = reportActionEnum.IGNORE;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
 
-          victim.reportFeatureMisuse = victim.reportFeatureMisuse + 1;
+          //victim.reportFeatureMisuse = victim.reportFeatureMisuse + 1;
 
           // If the victim has reported feature misuse 3 times, block them
-          if (victim.reportFeatureMisuse >= 3) {
-            victim.isBlockUser = true;
-          }
-          await victim.save();
+          //if(victim.reportFeatureMisuse >= 3) {
+          // victim.isBlockUser = true;
+          // }
+          //await victim.save();
           await report.save();
           await convict.save();
           // Increase moderator contribution count
-          const aggregate = new AdminAggregate({
-            userId: admin._id,
-            contributionType: 3,
-          });
+         // const aggregate = new AdminAggregate({
+          //  userId: admin._id,
+          //  contributionType: 3,
+          //});
 
-          await aggregate.save();
+         // await aggregate.save();
           // Send resolved mail to convict and victim
 
-          await sendWarningMailToVictimOnReportDismissOrIgnore(victim.email, details, reportType, report.reasonId.reason, Math.max(victim.reportFeatureMisuse - 1, 0));
-          await sendDismissedOrIgnoreMailToConvict(convict.email, details, reportType);
+         // await sendWarningMailToVictimOnReportDismissOrIgnore(victim.email, details, reportType, report.reasonId.reason, Math.max(victim.reportFeatureMisuse - 1, 0));
+        //  await sendDismissedOrIgnoreMailToConvict(convict.email, details, reportType);
           break;
         }
 
@@ -537,13 +537,19 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           await convict.save();
           await report.save();
 
-          // Remove that content
+            // Remove that content
           if (report.commentId) {
             // Remove comment
-            await Comment.findByIdAndDelete(report.commentId._id);
+            const comment = await Comment.findById(report.commentId._id);
+            comment.is_removed = true;
+
+            await comment.save();
           } else {
             // Remove post
-            await Article.findByIdAndDelete(report.articleId._id);
+            const art = await Article.findById(report.articleId._id);
+            art.is_removed = true;
+
+            await art.save();
           }
 
           // send warn mail to convict, and resolve mail to victim 
@@ -564,10 +570,16 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
             // Remove that content
           if (report.commentId) {
             // Remove comment
-            await Comment.findByIdAndDelete(report.commentId._id);
+            const comment = await Comment.findById(report.commentId._id);
+            comment.is_removed = true;
+
+            await comment.save();
           } else {
             // Remove post
-            await Article.findByIdAndDelete(report.articleId._id);
+            const art = await Article.findById(report.articleId._id);
+            art.is_removed = true;
+
+            await art.save();
           }
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
 
@@ -609,6 +621,36 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           await sendResolvedMailToVictim(victim.email, details, reportType, action);
           break;
         }
+        case reportActionEnum.RESTORE_CONTENT :{
+          // tHIS ACTION IS BASED ON CONVICT REQUEST,
+          // Mail will only send to convict
+          // convict will able to see, all article that has been removed from the platform
+          // Based on this they can request to review admin action
+
+        }
+
+        case reportActionEnum.BAN_CONVICT:{
+              
+          report.status = reportActionEnum.BAN_CONVICT;
+          convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          convict.isBannedUser = true; // Permanent banned account
+          await report.save();
+          await convict.save();
+        
+          // Increase moderator contribution count
+          const aggregate = new AdminAggregate({
+            userId: admin._id,
+            contributionType: 3,
+          });
+
+          // Send mail to convict and victim
+          await aggregate.save();
+          // Send Ban convict mail 
+         // await sendBlockConvictMail(convict.email, details, reportType, report.reasonId.reason);
+          await sendResolvedMailToVictim(victim.email, details, reportType, action);
+          break;  
+        }
+       
         default: {
           return res.status(400).json({ message: "Invalid action" });
         }
@@ -645,5 +687,13 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 // Get all reports for article
 // Get all reports for user
 // Get all reports for comment
-// Get all reports for reason
-// Get all reports for assignee
+
+
+// Task Left:
+
+// Admin action effect on user both frontend and backend (MOST Important part)
+// RESTORE CONTENT flow
+// Get all reports count for article 
+// Get all reports count for user
+// Get all reports  count for comment
+// Overall test

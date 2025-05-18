@@ -7,21 +7,21 @@ const commentSchema = new Schema({
         type: Schema.Types.ObjectId,
         auto: true,
         unique: true
-      },
-    articleId:{
+    },
+    articleId: {
         type: Number,
         required: true,
-        ref:'Article'
+        ref: 'Article'
     },
-    userId:{
+    userId: {
         type: Schema.Types.ObjectId,
         //required: true,
-        ref:'User',
+        ref: 'User',
         default: null
     },
-    adminId:{
+    adminId: {
         type: Schema.Types.ObjectId,
-        ref:"admin",
+        ref: "admin",
         default: null
     },
     content: {
@@ -32,20 +32,20 @@ const commentSchema = new Schema({
         type: Date,
         default: Date.now,
     },
-    updatedAt:{
+    updatedAt: {
         type: Date,
         default: Date.now,
     },
 
-    parentCommentId:{
+    parentCommentId: {
         type: Schema.Types.ObjectId,
-        ref:'Comment',
-        default:null,
+        ref: 'Comment',
+        default: null,
     },
-    replies:{
-        type:[Schema.Types.ObjectId],
-        ref:'Comment',
-        default:[]
+    replies: {
+        type: [Schema.Types.ObjectId],
+        ref: 'Comment',
+        default: []
     },
 
     likedUsers: {
@@ -62,13 +62,17 @@ const commentSchema = new Schema({
         type: Boolean,
         default: false
     },
-    isReview:{
-        type:Boolean,
-        default:false
+    isReview: {
+        type: Boolean,
+        default: false
     },
-    isNote:{
-        type:Boolean,
-        default:false
+    isNote: {
+        type: Boolean,
+        default: false
+    },
+    is_removed: {
+        type: Boolean,
+        default: false
     }
 })
 
