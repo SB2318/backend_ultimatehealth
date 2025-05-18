@@ -28,11 +28,20 @@ module.exports.submitEditRequest = expressAsyncHandler(
 
         try {
 
-            const article = await Article.findById(Number(article_id));
+            const [article, user] = await Promise.all([
+                Article.findById(Number(article_id)),
+                User.findById(userId)
+            ]);
 
-            if (!article) {
-                return res.status(404).json({ message: "Article not found" });
+            if (!article || !user) {
+                return res.status(404).json({ message: "Article or user not found" });
             }
+
+            if(user.isBlockUser || user.isBannedUser) {
+                return res.status(403).json({ message: "User is blocked or banned" });
+            
+            }
+            
             // User can have 2 open edit request at  a time
             const count = await EditRequest.countDocuments({
                 user_id: userId, status: {

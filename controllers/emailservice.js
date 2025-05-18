@@ -1258,6 +1258,94 @@ const  sendRemoveContentMailToConvict = async (email, details, reportType, reaso
   });
 };
 
+const sendRestoreContentMailToUser = async (email, articleTitle) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `✅ Your Content Has Been Restored`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+          }
+          .content {
+            padding: 20px;
+          }
+          .restored-content {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-left: 4px solid #4CAF50;
+            border-radius: 6px;
+            margin-top: 20px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            ✅ Content Restoration Notice
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>We’re writing to inform you that the following content previously removed from your account has been reviewed and successfully restored:</p>
+
+            <div class="restored-content">
+           
+              <p><strong>Article Title:</strong> ${articleTitle}</p>
+            </div>
+
+            <p>This restoration was processed in response to a valid request and after re-evaluation under our community guidelines.</p>
+
+            <p>If you have any questions or concerns, feel free to reach out to us at <a href="mailto:ultimate.health25@gmail.com">ultimate.health25@gmail.com</a>.</p>
+
+            <p>Thank you for being part of the UltimateHealth community.</p>
+          </div>
+          <div class="footer">
+            <p>Best regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending restore content email:', err);
+    } else {
+      console.log('Restore content email sent:', info.response);
+    }
+  });
+};
+
+
 const sendBlockConvictMail = async (email, details, reportType, reason) => {
   const reportedItem = reportType === 'content'
     ? `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
@@ -1387,6 +1475,217 @@ const sendBlockConvictMail = async (email, details, reportType, reason) => {
   });
 };
 
+const sendBannedUserMail = async (email, details, reportType, reason) => {
+  const reportedItem = reportType === 'content'
+    ? `<div style="padding: 15px; border: 2px solid #8B0000; background-color: #FFF0F0; border-radius: 8px;">
+         <h3 style="color: #8B0000;">Violated Content:</h3>
+         <p><strong>Content ID:</strong> ${details.articleId}</p>
+         <p><strong>Description:</strong> ${details.content}</p>
+       </div>`
+    : `<div style="padding: 15px; border: 2px solid #8B0000; background-color: #FFF0F0; border-radius: 8px;">
+         <h3 style="color: #8B0000;">Violated Comment:</h3>
+         <p><strong>Comment ID:</strong> ${details.commentId}</p>
+         <p><strong>Comment:</strong> ${details.content}</p>
+       </div>`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `❌ Account Permanently Banned Due to Severe Policy Violation`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fc;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #8B0000;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+          }
+          .content {
+            padding: 20px;
+          }
+          .reason {
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-left: 4px solid #8B0000;
+            margin: 15px 0;
+            font-style: italic;
+          }
+          .ban-notice {
+            background-color: #fff0f0;
+            color: #8B0000;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            border-left: 5px solid #b22222;
+            margin-top: 20px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            ❌ Permanent Account Ban Notification
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>Following a thorough review, we have determined that your account violated our community guidelines in the following ${reportType}:</p>
+            ${reportedItem}
+            <div class="reason"><strong>Reason:</strong> ${reason}</div>
+
+            <div class="ban-notice">
+              Your account has been <strong>permanently banned</strong> from the UltimateHealth platform. This action is final and cannot be undone.
+            </div>
+
+            <p>Due to the severity of this violation, you are no longer permitted to access or create any new content or interactions on our platform.</p>
+
+            <p>For more details, please review our <a href="#">community guidelines</a>.</p>
+
+            <p>If you believe this action was taken in error, you may contact our support team at <a href="mailto:ultimate.health25@gmail.com">ultimate.health25@gmail.com</a> with any questions or concerns.</p>
+          </div>
+          <div class="footer">
+            <p>Best regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending ban email to user:', err);
+    } else {
+      console.log('Ban email sent to user:', info.response);
+    }
+  });
+};
+
+const sendUnblockUserMail = async (email, username) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `✅ Account Access Restored`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+          }
+          .content {
+            padding: 20px;
+          }
+          .unblock-notice {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            border-left: 5px solid #4CAF50;
+            margin-top: 20px;
+          }
+          .reminder {
+            background-color: #fff8dc;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 5px solid #ffa500;
+            border-radius: 6px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+          a {
+            color: #4CAF50;
+            text-decoration: none;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            ✅ Your Account Has Been Unblocked
+          </div>
+          <div class="content">
+            <p>Hello${username ? ` ${username}` : ''},</p>
+
+            <p>We’re pleased to inform you that the temporary block on your account has now been lifted. You have regained full access to your account features.</p>
+
+            <div class="unblock-notice">
+              Your account access has been fully restored.
+            </div>
+
+            <div class="reminder">
+              <h4 style="margin: 0 0 10px 0;">📌 Please Remember:</h4>
+              <p>Continued access to our platform is contingent on adhering to our <a href="#">community guidelines</a>. Repeated violations may result in more severe penalties, including permanent suspension.</p>
+            </div>
+
+            <p>If you have any questions or concerns, feel free to contact our support team at <a href="mailto:ultimate.health25@gmail.com">ultimate.health25@gmail.com</a>.</p>
+          </div>
+          <div class="footer">
+            <p>Best regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending unblock email:', err);
+    } else {
+      console.log('Unblock email sent successfully:', info.response);
+    }
+  });
+};
+
+
 
 module.exports = {
     sendVerificationEmail,
@@ -1407,7 +1706,10 @@ module.exports = {
     sendDismissedOrIgnoreMailToConvict,
     sendWarningMailToConvict,
     sendRemoveContentMailToConvict,
-    sendBlockConvictMail
+    sendBlockConvictMail,
+    sendBannedUserMail,
+    sendRestoreContentMailToUser,
+    sendUnblockUserMail
 };
 
 

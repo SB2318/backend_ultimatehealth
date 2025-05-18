@@ -12,6 +12,7 @@ const mongoose = require('mongoose');
 // Create a new article
 module.exports.createArticle = async (req, res) => {
   try {
+
     const { authorId, title, authorName, description, content, tags, imageUtils } = req.body; // Destructure required fields from req.body
 
 
@@ -23,6 +24,10 @@ module.exports.createArticle = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
+    }
+
+    if(user.isBlockUser || user.isBannedUser){
+      return res.status(403).json({error: "User is blocked or banned."});
     }
 
     // Create a new article instance
@@ -49,6 +54,7 @@ module.exports.createArticle = async (req, res) => {
 
     // Respond with a success message and the new article
     res.status(201).json({ message: "Article under reviewed", newArticle });
+
   } catch (error) {
     console.log("Article Creation Error", error);
     res.status(500).json({ error: "Error creating article", details: error.message });
@@ -59,13 +65,11 @@ module.exports.createArticle = async (req, res) => {
 module.exports.getAllArticles = async (req, res) => {
   try {
 
-
     const articles = await Article.find({ status: statusEnum.statusEnum.PUBLISHED })
       .populate('tags')
       .populate('mentionedUsers', 'user_handle user_name Profile_image')
       .populate('likedUsers', 'Profile_image')
       .exec();
-
 
     articles.forEach(article => {
       article.likedUsers.reverse();
@@ -77,7 +81,6 @@ module.exports.getAllArticles = async (req, res) => {
       .json({ error: "Error fetching articles", details: error.message });
   }
 };
-
 
 
 // Get all articles for user
@@ -91,10 +94,10 @@ module.exports.getAllArticlesForUser = async (req, res) => {
       .populate('likedUsers', 'Profile_image')
       .exec();
 
-
     articles.forEach(article => {
       article.likedUsers.reverse();
     });
+
     res.status(200).json({ articles });
   } catch (error) {
     res
@@ -106,12 +109,14 @@ module.exports.getAllArticlesForUser = async (req, res) => {
 // Get an article by ID
 module.exports.getArticleById = async (req, res) => {
   try {
+
     const article = await Article.findById(req.params.id)
       .populate('tags')
       .populate('likedUsers')
       .populate('contributors', 'user_handle user_name Profile_image')
       .populate('authorId','followers')
       .exec();
+
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
     }
@@ -225,6 +230,8 @@ module.exports.likeArticle = async (req, res) => {
 
     const user = await User.findById(req.userId);
 
+
+
     const articleDb = await Article.findById(article_id)
       .populate(['tags', 'likedUsers']) // This populates the tag data
       .exec();
@@ -232,7 +239,11 @@ module.exports.likeArticle = async (req, res) => {
     if (!user || !articleDb) {
       return res.status(404).json({ error: 'User or Article not found' });
     }
-
+    
+    if(user.isBlockUser || user.isBannedUser){
+      return res.status(403).json({ error: 'User is blocked or banned' });
+    }
+    
 
     if (articleDb.status !== statusEnum.statusEnum.PUBLISHED) {
       return res.status(400).json({ message: 'Article is not published' });
@@ -296,15 +307,20 @@ module.exports.likeArticle = async (req, res) => {
 // Update View Count (Published article)
 module.exports.updateViewCount = async (req, res) => {
   const { article_id } = req.body;
-  const user = await User.findById(req.userId);
-
+ 
   try {
+    
+    const user = await User.findById(req.userId);
     const articleDb = await Article.findById(article_id)
       .populate(['tags', 'likedUsers'])
       .exec();
 
     if (!user || !articleDb) {
       return res.status(404).json({ error: 'User or Article not found' });
+    }
+
+    if(user.isBlockUser || user.isBannedUser){
+      return res.status(403).json({ error: 'User is blocked or banned' });
     }
 
     if (articleDb.status !== statusEnum.statusEnum.PUBLISHED) {
@@ -417,7 +433,7 @@ exports.updateReadEvents = async (req, res) => {
 
     if (!readEvent) {
       // Create New
-      //  console.log("Enter if block");
+      
       const newReadEvent = new ReadAggregate({ userId: req.userId, date: today });
       newReadEvent.dailyReads = 1;
       newReadEvent.monthlyReads = 1;
@@ -532,6 +548,11 @@ exports.repostArticle = expressAsyncHandler(
 
       if (!article || !user) {
         res.status(404).json({ error: 'Article or user not found.' });
+        return;
+      }
+
+      if(user.isBlockUser || user.isBannedUser){
+        res.status(403).json({ error: 'You are blocked or banned.' });
         return;
       }
 

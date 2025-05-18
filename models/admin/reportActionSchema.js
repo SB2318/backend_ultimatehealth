@@ -13,7 +13,8 @@ const reportActionEnum = {
     BAN_CONVICT: "User Banned",        
     ESCALATED: "Escalated",          
     INVESTIGATION: "Investigation Start",        
-    IGNORE: "Ignored"                
+    IGNORE: "Ignored",
+    CONVICT_REQUEST_TO_RESTORE_CONTENT: "CONVICT_REQUEST_TO_RESTORE_CONTENT",              
 };
 const reportActionSchema = new Schema({
 
@@ -67,6 +68,10 @@ const reportActionSchema = new Schema({
         type: Date,
         default: Date.now
     },
+    convict_statement:{
+        type: String,
+        default: null,
+    }
    
 })
 

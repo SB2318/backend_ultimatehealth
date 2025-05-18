@@ -668,6 +668,14 @@ module.exports.follow = async (req, res) => {
     if (!userToFollow)
       return res.status(404).json({ message: "User to follow not found" });
 
+    if(userToFollow.isBlockUser|| userToFollow.isBannedUser) {
+      return res.status(400).json({ message: "User to follow is blocked or banned"});
+    }
+
+    if(user.isBlockUser || user.isBannedUser) {
+      return res.status(400).json({ message: "You are blocked or banned"});
+    }
+
     // Filter out null values and convert to strings
     const followerUserset = new Set(
       userToFollow.followers.filter((id) => id).map((id) => id.toString())
