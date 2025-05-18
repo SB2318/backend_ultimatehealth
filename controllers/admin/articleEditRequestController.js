@@ -37,11 +37,11 @@ module.exports.submitEditRequest = expressAsyncHandler(
                 return res.status(404).json({ message: "Article or user not found" });
             }
 
-            if(user.isBlockUser || user.isBannedUser) {
+            if (user.isBlockUser || user.isBannedUser) {
                 return res.status(403).json({ message: "User is blocked or banned" });
-            
+
             }
-            
+
             // User can have 2 open edit request at  a time
             const count = await EditRequest.countDocuments({
                 user_id: userId, status: {
@@ -76,10 +76,22 @@ module.exports.getAllImprovementsForReview = expressAsyncHandler(
         try {
             const articles = await EditRequest.find({ status: statusEnum.statusEnum.UNASSIGNED }).populate({
                 path: 'article',
-                populate: {
-                    path: 'tags',
-                },
+                populate: [
+                    {
+                        path: 'tags',
+                    },
+                    {
+                        path: 'authorId',
+                        select: 'user_name email',
+                        match: {
+                            isBlockUser: false,
+                            isBannedUser: false
+                        }
+                    }
+                ]
             }).exec();
+
+            articles = articles.filter(req => req.article?.authorId !== null);
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -103,10 +115,22 @@ module.exports.getAllInProgressImprovementsForAdmin = expressAsyncHandler(
                 }
             }).populate({
                 path: 'article',
-                populate: {
+                populate:[ 
+                    {
                     path: 'tags',
-                },
+                  },
+                 {
+                    path: 'authorId',
+                    select: 'user_name email',
+                    match: {
+                        isBlockUser: false,
+                        isBannedUser: false
+                    }
+                }
+            ]
             }).exec();
+
+            articles.filter(req => req.article?.authorId !== null);
 
             res.status(200).json(articles);
         } catch (err) {
@@ -170,6 +194,10 @@ module.exports.pickImprovementRequest = expressAsyncHandler(
 
             if (!user) {
                 return res.status(400).json({ message: "User not found" });
+            }
+
+            if (user.isBlockUser || user.isBannedUser) {
+                return res.status(400).json({ message: "User is blocked or banned" });
             }
 
             if (editRequest.status !== statusEnum.statusEnum.UNASSIGNED) {
@@ -288,8 +316,14 @@ module.exports.submitImprovement = expressAsyncHandler(
             const editRequest = await EditRequest.findById(requestId).populate('article')
                 .populate('user_id').exec();
 
+
+
             if (!editRequest) {
                 return res.status(400).json({ message: "Edit request not found" });
+            }
+
+            if (editRequest.user_id.isBlockUser || editRequest.user_id.isBannedUser) {
+                return res.status(400).json({ message: "User is blocked or banned" });
             }
             if (editRequest.reviewer_id === null) {
                 return res.status(403).json({ message: "The request has not been approved yet" });
@@ -345,10 +379,10 @@ module.exports.detectContentLoss = expressAsyncHandler(
             }
 
             let original_content = '';
-            if(editRequest.article.content.endsWith('.html')){
-                  original_content = await getContent(editRequest.article.content);
+            if (editRequest.article.content.endsWith('.html')) {
+                original_content = await getContent(editRequest.article.content);
             }
-            else{
+            else {
                 original_content = editRequest.article.content;
             }
 
@@ -434,6 +468,7 @@ module.exports.publishImprovement = expressAsyncHandler(
             }
 
 
+
             if (editRequest.reviewer_id.toString() !== reviewer_id) {
                 return res.status(403).json({ message: "Article is not assigned to this reviewer" });
             }
@@ -445,6 +480,10 @@ module.exports.publishImprovement = expressAsyncHandler(
 
             if (!article || !contributor) {
                 return res.status(400).json({ message: "Article or contributor not found" });
+            }
+
+            if (contributor.isBlockUser || contributor.isBannedUser) {
+                return res.status(400).json({ message: "User is blocked or banned" });
             }
 
             article.status = statusEnum.statusEnum.PUBLISHED;
@@ -650,12 +689,12 @@ function escapeHtml(text) {
 
 const getContent = async content => {
     try {
-      const response = await fetch(`http://51.20.1.81:8084/api/getFile/${content}`);
-      const text = await response.text();
-      return text;
+        const response = await fetch(`http://51.20.1.81:8084/api/getFile/${content}`);
+        const text = await response.text();
+        return text;
     } catch (error) {
-       console.error('Error fetching URI:', error);
-    return content;
+        console.error('Error fetching URI:', error);
+        return content;
     }
-  };
+};
 

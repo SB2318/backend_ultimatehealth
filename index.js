@@ -167,6 +167,10 @@ io.on('connection', (socket) => {
                     return;
                 }
 
+                if(user.isBlockUser || user.isBannedUser){
+                    socket.emit('error', {message: 'User is blocked or banned'});
+                    return;
+                }
                 /** If a new user comment on the article, the id will automatically stored */
                 const hasCommentedBefore = article.mentionedUsers.some(user => user._id.toString() === userId);
 
@@ -290,12 +294,19 @@ io.on('connection', (socket) => {
                     return;
                 }
 
+                if(user.isBlockUser || user.isBannedUser){
+                    socket.emit('error', {message: 'User is blocked or banned'});
+                    return;
+                }
+
+
                 if (comment.userId.toString() !== user._id.toString()) {
                     socket.emit("edit-comment-processing", false);
                     socket.emit('error', { message: 'You are not authorized to edit this comment' });
                     return;
                 }
 
+              
                 comment.content = content;
                 comment.updatedAt = new Date();
                 comment.isEdited = true;
@@ -330,12 +341,20 @@ io.on('connection', (socket) => {
             }
 
             try {
-                const comment = await Comment.findById(commentId);
+                const [comment, user] = await Promise.all([
+                    Comment.findById(commentId),
+                    User.findById(userId)
+                ]);
 
-                if (!comment) {
+                if (!comment || !user) {
                     socket.emit("delete-comment-processing", false);
-                    socket.emit('error', { message: 'Comment not found' });
+                    socket.emit('error', { message: 'Comment or user not found.' });
                     return;
+                }
+
+                if(user.isBlockUser || user.isBannedUser){
+                    socket.emit("delete-comment-processing", false);
+                    socket.emit('error', { message: 'You are blocked or banned.' });
                 }
 
                 // Check if the user is authorized to delete the comment
@@ -395,6 +414,11 @@ io.on('connection', (socket) => {
                 if (!comment || !article || !user) {
                     socket.emit('error', { message: 'Comment, article or user not found' });
                     socket.emit("like-comment-processing", false);
+                    return;
+                }
+
+                if(user.isBlockUser || user.isBannedUser){
+                    socket.emit('error', { message: 'You are blocked or banned' });
                     return;
                 }
 
@@ -461,11 +485,21 @@ io.on('connection', (socket) => {
 
                 // Fetch all active comments related to the article
                 const comments = await Comment.find({ articleId: articleId, status: 'Active' })
-                    .populate('userId', 'user_handle Profile_image')
-                    .populate('replies')
-                    .sort({ createdAt: -1 }); // Sort by most recent first
+                   // .populate('userId', 'user_handle Profile_image')
+                      .populate({
+                        path: 'userId',
+                        select: 'user_handle Profile_image',
+                        match:{
+                          isBlockUser: false,
+                          isBannedUser: false
+                        }
+                       })
+                       .populate('replies')
+                       .sort({ createdAt: -1 })
+                       .exec(); // Sort by most recent first
 
                 // Emit the comments and replies to the client
+                 comments = comments.filter(comment => comment.userId !== null);
                 socket.emit("fetch-comment-processing", false);
                 socket.emit('fetch-comments', {
                     articleId,

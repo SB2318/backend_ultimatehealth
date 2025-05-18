@@ -17,7 +17,19 @@ const jwt = require("jsonwebtoken");
 module.exports.getAllArticleForReview = expressAsyncHandler(
     async (req, res) => {
         try {
-            const articles = await Article.find({ status: statusEnum.statusEnum.UNASSIGNED }).populate('tags').exec();
+            const articles = await Article.find({
+                status: statusEnum.statusEnum.UNASSIGNED
+            }).populate('tags')
+                .populate({
+                    path: 'authorId',
+                    select: 'user_name email',
+                    match: {
+                        isBlockUser: false,
+                        isBannedUser: false
+                    }
+                }).
+                exec();
+            articles.filter(req => req.article?.authorId !== null);
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -37,7 +49,17 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
                 reviewer_id: reviewer_id, status: {
                     $in: [statusEnum.statusEnum.IN_PROGRESS, statusEnum.statusEnum.AWAITING_USER, statusEnum.statusEnum.REVIEW_PENDING]
                 }
-            }).populate('tags').exec();
+            }).populate('tags')
+                .populate({
+                    path: 'authorId',
+                    select: 'user_name email',
+                    match: {
+                        isBlockUser: false,
+                        isBannedUser: false
+                    }
+                }).
+                exec();
+            articles.filter(req => req.article?.authorId !== null);
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -81,13 +103,25 @@ module.exports.assignModerator = expressAsyncHandler(
 
             const [article, moderator] = await Promise.all(
                 [
-                    Article.findById(Number(articleId)),
+                    Article.findById(Number(articleId)).populate({
+                        path: 'authorId',
+                        select: 'user_name email',
+                        match: {
+                            isBlockUser: false,
+                            isBannedUser: false
+                        }
+                    }).exec(),
                     admin.findById(moderatorId),
                 ]
             );
 
             if (!article || !moderator) {
                 res.status(404).json({ message: 'Article or Moderator not found' });
+                return;
+            }
+
+            if(article.authorId === null){
+                res.status(400).json({ message: 'Article author either block or banned' });
                 return;
             }
 
@@ -194,10 +228,18 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
 
         try {
 
-            const article = await Article.findById(Number(articleId));
+            const [article, user] = await Promise.all(
+                Article.findById(Number(articleId)),
+                User.findById(userId)
+            );
 
-            if (!article) {
+            if (!article || !user) {
                 res.status(404).json({ message: "Article not found" });
+                return;
+            }
+
+            if (user.isBlockUser || user.isBannedUser) {
+                res.status(403).json({ message: "User is blocked or banned" });
                 return;
             }
 
@@ -254,12 +296,25 @@ module.exports.publishArticle = expressAsyncHandler(
 
         try {
             const [article, reviewer] = await Promise.all([
-                Article.findById(Number(articleId)),
+                Article.findById(Number(articleId))
+                    .populate({
+                        path: 'authorId',
+                        select: 'user_name email',
+                        match: {
+                            isBlockUser: false,
+                            isBannedUser: false
+                        }
+                    }).exec(),
                 admin.findById(reviewer_id)
             ]);
 
             if (!article || !reviewer) {
                 return res.status(404).json({ message: "Article or Reviewer not found" });
+            }
+
+            if(article.authorId === null){
+                return res.status(404).json({ message: "Article author either block or banned" });
+                return;
             }
 
             if (article.reviewer_id !== reviewer_id) {
@@ -346,37 +401,37 @@ module.exports.discardChanges = expressAsyncHandler(
 
 module.exports.unassignModerator = expressAsyncHandler(
 
-    async (req, res)=>{
-        const {articleId} = req.body;
+    async (req, res) => {
+        const { articleId } = req.body;
 
-        if(!articleId){
-            return res.status(400).json({message:"Article id required"});
+        if (!articleId) {
+            return res.status(400).json({ message: "Article id required" });
         }
 
-        try{
-          
-            const article= await Article.findById(Number(articleId));
+        try {
 
-            if(!article){
-                return res.status(404).json({message:"Article not found"});
+            const article = await Article.findById(Number(articleId));
+
+            if (!article) {
+                return res.status(404).json({ message: "Article not found" });
             }
-           if(article.status === statusEnum.statusEnum.PUBLISHED){
-            return res.status(403).json({message:"Article already published"}); 
-           }
+            if (article.status === statusEnum.statusEnum.PUBLISHED) {
+                return res.status(403).json({ message: "Article already published" });
+            }
 
-           
-           article.reviewer_id = null;
-           article.assigned_at = null;
-           article.status = statusEnum.statusEnum.UNASSIGNED;
-           article.lastUpdated = new Date();
 
-           await article.save();
+            article.reviewer_id = null;
+            article.assigned_at = null;
+            article.status = statusEnum.statusEnum.UNASSIGNED;
+            article.lastUpdated = new Date();
 
-           res.status(200).json({message:"Article unassigned"});
+            await article.save();
 
-        }catch(err){
+            res.status(200).json({ message: "Article unassigned" });
+
+        } catch (err) {
             console.log(err);
-            res.status(500).json({message:"Internal server error"});
+            res.status(500).json({ message: "Internal server error" });
         }
     }
 )

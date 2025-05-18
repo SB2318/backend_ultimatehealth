@@ -26,8 +26,8 @@ module.exports.createArticle = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if(user.isBlockUser || user.isBannedUser){
-      return res.status(403).json({error: "User is blocked or banned."});
+    if (user.isBlockUser || user.isBannedUser) {
+      return res.status(403).json({ error: "User is blocked or banned." });
     }
 
     // Create a new article instance
@@ -67,12 +67,34 @@ module.exports.getAllArticles = async (req, res) => {
 
     const articles = await Article.find({ status: statusEnum.statusEnum.PUBLISHED })
       .populate('tags')
-      .populate('mentionedUsers', 'user_handle user_name Profile_image')
-      .populate('likedUsers', 'Profile_image')
+      //.populate('mentionedUsers', 'user_handle user_name Profile_image')
+      .populate({
+        path: 'mentionedUsers',
+        select: 'user_handle user_name Profile_image',
+        match: {
+          isBlockUser: false,
+          isBannedUser: false
+        }
+      })
+      //.populate('likedUsers', 'Profile_image')
+      .populate({
+        path: 'likedUsers',
+        select: 'Profile_image user_name user_handle',
+        match: {
+          isBlockUser: false,
+          isBannedUser: false
+        }
+      })
       .exec();
 
     articles.forEach(article => {
-      article.likedUsers.reverse();
+      if (article.mentionedUsers) {
+        article.mentionedUsers = article.mentionedUsers.filter(user => user !== null);
+      }
+
+      if (article.likedUsers) {
+        article.likedUsers = article.likedUsers.filter(user => user !== null).reverse();
+      }
     });
     res.status(200).json({ articles });
   } catch (error) {
@@ -90,12 +112,36 @@ module.exports.getAllArticlesForUser = async (req, res) => {
     // console.log("User Id", req.userId);
     const articles = await Article.find({ authorId: req.userId })
       .populate('tags')
-      .populate('mentionedUsers', 'user_handle user_name Profile_image')
-      .populate('likedUsers', 'Profile_image')
+      //.populate('mentionedUsers', 'user_handle user_name Profile_image')
+      .populate({
+        path: 'mentionedUsers',
+        select: 'user_handle user_name Profile_image',
+        match: {
+          isBlockUser: false,
+          isBannedUser: false
+        }
+      })
+      //.populate('likedUsers', 'Profile_image')
+      .populate({
+        path: 'likedUsers',
+        select: 'Profile_image user_name user_handle',
+        match: {
+          isBlockUser: false,
+          isBannedUser: false
+        }
+      })
       .exec();
 
     articles.forEach(article => {
-      article.likedUsers.reverse();
+      if (article.mentionedUsers) {
+        article.mentionedUsers = article.mentionedUsers.filter(user => user !== null);
+      }
+
+      if (article.likedUsers) {
+        article.likedUsers = article.likedUsers.filter(user => user !== null).reverse();
+
+      }
+
     });
 
     res.status(200).json({ articles });
@@ -112,14 +158,65 @@ module.exports.getArticleById = async (req, res) => {
 
     const article = await Article.findById(req.params.id)
       .populate('tags')
-      .populate('likedUsers')
-      .populate('contributors', 'user_handle user_name Profile_image')
-      .populate('authorId','followers')
+      .populate({
+        path: 'likedUsers',
+        match: {
+          isBlockUser: false,
+          isBannedUser: false
+        }
+      })
+      //.populate('contributors', 'user_handle user_name Profile_image')
+      .populate({
+        path: 'contributors',
+        select: 'user_handle user_name Profile_image',
+        match: {
+          isBannedUser: false,
+          isBlockUser: false
+        }
+      })
+      //.populate('authorId','followers')
+      .populate({
+        path: "authorId",
+        match: {
+          isBannedUser: false,
+          isBlockUser: false
+        },
+        populate: {
+          path: 'followers',
+          match: {
+            isBannedUser: false,
+            isBlockUser: false
+          }
+        }
+      })
       .exec();
 
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
     }
+
+
+    if (Array.isArray(article.likedUsers)) {
+      article.likedUsers = article.likedUsers.filter(user => user !== null);
+    }
+
+
+    if (Array.isArray(article.contributors)) {
+      article.contributors = article.contributors.filter(user => user !== null);
+    }
+
+
+    if (article.authorId && Array.isArray(article.authorId.followers)) {
+      article.authorId.followers = article.authorId.followers.filter(user => user !== null);
+    }
+
+    //If the author itself is blocked or banned
+    if (!article.authorId) {
+
+      return res.status(404).json({ message: "Author not found or is blocked/banned" });
+    }
+
+
     res.status(200).json({ article });
   } catch (error) {
     res
@@ -239,11 +336,11 @@ module.exports.likeArticle = async (req, res) => {
     if (!user || !articleDb) {
       return res.status(404).json({ error: 'User or Article not found' });
     }
-    
-    if(user.isBlockUser || user.isBannedUser){
+
+    if (user.isBlockUser || user.isBannedUser) {
       return res.status(403).json({ error: 'User is blocked or banned' });
     }
-    
+
 
     if (articleDb.status !== statusEnum.statusEnum.PUBLISHED) {
       return res.status(400).json({ message: 'Article is not published' });
@@ -307,9 +404,9 @@ module.exports.likeArticle = async (req, res) => {
 // Update View Count (Published article)
 module.exports.updateViewCount = async (req, res) => {
   const { article_id } = req.body;
- 
+
   try {
-    
+
     const user = await User.findById(req.userId);
     const articleDb = await Article.findById(article_id)
       .populate(['tags', 'likedUsers'])
@@ -319,7 +416,7 @@ module.exports.updateViewCount = async (req, res) => {
       return res.status(404).json({ error: 'User or Article not found' });
     }
 
-    if(user.isBlockUser || user.isBannedUser){
+    if (user.isBlockUser || user.isBannedUser) {
       return res.status(403).json({ error: 'User is blocked or banned' });
     }
 
@@ -433,7 +530,7 @@ exports.updateReadEvents = async (req, res) => {
 
     if (!readEvent) {
       // Create New
-      
+
       const newReadEvent = new ReadAggregate({ userId: req.userId, date: today });
       newReadEvent.dailyReads = 1;
       newReadEvent.monthlyReads = 1;
@@ -551,7 +648,7 @@ exports.repostArticle = expressAsyncHandler(
         return;
       }
 
-      if(user.isBlockUser || user.isBannedUser){
+      if (user.isBlockUser || user.isBannedUser) {
         res.status(403).json({ error: 'You are blocked or banned.' });
         return;
       }
