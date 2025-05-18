@@ -756,9 +756,6 @@ cron.schedule('0 0 * * *', async () => {
 
 // Admin action effect on user both frontend and backend (MOST Important part)
 
-// Get all reports count for article
-// Get all reports count for user
-// Get all reports  count for comment
 // Overall test
 
 // Mail request to restore article content

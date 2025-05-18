@@ -540,13 +540,13 @@ async function discardArticle() {
 
 cron.schedule('0 0 * * *', async () => {
 
-    console.log('running cron job unassign article...');
+   
     await unassignArticle();
 });
 
 cron.schedule('0 0 * * *', async () => {
 
-    console.log('running cron job discard article...');
+   
     await discardArticle();
 });
 
