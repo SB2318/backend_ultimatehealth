@@ -137,7 +137,7 @@ module.exports.submitReport = expressAsyncHandler(
       if (commentId) {
         comment = await Comment.findById(commentId);
 
-        if (!comment) {
+        if (!comment || !comment.is_removed) {
           return res.status(404).json({ message: "Comment not found." });
         }
       }
@@ -726,10 +726,7 @@ cron.schedule('0 0 * * *', async () => {
 });
 
 // Check report status
-/**
- RESTORE_CONTENT: "Content Restored",  // User action
 
- */
 
 
 // Report Flow
@@ -746,10 +743,6 @@ cron.schedule('0 0 * * *', async () => {
 // 1. User will be unable to post new content
 // 2. All content and comment of the particular user will be removed from the platform
 // 3. They even can't able to see any new or existing post or they can't make any changes.
-
-
-
-
 
 
 // Task Left:

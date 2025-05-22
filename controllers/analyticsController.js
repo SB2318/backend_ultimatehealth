@@ -86,7 +86,7 @@ module.exports.getTotalLikeAndViewReceivedByUser = expressAsyncHandler(
 
     try {
 
-      const articles = await Article.find({ authorId: userId });
+      const articles = await Article.find({ authorId: userId, is_removed: false });
 
       // O(n)
       const totalLikes = articles.reduce((acc, curr) => acc + curr.likedUsers.length, 0);

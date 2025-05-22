@@ -161,7 +161,7 @@ io.on('connection', (socket) => {
                     Article.findById(Number(articleId))
                 ]);
 
-                if (!user || !article) {
+                if (!user || !article || article.is_removed) {
                     socket.emit('error', 'User or article not found');
                     socket.emit("comment-processing", false);
                     return;
@@ -195,7 +195,7 @@ io.on('connection', (socket) => {
                 if (parentCommentId) {
                     const parentComment = Comment.findById(parentCommentId);
 
-                    if (!parentComment) {
+                    if (!parentComment || parentComment.is_removed) {
                         socket.emit("comment-processing", false);
                         socket.emit('error', { message: 'Parent comment not found' });
                         return;
@@ -205,7 +205,7 @@ io.on('connection', (socket) => {
 
 
 
-                    socket.broacast.emit('update-parent-comment', {
+                    socket.emit('update-parent-comment', {
                         parentCommentId: parentComment._id,
                         parentComment
                     });
@@ -216,6 +216,8 @@ io.on('connection', (socket) => {
                     .populate('userId', 'user_handle Profile_image')
                     .populate('replies')
                     .exec(); 
+
+                    
 
                     socket.emit("comment-processing", false);
                     socket.emit('comment', {
@@ -288,7 +290,7 @@ io.on('connection', (socket) => {
                     Article.findById(articleId)
                 ]);
 
-                if (!comment || !user || !article) {
+                if (!comment || !user || !article || article.is_removed || comment.is_removed) {
                     socket.emit("edit-comment-processing", false);
                     socket.emit('error', { message: 'Comment or user or article not found' });
                     return;
@@ -346,7 +348,7 @@ io.on('connection', (socket) => {
                     User.findById(userId)
                 ]);
 
-                if (!comment || !user) {
+                if (!comment || !user || comment.is_removed) {
                     socket.emit("delete-comment-processing", false);
                     socket.emit('error', { message: 'Comment or user not found.' });
                     return;
@@ -371,7 +373,7 @@ io.on('connection', (socket) => {
                 // If it's a reply, update the parent comment
                 if (comment.parentCommentId) {
                     const parentComment = await Comment.findById(comment.parentCommentId);
-                    if (parentComment) {
+                    if (parentComment || !parentComment.is_removed) {
                         parentComment.replies = parentComment.replies.filter(replyId => replyId.toString() !== commentId);
                         await parentComment.save();
 
@@ -411,7 +413,7 @@ io.on('connection', (socket) => {
                     User.findById(userId)
                 ]);
 
-                if (!comment || !article || !user) {
+                if (!comment || !article || !user || article.is_removed || comment.is_removed) {
                     socket.emit('error', { message: 'Comment, article or user not found' });
                     socket.emit("like-comment-processing", false);
                     return;
@@ -477,14 +479,14 @@ io.on('connection', (socket) => {
 
             try {
                 const article = await Article.findById(articleId);
-                if (!article) {
+                if (!article || article.is_removed) {
                     socket.emit('error', { message: 'Article not found.' });
                     socket.emit("fetch-comment-processing", false);
                     return;
                 }
 
                 // Fetch all active comments related to the article
-                const comments = await Comment.find({ articleId: articleId, status: 'Active' })
+                const comments = await Comment.find({ articleId: articleId, status: 'Active', is_removed: false })
                    // .populate('userId', 'user_handle Profile_image')
                       .populate({
                         path: 'userId',
@@ -547,7 +549,7 @@ io.on('connection', (socket) => {
                     admin.findById(reviewer_id),
                 ]);
     
-                if (!article || !reviewer) {
+                if (!article || !reviewer || article.is_removed) {
                     socket.emit('error',{ message: 'Article or Moderator not found' });
                     return;
                 }
@@ -703,7 +705,9 @@ io.on('connection', (socket) => {
            
             if(articleId){
                 const article = await Article.findById(Number(articleId)).populate('review_comments').exec();
-                if(article && article.review_comments){
+                if(article && article.review_comments && !article.is_removed){
+
+                    article.review_comments = article.review_comments.filter(comment => !comment.is_removed);
                     socket.emit('review-comments', article.review_comments);
                 }
                 else{
@@ -713,6 +717,7 @@ io.on('connection', (socket) => {
                
                 const requests = await EditRequest.findById(requestId).populate('editComments').exec();
                 if(requests && requests.editComments){
+                    requests.editComments = requests.editComments.filter(comment => !comment.is_removed);
                     socket.emit('review-comments', requests.editComments);
                 }
                 else{

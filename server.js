@@ -104,7 +104,7 @@ io.on('connection', (socket) => {
                     Article.findById(Number(articleId))
                 ]);
 
-                if (!user || !article) {
+                if (!user || !article || article.is_removed) {
                     socket.emit('error', 'User or article not found');
                     return;
                 }
@@ -179,7 +179,7 @@ io.on('connection', (socket) => {
                     Article.findById(articleId)
                 ]);
 
-                if (!comment || !user || !article) {
+                if (!comment || !user || !article || article.is_removed) {
                     socket.emit('error', { message: 'Comment or user or article not found' });
                     return;
                 }
@@ -326,7 +326,7 @@ io.on('connection', (socket) => {
 
             try {
                 const article = await Article.findById(articleId);
-                if (!article) {
+                if (!article || article.is_removed) {
                     socket.emit('error', { message: 'Article not found.' });
                     return;
                 }

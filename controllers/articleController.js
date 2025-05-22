@@ -10,7 +10,8 @@ const statusEnum = require("../utils/StatusEnum");
 
 const mongoose = require('mongoose');
 // Create a new article
-module.exports.createArticle = async (req, res) => {
+module.exports.createArticle = expressAsyncHandler(
+  async (req, res) => {
   try {
 
     const { authorId, title, authorName, description, content, tags, imageUtils } = req.body; // Destructure required fields from req.body
@@ -59,13 +60,15 @@ module.exports.createArticle = async (req, res) => {
     console.log("Article Creation Error", error);
     res.status(500).json({ error: "Error creating article", details: error.message });
   }
-};
+}
+)
 
 // Get all articles (published)
-module.exports.getAllArticles = async (req, res) => {
+module.exports.getAllArticles = expressAsyncHandler(
+  async (req, res) => {
   try {
 
-    const articles = await Article.find({ status: statusEnum.statusEnum.PUBLISHED })
+    const articles = await Article.find({ status: statusEnum.statusEnum.PUBLISHED, is_removed: false })
       .populate('tags')
       //.populate('mentionedUsers', 'user_handle user_name Profile_image')
       .populate({
@@ -85,9 +88,20 @@ module.exports.getAllArticles = async (req, res) => {
           isBannedUser: false
         }
       })
+      .populate({
+        path: 'authorId',
+        select: 'Profile_image user_name user_handle',
+        match: {
+          isBlockUser: false,
+          isBannedUser: false
+        }
+      })
       .exec();
 
-    articles.forEach(article => {
+    articles.filter(r => r.article?.authorId !== null);
+
+    for (const article of articles) {
+
       if (article.mentionedUsers) {
         article.mentionedUsers = article.mentionedUsers.filter(user => user !== null);
       }
@@ -95,22 +109,25 @@ module.exports.getAllArticles = async (req, res) => {
       if (article.likedUsers) {
         article.likedUsers = article.likedUsers.filter(user => user !== null).reverse();
       }
-    });
+    }
+
     res.status(200).json({ articles });
   } catch (error) {
     res
       .status(500)
       .json({ error: "Error fetching articles", details: error.message });
   }
-};
+}
+)
 
 
 // Get all articles for user
-module.exports.getAllArticlesForUser = async (req, res) => {
+module.exports.getAllArticlesForUser = expressAsyncHandler(
+   async (req, res) => {
   try {
 
     // console.log("User Id", req.userId);
-    const articles = await Article.find({ authorId: req.userId })
+    const articles = await Article.find({ authorId: req.userId, is_removed: false })
       .populate('tags')
       //.populate('mentionedUsers', 'user_handle user_name Profile_image')
       .populate({
@@ -150,23 +167,25 @@ module.exports.getAllArticlesForUser = async (req, res) => {
       .status(500)
       .json({ error: "Error fetching articles", details: error.message });
   }
-};
+}
+)
 
 // Get an article by ID
-module.exports.getArticleById = async (req, res) => {
+module.exports.getArticleById = expressAsyncHandler(
+  async (req, res) => {
   try {
 
     const article = await Article.findById(req.params.id)
       .populate('tags')
       .populate({
         path: 'likedUsers',
+        select: 'user_handle user_name Profile_image',
         match: {
           isBlockUser: false,
           isBannedUser: false
         }
       })
-      //.populate('contributors', 'user_handle user_name Profile_image')
-      .populate({
+       .populate({
         path: 'contributors',
         select: 'user_handle user_name Profile_image',
         match: {
@@ -174,15 +193,11 @@ module.exports.getArticleById = async (req, res) => {
           isBlockUser: false
         }
       })
-      //.populate('authorId','followers')
       .populate({
         path: "authorId",
-        match: {
-          isBannedUser: false,
-          isBlockUser: false
-        },
         populate: {
           path: 'followers',
+          select: 'user_handle user_name Profile_image',
           match: {
             isBannedUser: false,
             isBlockUser: false
@@ -191,9 +206,10 @@ module.exports.getArticleById = async (req, res) => {
       })
       .exec();
 
-    if (!article) {
+    if (!article || article.is_removed) {
       return res.status(404).json({ message: "Article not found" });
     }
+
 
 
     if (Array.isArray(article.likedUsers)) {
@@ -210,11 +226,7 @@ module.exports.getArticleById = async (req, res) => {
       article.authorId.followers = article.authorId.followers.filter(user => user !== null);
     }
 
-    //If the author itself is blocked or banned
-    if (!article.authorId) {
-
-      return res.status(404).json({ message: "Author not found or is blocked/banned" });
-    }
+   
 
 
     res.status(200).json({ article });
@@ -223,10 +235,12 @@ module.exports.getArticleById = async (req, res) => {
       .status(500)
       .json({ error: "Error fetching article", details: error.message });
   }
-};
+}
+)
 
 // Update an article by ID
-module.exports.updateArticle = async (req, res) => {
+module.exports.updateArticle = expressAsyncHandler(
+  async (req, res) => {
   try {
     const article = await Article.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -242,10 +256,12 @@ module.exports.updateArticle = async (req, res) => {
       .status(500)
       .json({ error: "Error updating article", details: error.message });
   }
-};
+}
+)
 
 // Delete an article by ID
-module.exports.deleteArticle = async (req, res) => {
+module.exports.deleteArticle = expressAsyncHandler(
+   async (req, res) => {
   try {
     const article = await Article.findByIdAndDelete(req.params.id)
       .populate('tags') // This populates the tag data
@@ -259,10 +275,12 @@ module.exports.deleteArticle = async (req, res) => {
       .status(500)
       .json({ error: "Error deleting article", details: error.message });
   }
-};
+}
+)
 
 // Save Article : (published article)
-module.exports.saveArticle = async (req, res) => {
+module.exports.saveArticle = expressAsyncHandler(
+  async (req, res) => {
   try {
     const { article_id } = req.body;
 
@@ -270,12 +288,16 @@ module.exports.saveArticle = async (req, res) => {
       return res.status(400).json({ message: "User ID and Article ID are required" });
     }
     const user = await User.findById(req.userId);
-    const article = await Article.findById(article_id)
+    const article = await Article.findById(Number(article_id))
       .populate('tags') // This populates the tag data
       .exec();
 
-    if (!user || !article) {
+    if (!user || !article || article.is_removed) {
       return res.status(404).json({ error: 'User or article not found' });
+    }
+
+    if(user.isBannedUser){
+      return res.status(403).json({ error: 'User is banned' });
     }
 
     if (article.status !== statusEnum.statusEnum.PUBLISHED) {
@@ -314,10 +336,11 @@ module.exports.saveArticle = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Error saving article', details: error.message });
   }
-};
-
+}
+)
 // Like Articles (published article)
-module.exports.likeArticle = async (req, res) => {
+module.exports.likeArticle = expressAsyncHandler(
+  async (req, res) => {
   try {
     const { article_id } = req.body;
 
@@ -329,11 +352,11 @@ module.exports.likeArticle = async (req, res) => {
 
 
 
-    const articleDb = await Article.findById(article_id)
+    const articleDb = await Article.findById(Number(article_id))
       .populate(['tags', 'likedUsers']) // This populates the tag data
       .exec();
 
-    if (!user || !articleDb) {
+    if (!user || !articleDb || articleDb.is_removed) {
       return res.status(404).json({ error: 'User or Article not found' });
     }
 
@@ -347,7 +370,7 @@ module.exports.likeArticle = async (req, res) => {
     }
     // Check if the article is already liked
     const likedArticlesSet = new Set(user.likedArticles);
-    const isArticleLiked = likedArticlesSet.has(article_id);
+    const isArticleLiked = likedArticlesSet.has(Number(article_id));
     //console.log("Article Id", article_id);
 
     // console.log('Liked Articles', user.likedArticles);
@@ -357,11 +380,11 @@ module.exports.likeArticle = async (req, res) => {
 
       // Unlike It
       await Promise.all([
-        Article.findByIdAndUpdate(article_id, {
+        Article.findByIdAndUpdate(Number(article_id), {
           $pull: { likedUsers: req.userId } // Remove user from likedUsers
         }),
         User.findByIdAndUpdate(req.userId, {
-          $pull: { likedArticles: article_id } // Remove article from likedArticles
+          $pull: { likedArticles: Number(article_id) } // Remove article from likedArticles
         })
       ]);
 
@@ -377,7 +400,7 @@ module.exports.likeArticle = async (req, res) => {
 
     } else {
       await Promise.all([
-        Article.findByIdAndUpdate(article_id, {
+        Article.findByIdAndUpdate(Number(article_id), {
           $addToSet: { likedUsers: req.userId } // Add user to likedUsers
         }),
         User.findByIdAndUpdate(req.userId, {
@@ -399,20 +422,22 @@ module.exports.likeArticle = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Error liking article', details: error.message });
   }
-};
+}
+)
 
 // Update View Count (Published article)
-module.exports.updateViewCount = async (req, res) => {
+module.exports.updateViewCount = expressAsyncHandler(
+  async (req, res) => {
   const { article_id } = req.body;
 
   try {
 
     const user = await User.findById(req.userId);
-    const articleDb = await Article.findById(article_id)
+    const articleDb = await Article.findById(Number(article_id))
       .populate(['tags', 'likedUsers'])
       .exec();
 
-    if (!user || !articleDb) {
+    if (!user || !articleDb || articleDb.is_removed) {
       return res.status(404).json({ error: 'User or Article not found' });
     }
 
@@ -445,6 +470,7 @@ module.exports.updateViewCount = async (req, res) => {
     res.status(500).json({ error: 'Error updating view', details: err.message });
   }
 }
+)
 
 
 // Helper function to get the next id
@@ -454,7 +480,8 @@ const getNextId = async () => {
 };
 
 // Create a new tag
-exports.addNewTag = async (req, res) => {
+module.exports.addNewTag = expressAsyncHandler(
+  async (req, res) => {
   try {
     const { name } = req.body;
     const id = await getNextId();
@@ -464,20 +491,24 @@ exports.addNewTag = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
+}
+)
 
 // Get all tags
-exports.getAllTags = async (req, res) => {
+module.exports.getAllTags =  expressAsyncHandler(
+  async (req, res) => {
   try {
     const tags = await ArticleTag.find();
     res.status(200).json(tags);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
+}
+)
 
 // Update a tag by id
-exports.updateTagById = async (req, res) => {
+module.exports.updateTagById =  expressAsyncHandler(
+  async (req, res) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
@@ -493,10 +524,12 @@ exports.updateTagById = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
+}
+)
 
 // Delete a tag by id
-exports.deleteArticleTagByIds = async (req, res) => {
+module.exports.deleteArticleTagByIds = expressAsyncHandler(
+  async (req, res) => {
   try {
     const { id } = req.params;
     const deletedTag = await ArticleTag.findOneAndDelete({ id });
@@ -507,11 +540,13 @@ exports.deleteArticleTagByIds = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
+}
+)
 
 // Read Event API
 // Update User Read Event
-exports.updateReadEvents = async (req, res) => {
+module.exports.updateReadEvents = expressAsyncHandler(
+  async (req, res) => {
 
   const { article_id } = req.body;
 
@@ -553,9 +588,11 @@ exports.updateReadEvents = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 }
+)
 
 // GET ALL READ EVENTS STATUS DAILY, WEEKLY, MONTHLY
-exports.getReadDataForGraphs = async (req, res) => {
+module.exports.getReadDataForGraphs = expressAsyncHandler(
+  async (req, res) => {
 
   const userId = req.userId;
   //console.log("Read event", userId);
@@ -585,14 +622,16 @@ exports.getReadDataForGraphs = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'An error occurred while fetching read data' });
   }
-};
+}
+)
 
 
 
 
 
 // GET ALL Write EVENTS STATUS DAILY, WEEKLY, MONTHLY
-exports.getWriteDataForGraphs = async (req, res) => {
+module.exports.getWriteDataForGraphs = expressAsyncHandler(
+  async (req, res) => {
 
   const userId = req.userId;
 
@@ -622,10 +661,11 @@ exports.getWriteDataForGraphs = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'An error occurred while fetching read data' });
   }
-};
+}
+)
 
 // Repost Article (Published article)
-exports.repostArticle = expressAsyncHandler(
+module.exports.repostArticle = expressAsyncHandler(
   async (req, res) => {
 
     try {
@@ -643,7 +683,7 @@ exports.repostArticle = expressAsyncHandler(
         User.findById(userId),
       ]);
 
-      if (!article || !user) {
+      if (!article || !user || article.is_removed) {
         res.status(404).json({ error: 'Article or user not found.' });
         return;
       }
@@ -697,8 +737,14 @@ module.exports.getAllImprovementsForUser = expressAsyncHandler(
         populate: {
           path: 'tags',
         },
+        match:{
+          is_removed: false
+        }
       }).exec();
 
+      if(articles){
+        articles = articles.filter(a => a.article !== null);
+      }
       res.status(200).json(articles);
     } catch (err) {
       console.log(err);
@@ -724,6 +770,10 @@ module.exports.getImprovementById = expressAsyncHandler(
         },
       }).exec();
 
+      if(improvement.article.is_removed){
+        return res.status(404).json({ message: "Article not found" });
+      }
+      
       res.status(200).json(improvement);
 
     } catch (err) {

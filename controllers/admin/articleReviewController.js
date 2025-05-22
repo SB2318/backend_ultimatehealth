@@ -18,7 +18,8 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
     async (req, res) => {
         try {
             const articles = await Article.find({
-                status: statusEnum.statusEnum.UNASSIGNED
+                status: statusEnum.statusEnum.UNASSIGNED,
+                is_removed: false
             }).populate('tags')
                 .populate({
                     path: 'authorId',
@@ -29,7 +30,7 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
                     }
                 }).
                 exec();
-            articles.filter(req => req.article?.authorId !== null);
+            articles.filter(r => r.article?.authorId !== null);
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -46,7 +47,9 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
         }
         try {
             const articles = await Article.find({
-                reviewer_id: reviewer_id, status: {
+                reviewer_id: reviewer_id, 
+                is_removed: false,
+                status: {
                     $in: [statusEnum.statusEnum.IN_PROGRESS, statusEnum.statusEnum.AWAITING_USER, statusEnum.statusEnum.REVIEW_PENDING]
                 }
             }).populate('tags')
@@ -59,7 +62,7 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
                     }
                 }).
                 exec();
-            articles.filter(req => req.article?.authorId !== null);
+            articles.filter(r => r.article?.authorId !== null);
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -76,7 +79,9 @@ module.exports.getAllReviewCompletedArticles = expressAsyncHandler(
         }
         try {
             const articles = await Article.find({
-                reviewer_id: reviewer_id, status: {
+                reviewer_id: reviewer_id,
+                is_removed: false,
+                 status: {
                     $in: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
                 }
             }).populate('tags').exec();
@@ -115,7 +120,7 @@ module.exports.assignModerator = expressAsyncHandler(
                 ]
             );
 
-            if (!article || !moderator) {
+            if (!article || !moderator || article.is_removed) {
                 res.status(404).json({ message: 'Article or Moderator not found' });
                 return;
             }
@@ -173,7 +178,7 @@ module.exports.submitReview = expressAsyncHandler(
                 admin.findById(reviewer_id),
             ]);
 
-            if (!article || !reviewer) {
+            if (!article || !reviewer || article.is_removed) {
                 res.status(404).json({ message: 'Article or Moderator not found' });
                 return;
             }
@@ -233,7 +238,7 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
                 User.findById(userId)
             );
 
-            if (!article || !user) {
+            if (!article || !user || article.is_removed) {
                 res.status(404).json({ message: "Article not found" });
                 return;
             }
@@ -246,7 +251,7 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
             //console.log("Author Id", article.authorId);
             //console.log("User Id", userId);
 
-            if (article.authorId.toString() !== userId) {
+            if (article.authorId !== userId) {
                 res.status(403).json({ message: "You are not the author of this article" });
                 return;
             }
@@ -308,7 +313,7 @@ module.exports.publishArticle = expressAsyncHandler(
                 admin.findById(reviewer_id)
             ]);
 
-            if (!article || !reviewer) {
+            if (!article || !reviewer || article.is_removed) {
                 return res.status(404).json({ message: "Article or Reviewer not found" });
             }
 
@@ -320,10 +325,10 @@ module.exports.publishArticle = expressAsyncHandler(
             if (article.reviewer_id !== reviewer_id) {
                 return res.status(403).json({ message: "Article is not assigned to this reviewer" });
             }
-            const user = await User.findById(article.authorId);
-            if (!user) {
-                return res.status(404).json({ message: "Author not found" });
-            }
+            //const user = await User.findById(article.authorId);
+            //if (!user) {
+               // return res.status(404).json({ message: "Author not found" });
+            //}
             article.status = statusEnum.statusEnum.PUBLISHED;
             article.publishedDate = new Date();
             article.lastUpdated = new Date();
@@ -331,7 +336,7 @@ module.exports.publishArticle = expressAsyncHandler(
             await article.save();
             // user.articles.push(article._id);
 
-            await updateWriteEvents(article._id, user._id);
+            await updateWriteEvents(article._id, article.authorId._id);
 
             // Update admin contribution for publish new article
             const aggregate = new AdminAggregate({
@@ -342,10 +347,10 @@ module.exports.publishArticle = expressAsyncHandler(
             await aggregate.save();
 
             // send mail to user
-            sendArticlePublishedEmail(user.email, "", article.title);
+            sendArticlePublishedEmail(article.authorId.email, "", article.title);
 
             // send notification
-            articleReviewNotificationsToUser(user._id, article._id, {
+            articleReviewNotificationsToUser(article.authorId._id, article._id, {
                 title: ` Your Article : ${article.title} is Live now!`,
                 body: "Keep contributing!  We encourage you to keep sharing valuable content with us."
             }, 2);
@@ -373,7 +378,7 @@ module.exports.discardChanges = expressAsyncHandler(
 
             const article = await Article.findById(Number(articleId));
 
-            if (!article) {
+            if (!article || article.is_removed) {
                 return res.status(404).json({ message: "Article not found" });
             }
 
@@ -412,7 +417,7 @@ module.exports.unassignModerator = expressAsyncHandler(
 
             const article = await Article.findById(Number(articleId));
 
-            if (!article) {
+            if (!article || article.is_removed) {
                 return res.status(404).json({ message: "Article not found" });
             }
             if (article.status === statusEnum.statusEnum.PUBLISHED) {
@@ -479,7 +484,8 @@ async function unassignArticle() {
             },
             lastUpdated: {
                 $lte: thirtyDaysAgo
-            }
+            },
+            is_removed: false,
         });
 
         articles.forEach(async (article) => {
@@ -516,7 +522,8 @@ async function discardArticle() {
 
                 $lte: sixtyDaysAgo
 
-            }
+            },
+            is_removed: false,
         }).populate('authorId').exec();
 
         articles.forEach(async (article) => {

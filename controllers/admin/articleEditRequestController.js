@@ -33,7 +33,7 @@ module.exports.submitEditRequest = expressAsyncHandler(
                 User.findById(userId)
             ]);
 
-            if (!article || !user) {
+            if (!article || !user || article.is_removed) {
                 return res.status(404).json({ message: "Article or user not found" });
             }
 
@@ -91,7 +91,7 @@ module.exports.getAllImprovementsForReview = expressAsyncHandler(
                 ]
             }).exec();
 
-            articles = articles.filter(req => req.article?.authorId !== null);
+            articles = articles.filter(r => r.article?.authorId !== null);
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -130,7 +130,7 @@ module.exports.getAllInProgressImprovementsForAdmin = expressAsyncHandler(
             ]
             }).exec();
 
-            articles.filter(req => req.article?.authorId !== null);
+            articles.filter(r => r.article?.authorId !== null);
 
             res.status(200).json(articles);
         } catch (err) {
@@ -197,7 +197,7 @@ module.exports.pickImprovementRequest = expressAsyncHandler(
             }
 
             if (user.isBlockUser || user.isBannedUser) {
-                return res.status(400).json({ message: "User is blocked or banned" });
+                return res.status(403).json({ message: "User is blocked or banned" });
             }
 
             if (editRequest.status !== statusEnum.statusEnum.UNASSIGNED) {
@@ -478,12 +478,12 @@ module.exports.publishImprovement = expressAsyncHandler(
                 User.findById(editRequest.user_id)
             ])
 
-            if (!article || !contributor) {
+            if (!article || !contributor || article.is_removed) {
                 return res.status(400).json({ message: "Article or contributor not found" });
             }
 
             if (contributor.isBlockUser || contributor.isBannedUser) {
-                return res.status(400).json({ message: "User is blocked or banned" });
+                return res.status(403).json({ message: "User is blocked or banned" });
             }
 
             article.status = statusEnum.statusEnum.PUBLISHED;
