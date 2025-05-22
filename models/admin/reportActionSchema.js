@@ -14,7 +14,8 @@ const reportActionEnum = {
     ESCALATED: "Escalated",          
     INVESTIGATION: "Investigation Start",        
     IGNORE: "Ignored",
-    CONVICT_REQUEST_TO_RESTORE_CONTENT: "CONVICT_REQUEST_TO_RESTORE_CONTENT",              
+    CONVICT_REQUEST_TO_RESTORE_CONTENT: "CONVICT_REQUEST_TO_RESTORE_CONTENT",   
+    CONVICT_REQUEST_DISAPPROVED : "CONVICT_REQUEST_DISAPPROVED",
 };
 const reportActionSchema = new Schema({
 

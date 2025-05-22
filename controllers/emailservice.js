@@ -1345,6 +1345,180 @@ const sendRestoreContentMailToUser = async (email, articleTitle) => {
   });
 };
 
+const sendRestoreRequestReceivedMail = async (email, articleTitle) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `📥 We've Received Your Content Restoration Request`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #1976D2;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+          }
+          .content {
+            padding: 20px;
+          }
+          .request-info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-left: 4px solid #1976D2;
+            border-radius: 6px;
+            margin-top: 20px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            📥 Request Confirmation
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>We’ve received your request to restore the following content:</p>
+
+            <div class="request-info">
+              <p><strong>Article Title:</strong> ${articleTitle}</p>
+            </div>
+
+            <p>Our team will review your request carefully to ensure it meets our content and community guidelines.</p>
+
+            <p>You’ll receive a follow-up email once the review is complete. This process may take up to 3–5 business days.</p>
+
+            <p>If you have any additional information to support your request, feel free to reply to this email at <a href="mailto:ultimate.health25@gmail.com">ultimate.health25@gmail.com</a>.</p>
+
+            <p>Thanks for your patience and for being part of the UltimateHealth community.</p>
+          </div>
+          <div class="footer">
+            <p>Warm regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending restore request received email:', err);
+    } else {
+      console.log('Restore request received email sent:', info.response);
+    }
+  });
+};
+
+const sendRestoreRequestDisapprovedMail = async (email, articleTitle) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `❌ Content Restoration Request Denied`,
+    html: `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+          }
+          .header {
+            background-color: #d32f2f;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+          }
+          .content {
+            padding: 20px;
+          }
+          .disapproval-info {
+            background-color: #ffebee;
+            padding: 15px;
+            border-left: 4px solid #d32f2f;
+            border-radius: 6px;
+            margin-top: 20px;
+          }
+          .footer {
+            background-color: #f1f1f1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            ❌ Request Denied
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>Thank you for submitting a content restoration request. After a thorough review, we regret to inform you that your request to restore the following content has been denied:</p>
+
+            <div class="disapproval-info">
+              <p><strong>Article Title:</strong> ${articleTitle}</p>
+            </div>
+
+            <p>Unfortunately, the content did not meet our community guidelines or failed to comply with our platform's terms of use. As a result, we are unable to proceed with the restoration.</p>
+
+            <p>If you believe this decision was made in error or you have new information to provide, feel free to respond to this email at <a href="mailto:ultimate.health25@gmail.com">ultimate.health25@gmail.com</a>.</p>
+
+            <p>We appreciate your understanding and continued support of the UltimateHealth community.</p>
+          </div>
+          <div class="footer">
+            <p>Kind regards,<br>The UltimateHealth Team</p>
+            <p>© 2025 UltimateHealth. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>`
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending disapproval email:', err);
+    } else {
+      console.log('Disapproval email sent:', info.response);
+    }
+  });
+};
+
 
 const sendBlockConvictMail = async (email, details, reportType, reason) => {
   const reportedItem = reportType === 'content'
@@ -1709,7 +1883,9 @@ module.exports = {
     sendBlockConvictMail,
     sendBannedUserMail,
     sendRestoreContentMailToUser,
-    sendUnblockUserMail
+    sendUnblockUserMail,
+    sendRestoreRequestReceivedMail,
+    sendRestoreRequestDisapprovedMail
 };
 
 

@@ -21,7 +21,9 @@ const {
   sendBlockConvictMail,
   sendBannedUserMail,
   sendRestoreContentMailToUser,
-  sendUnblockUserMail
+  sendUnblockUserMail,
+  sendRestoreRequestDisapprovedMail,
+  sendRestoreRequestReceivedMail
 } = require('./emailservice');
 const cron = require('node-cron');
 
@@ -182,6 +184,7 @@ module.exports.submitReport = expressAsyncHandler(
         convictId: authorId
       });
       author.activeReportCount += 1;
+      report.last_action_date = new Date();
       await author.save();
       await report.save();
 
@@ -365,6 +368,7 @@ module.exports.pickReport = expressAsyncHandler(
       }
       report.admin_id = req.userId;
       report.action_taken = reportActionEnum.INVESTIGATION;
+      report.last_action_date = new Date();
 
       await report.save();
 
@@ -447,8 +451,10 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
         // Ignore Report
         report.status = reportActionEnum.IGNORE;
         convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+        report.last_action_date = new Date();
         await report.save();
         await convict.save();
+
 
         return res.status(403).json({ message: 'Convict or victim is blocked' });
       }
@@ -456,7 +462,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
       if (convict.isBannedUser || victim.isBannedUser) {
         // Ignore Report
         report.status = reportActionEnum.IGNORE;
-       
+        report.last_action_date = new Date();
         await report.save();
         await convict.save();
         return res.status(403).json({ message: 'Convict or victim is banned' });
@@ -475,7 +481,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           report.status = reportActionEnum.RESOLVED;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
 
-
+          report.last_action_date = new Date();
           await report.save();
           await convict.save();
           // Increase moderator contribution count
@@ -505,6 +511,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
             victim.blockedAt = new Date();
           }
           await victim.save();
+          report.last_action_date = new Date();
           await report.save();
           await convict.save();
 
@@ -525,7 +532,9 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
           report.status = reportActionEnum.IGNORE;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
+          report.last_action_date = new Date();
           await report.save();
+
           await convict.save();
 
           break;
@@ -542,9 +551,11 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
             // ban the user
             convict.isBannedUser = true;
           }
+          report.last_action_date = new Date();
           // For warning will not decrease report count
           await convict.save();
           await report.save();
+
 
           // Remove that content
           if (report.commentId) {
@@ -591,7 +602,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
             await art.save();
           }
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
-
+          report.last_action_date = new Date();
           await report.save();
           await convict.save();
 
@@ -616,6 +627,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           convict.activeReportCount = Math.max(0, convict.activeReportCount + 1);
           convict.isBlockUser = true;
           convict.blockedAt = new Date(); // Temporary block for 1 month
+          report.last_action_date = new Date();
           await report.save();
           await convict.save();
 
@@ -639,7 +651,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           art.is_removed = false;
           art.reportId = null;
           await art.save();
-
+          report.last_action_date = new Date();
           await report.save();
           await convict.save();
 
@@ -652,6 +664,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           report.status = reportActionEnum.BAN_CONVICT;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
           convict.isBannedUser = true; // Permanent banned account
+          report.last_action_date = new Date();
           await report.save();
           await convict.save();
 
@@ -669,12 +682,18 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           await sendResolvedMailToVictim(victim.email, details, reportType, action);
           break;
         }
+        case reportActionEnum.CONVICT_REQUEST_DISAPPROVED: {
+          report.last_action_date = new Date();
+          await report.save();
+          await sendRestoreRequestDisapprovedMail(convict.email, report.articleId.title);
+          break;
+        }
         default: {
           return res.status(400).json({ message: "Invalid action" });
         }
       }
 
-      if (convict.activeReportCount < 3 && convict.isBlockUser && action.toString() !== reportActionEnum.BLOCK_CONVICT ) {
+      if (convict.activeReportCount < 3 && convict.isBlockUser && action.toString() !== reportActionEnum.BLOCK_CONVICT) {
         convict.isBlockUser = false;
         convict.blockedAt = null;
         await convict.save();
@@ -689,6 +708,92 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
     }
 
   }
+)
+
+/** Submit request to restore content */
+module.exports.convictRequestToRestoreContent = expressAsyncHandler(
+  async (req, res) => {
+    const { convict_id, convict_statement, report_id } = req.body;
+
+    if (!convict_id || !convict_statement || !report_id) {
+      return res.status(400).json({ message: "Convict id, convict statement and report id are required" });
+    }
+
+    try {
+
+
+      const convict = await User.findOne({ _id: convict_id });
+      const report = await ReportAction.findOne({ _id: report_id });
+
+      if (!convict || !report) {
+        return res.status(400).json({ message: "Convict or report not found" });
+      }
+
+      if (report.convictId !== convict.id) {
+        return res.status(400).json({ message: "Convict does not match report" });
+      }
+      if (report.commentId) {
+        return res.status(400).json({ message: "Comment is already resolved" });
+      }
+
+      const article = await Article.findOne({ _id: report.articleId });
+      if (!article) {
+        return res.status(400).json({ message: "Article not found" });
+      }
+      report.action_taken = reportActionEnum.CONVICT_REQUEST_TO_RESTORE_CONTENT;
+      report.convict_statement = convict_statement;
+      report.last_action_date = new Date();
+      await report.save();
+
+      // Send email to user to inform them of the request to restore content
+      await sendRestoreRequestReceivedMail(convict.email, article.title);
+
+      return res.status(200).json({ message: "Request sent" });
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Error convicting user' });
+    }
+
+  }
+)
+
+/** GET ALL REPORTS AGAINST CONVICT */
+module.exports.getAllReportsAgainstConvict = expressAsyncHandler(
+  async (req, res) => {
+
+    try {
+
+      const reports = await ReportAction.find({
+        convictId: req.userId, status: {
+          $in: [reportActionEnum.RESOLVED,
+          reportActionEnum.DISMISSED,
+          reportActionEnum.IGNORE,
+          reportActionEnum.WARN_CONVICT,
+          reportActionEnum.REMOVE_CONTENT,
+          reportActionEnum.BLOCK_CONVICT]
+        }
+      }).populate({
+        path: 'reasonId',
+        select: 'reason',
+      }).
+        populate({
+          path: "articleId",
+          select: "title"
+        }).
+        populate({
+          path: "commentId",
+          select: "content"
+        }).
+        exec();
+
+      return res.status(200).json(reports);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Error fetching reports' });
+    }
+  }
+
 )
 
 async function unBlockUser() {
@@ -725,24 +830,13 @@ cron.schedule('0 0 * * *', async () => {
   await unBlockUser();
 });
 
-// Check report status
 
 
 
-// Report Flow
-//  Convict will be temporarily block If he or she has at least 3 active reports in his bucket or admin block them
-// Block User means:
-// 1. User will be unable to post new content
-// 2. User will be unable to comment on existing content
-// 3. User will unable to make any reaction or repost on existing content
-// 4. User will not able to make any further edit request.
-// 5. But Yes, they can View and save existing content
-// 6. If user already block,  action can't be taken.
 
-// BAN USER:
-// 1. User will be unable to post new content
-// 2. All content and comment of the particular user will be removed from the platform
-// 3. They even can't able to see any new or existing post or they can't make any changes.
+
+
+
 
 
 // Task Left:
