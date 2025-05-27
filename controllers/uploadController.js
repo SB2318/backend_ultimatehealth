@@ -3,15 +3,20 @@ const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = re
 const fs = require('fs');
 const sharp = require('sharp');
 const path = require('path');
+const Pocketbase = require('pocketbase/cjs');
+const expressAsyncHandler = require('express-async-handler');
+
 require('dotenv').config();
 
-  const s3Client = new S3Client({
+const s3Client = new S3Client({
     region: 'eu-north-1',
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    }, 
+    },
 });
+
+const pb = new Pocketbase(process.env.DATASORCE_URL);
 
 
 // upload file
@@ -23,14 +28,14 @@ const uploadFile = async (req, res) => {
         return res.status(400).json({ message: 'No file uploaded.' });
     }
     //console.log("Here comessss", file);
-    
+
     try {
         // Handle Image file upload
         if (file.mimetype.startsWith('image/')) {
 
             // Optimize storage, create buffer and convert image in one format 
             await sharp(file.path)
-                .webp({ quality: 80 }) 
+                .webp({ quality: 80 })
                 .toBuffer(async (err, buffer) => {
                     if (err) {
                         return res.status(500).send('Error processing image: ' + err.message);
@@ -101,7 +106,7 @@ const uploadFile = async (req, res) => {
             });
             */
 
-            res.status(200).send({ message: 'Text or HTML uploaded successfully', key:`${file.originalname}` });
+            res.status(200).send({ message: 'Text or HTML uploaded successfully', key: `${file.originalname}` });
         }
         else if (file.mimetype === 'audio/mpeg') {
             // Handle MP3 file upload
@@ -143,7 +148,7 @@ const uploadFile = async (req, res) => {
 }
 
 // get file
-const getFile = async(req, res)=>{
+const getFile = async (req, res) => {
     const params = {
         Bucket: 'ultimatehealth-01',
         Key: req.params.key,
@@ -180,8 +185,85 @@ const deleteFile = async (req, res) => {
     }
 };
 
+/** Pocketbase work */
+
+const uploadFileToPocketBase = expressAsyncHandler(
+
+    async (req, res) => {
+        try {
+            const { title } = req.body;
+            const file = req.file;
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('html_file', fs.createReadStream(file.path), file.originalname);
+
+            const record = await pb.collection('content').create(formData);
+
+            return res.status(200).json({
+                message: 'File uploaded successfully',
+                recordId: record.id,
+                html_file: record.html_file
+            });
+        } catch (err) {
+            console.log("Error uploading file to pocketbase:", err);
+            return res.status(500).json({
+                message: 'Internal server error'
+            });
+        }
+    }
+)
+
+const getPbFile = expressAsyncHandler(
+    async (req, res) => {
+
+        try {
+            const  id = req.params.id;
+            const record = await pb.collection('content').getOne(id);
+            const htmlFileUrl = pb.getFileUrl(record, record.html_file);
+
+            const response = await fetch(htmlFileUrl);
+            const htmlContent = await response.text();
+
+            return res.status(200).json({htmlContent: htmlContent, fileName: record.html_file});
+        } catch (err) {
+            console.log("Error getting file from pocketbase:", err);
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+    }
+)
+
+const uploadImprovementToPocketBase = expressAsyncHandler(
+
+    async (req, res) => {
+        try {
+            const { title } = req.body;
+            const file = req.file;
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('html_file', fs.createReadStream(file.path), file.originalname);
+
+            const record = await pb.collection('content').create(formData);
+
+            return res.status(200).json({
+                message: 'File uploaded successfully',
+                recordId: record.id,
+                html_file: record.html_file
+            });
+        } catch (err) {
+            console.log("Error uploading file to pocketbase:", err);
+            return res.status(500).json({
+                message: 'Internal server error'
+            });
+        }
+    }
+)
+
 module.exports = {
     uploadFile,
     getFile,
     deleteFile,
+    uploadFileToPocketBase,
+    getPbFile
 };
