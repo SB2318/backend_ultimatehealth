@@ -191,14 +191,29 @@ const uploadFileToPocketBase = expressAsyncHandler(
 
     async (req, res) => {
         try {
-            const { title } = req.body;
+            
+            const { record_id, title } = req.body;
             const file = req.file;
+
+            if (!file) {
+                return res.status(400).send({ message: 'No file uploaded' });
+            }
 
             const formData = new FormData();
             formData.append('title', title);
             formData.append('html_file', fs.createReadStream(file.path), file.originalname);
 
-            const record = await pb.collection('content').create(formData);
+            let record;
+            if (record_id) {
+                record = await pb.collection('content').update(record_id, formData);
+
+                if(!record){
+                    return res.status(404).json({ message: 'Record not found' });
+                }
+            }
+            else {
+                record = await pb.collection('content').create(formData);
+            }
 
             return res.status(200).json({
                 message: 'File uploaded successfully',
@@ -214,18 +229,19 @@ const uploadFileToPocketBase = expressAsyncHandler(
     }
 )
 
+
 const getPbFile = expressAsyncHandler(
     async (req, res) => {
 
         try {
-            const  id = req.params.id;
+            const id = req.params.id;
             const record = await pb.collection('content').getOne(id);
             const htmlFileUrl = pb.getFileUrl(record, record.html_file);
 
             const response = await fetch(htmlFileUrl);
             const htmlContent = await response.text();
 
-            return res.status(200).json({htmlContent: htmlContent, fileName: record.html_file});
+            return res.status(200).json({ htmlContent: htmlContent, fileName: record.html_file });
         } catch (err) {
             console.log("Error getting file from pocketbase:", err);
             return res.status(500).json({ message: 'Internal server error' });
@@ -233,32 +249,68 @@ const getPbFile = expressAsyncHandler(
     }
 )
 
-const uploadImprovementToPocketBase = expressAsyncHandler(
-
+const uploadImprovementFileToPocketbase = expressAsyncHandler(
     async (req, res) => {
+
+        const { record_id, user_id, article_id, improvement_id } = req.body;
+        const file = req.file;
+
+        if (!user_id || !article_id || !improvement_id || !file) {
+            return res.status(400).json({ message: 'Missing required fields: user_id, article_id, improvement_id, file' });
+        }
+
         try {
-            const { title } = req.body;
-            const file = req.file;
 
             const formData = new FormData();
-            formData.append('title', title);
-            formData.append('html_file', fs.createReadStream(file.path), file.originalname);
+            formData.append('user_id', user_id);
+            formData.append('article_id', article_id);
+            formData.append('improvement_id', improvement_id);
+            formData.append('edited_html_file', fs.createReadStream(file.path), file.originalname);
 
-            const record = await pb.collection('content').create(formData);
+            let record;
+            if (record_id) {
+                record = await pb.collection('edit_requests').update(record_id, formData);
+
+                if(!record){
+                    return res.status(404).json({ message: 'Record not found' });
+                }
+            }
+            else {
+                record = await pb.collection('edit_requests').create(formData);
+            }
 
             return res.status(200).json({
                 message: 'File uploaded successfully',
                 recordId: record.id,
-                html_file: record.html_file
+                html_file: record.edited_html_file
             });
+
         } catch (err) {
             console.log("Error uploading file to pocketbase:", err);
-            return res.status(500).json({
-                message: 'Internal server error'
-            });
+            return res.status(500).json({ message: 'Internal server error' });
         }
     }
 )
+
+const publishImprovementFileFromPocketbase = expressAsyncHandler(
+    async (req, res) =>{
+     
+         const {record_id, article_id} = req.body;
+
+         if(!record_id || !article_id){
+            return res.status(400).json({message: 'Missing required fields: record_id, article_id'});
+         }
+
+         try{
+
+         }catch(err){
+            console.log("Error publishing improvement file from pocketbase:", err);
+            return res.status(500).json({message: 'Internal server error'});
+         }
+    }
+)
+
+
 
 module.exports = {
     uploadFile,
