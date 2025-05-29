@@ -10,15 +10,15 @@ uploadRoute.post('/upload-storage', upload.single('file'), controller.uploadFile
 uploadRoute.get('/getFile/:key', controller.getFile);
 uploadRoute.delete('/deleteFile/:key',authenticateToken, controller.deleteFile);
 
+/** Pocketbase */
+uploadRoute.post('/upload-pocketbase/article', authenticateToken, upload.single('html_file'),controller.uploadFileToPocketBase);
+uploadRoute.post('/upload-pocketbase/improvement', authenticateToken,  upload.single('edited_html_file'), controller.uploadImprovementFileToPocketbase);
+uploadRoute.post('/publish-improvement-from-pocketbase', authenticateToken, controller.publishImprovementFileFromPocketbase);
+uploadRoute.get('/get-pbf-file/:id', authenticateToken, controller.getPbFile);
+uploadRoute.get('/get-imp-file/:id', authenticateToken, controller.getIMPFile);
+
+   
+
 module.exports = uploadRoute;
 
-// Upload Profile Image
 
-// Upload Article Image
-// Case I -> ImageUtils, will added at the time of post creation 
-// Case II -> Article Image url will attached with content. 
-// Id review reject, then all the corresponding image will be deleted from storage.
-
-// Upload Article Content
-// Later
-// Upload Audio

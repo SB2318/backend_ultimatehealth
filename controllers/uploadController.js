@@ -1,10 +1,13 @@
 //const AWS = require('aws-sdk');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const fs = require('fs');
+const axios = require('axios');
 const sharp = require('sharp');
 const path = require('path');
+const os = require('os');
 const Pocketbase = require('pocketbase/cjs');
 const expressAsyncHandler = require('express-async-handler');
+const getHTMLFileContent = require('../utils/pocketbaseUtil');
 
 require('dotenv').config();
 
@@ -235,13 +238,14 @@ const getPbFile = expressAsyncHandler(
 
         try {
             const id = req.params.id;
-            const record = await pb.collection('content').getOne(id);
-            const htmlFileUrl = pb.getFileUrl(record, record.html_file);
+            const result = await getHTMLFileContent('content', id);
+            //const record = await pb.collection('content').getOne(id);
+            //const htmlFileUrl = pb.getFileUrl(record, record.html_file);
 
-            const response = await fetch(htmlFileUrl);
-            const htmlContent = await response.text();
+            //const response = await fetch(htmlFileUrl);
+            //const htmlContent = await response.text();
 
-            return res.status(200).json({ htmlContent: htmlContent, fileName: record.html_file });
+            return res.status(200).json(result);
         } catch (err) {
             console.log("Error getting file from pocketbase:", err);
             return res.status(500).json({ message: 'Internal server error' });
@@ -303,10 +307,64 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
 
          try{
 
+            const improvementRecord = await pb.collection('edit_requests').get(record_id);
+
+            if(!improvementRecord || !improvementRecord.edited_html_file){
+                return res.status(404).json({ message: 'Record not found' });
+            }
+
+            const fileUrl = pb.files.getUrl(improvementRecord, improvementRecord.edited_html_file, { download: true });
+            const tempFilePath = path.join(os.tempdir(), improvementRecord.edited_html_file);
+            
+            const response = await axios.get(fileUrl, { responseType: 'stream' });
+            const writer = fs.createWriteStream(tempFilePath);
+
+            await new Promise((resolve, reject)=>{
+                response.data.pipe(writer);
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+            });
+
+            // Prepare formdata to upload to pocketbase
+            const formData = new FormData();
+            formData.append('html-file', fs.createReadStream(tempFilePath));
+
+            await pb.collection('content').update(article_id, formData);
+
+            fs.unlinkSync(tempFilePath);
+            
+            // delete record
+            await pb.collection('edit_requests').delete(record_id);
+
+            return res.status(200).json({ message: 'Improvement published successfully' });
+            
+
          }catch(err){
             console.log("Error publishing improvement file from pocketbase:", err);
             return res.status(500).json({message: 'Internal server error'});
          }
+    }
+)
+
+const getIMPFile = expressAsyncHandler(
+
+    async (req, res) => {
+
+        try {
+            const id = req.params.id;
+
+            const result = await getHTMLFileContent('edit_requests', id);
+            //const record = await pb.collection('content').getOne(id);
+            //const htmlFileUrl = pb.getFileUrl(record, record.html_file);
+
+            //const response = await fetch(htmlFileUrl);
+            //const htmlContent = await response.text();
+
+            return res.status(200).json(result);
+        } catch (err) {
+            console.log("Error getting file from pocketbase:", err);
+            return res.status(500).json({ message: 'Internal server error' });
+        }
     }
 )
 
@@ -317,5 +375,8 @@ module.exports = {
     getFile,
     deleteFile,
     uploadFileToPocketBase,
-    getPbFile
+    getPbFile,
+    getIMPFile,
+    uploadImprovementFileToPocketbase,
+    publishImprovementFileFromPocketbase
 };

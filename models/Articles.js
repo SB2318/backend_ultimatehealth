@@ -9,6 +9,12 @@ const articleSchema = new Schema({
     type: Number,
     autoIncrement: true,
   },
+  pb_recordId :{
+    type: String,
+    require: true,
+    default: null
+
+  },
   title: {
     type: String,
     required: true,
@@ -147,7 +153,8 @@ const articleSchema = new Schema({
     type: Schema.Types.ObjectId,
     default: null,
     ref:"ReportAction"
-  }
+  },
+
 });
 
 // Apply the autoIncrement plugin to the schema

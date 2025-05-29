@@ -5,9 +5,21 @@ const editRequestSchema = new Schema(
     {
         _id: {
             type: Schema.Types.ObjectId,
-           // required: true,
+            // required: true,
             auto: true,
             unique: true
+        },
+        pb_recordId: {
+            type: String,
+            require: true,
+            default: null
+
+        },
+        article_recordId: {
+            type: String,
+            require: true,
+            default: null
+
         },
         user_id: {
             type: Schema.Types.ObjectId,
@@ -53,9 +65,9 @@ const editRequestSchema = new Schema(
             type: String,
             default: "Discarded by system"
         },
-        last_updated:{
+        last_updated: {
             type: Date,
-            default: Date.now 
+            default: Date.now
         }
     }
 )

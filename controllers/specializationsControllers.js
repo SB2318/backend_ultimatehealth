@@ -89,6 +89,7 @@ module.exports.getSpecializations = async (req, res) => {
   }
 };
 
+
 module.exports.updateDoctorSpecializations = async (req, res) => {
   try {
     const { id, doctor_ids } = req.body;
