@@ -20,10 +20,11 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
             const articles = await Article.find({
                 status: statusEnum.statusEnum.UNASSIGNED,
                 is_removed: false
-            }).populate('tags')
-                .populate({
-                    path: 'authorId',
-                    select: 'user_name email',
+            })
+            .populate('tags')
+            .populate({
+              path: 'authorId',
+              select: 'user_name email',
                     match: {
                         isBlockUser: false,
                         isBannedUser: false
@@ -337,7 +338,6 @@ module.exports.publishArticle = expressAsyncHandler(
             // user.articles.push(article._id);
 
             await updateWriteEvents(article._id, article.authorId._id);
-
             // Update admin contribution for publish new article
             const aggregate = new AdminAggregate({
                 userId: article.reviewer_id,

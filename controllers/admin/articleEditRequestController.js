@@ -11,6 +11,7 @@ const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
 const AdminAggregate = require('../../models/events/adminContributionEvent');
 const diff = require('diff');
+const getHTMLFileContent = require('../../utils/pocketbaseUtil');
 // Flow
 
 // Submit Edit request
@@ -18,12 +19,12 @@ module.exports.submitEditRequest = expressAsyncHandler(
 
     async (req, res) => {
 
-        const { article_id, edit_reason } = req.body;
+        const { article_id, edit_reason, article_recordId } = req.body;
 
         const userId = req.userId;
 
-        if (!article_id || !edit_reason || !userId) {
-            return res.status(400).json({ message: "Article Id , User Id, Edit Reason required" });
+        if (!article_id || !edit_reason || !userId || !article_recordId) {
+            return res.status(400).json({ message: "Article Id , User Id, article record id, Edit Reason required" });
         }
 
         try {
@@ -57,7 +58,8 @@ module.exports.submitEditRequest = expressAsyncHandler(
             const editRequest = new EditRequest({
                 user_id: userId,
                 article: Number(article_id),
-                edit_reason: edit_reason
+                edit_reason: edit_reason,
+                article_recordId: article_recordId
             });
             await editRequest.save();
 
@@ -305,10 +307,10 @@ module.exports.submitImprovement = expressAsyncHandler(
 
     async (req, res) => {
 
-        const { requestId, edited_content } = req.body;
+        const { requestId, edited_content, pb_recordId } = req.body;
 
-        if (!requestId || !edited_content) {
-            return res.status(400).json({ message: "Request Id, Edited Content, Author Id and Reviewer Id required" });
+        if (!requestId || !edited_content || !pb_recordId) {
+            return res.status(400).json({ message: "Request Id, Edited Content, pb recordid, Author Id and Reviewer Id required" });
         }
 
         try {
@@ -331,6 +333,7 @@ module.exports.submitImprovement = expressAsyncHandler(
 
             editRequest.edited_content = edited_content;
             editRequest.status = statusEnum.statusEnum.REVIEW_PENDING;
+            editRequest.pb_recordId = pb_recordId;
             editRequest.last_updated = new Date();
 
             await editRequest.save();
@@ -378,15 +381,20 @@ module.exports.detectContentLoss = expressAsyncHandler(
                 return res.status(403).json({ message: "The request has not been approved yet." });
             }
 
-            let original_content = '';
-            if (editRequest.article.content.endsWith('.html')) {
-                original_content = await getContent(editRequest.article.content);
-            }
-            else {
-                original_content = editRequest.article.content;
+            if(!editRequest.pb_record || !editRequest.article_recordId){
+                return res.status(400).json({ message: "Missing required fields, record id not found" });
             }
 
-            const differences = diff.diffWords(original_content, editRequest.edited_content);
+            let original_content = await getHTMLFileContent('content', editRequest.pb_recordId);
+            let new_content =  await getHTMLFileContent('edit_requests', editRequest.article_recordId);
+           // if (editRequest.article.content.endsWith('.html')) {
+             //   original_content = await getContent(editRequest.article.content);
+          //  }
+          //  else {
+            //    original_content = editRequest.article.content;
+           // }
+
+            const differences = diff.diffWords(original_content.htmlContent, new_content.htmlContent);
 
             const htmlDiff = differences.map((part) => {
 
@@ -450,10 +458,10 @@ module.exports.discardImprovement = expressAsyncHandler(
 
 module.exports.publishImprovement = expressAsyncHandler(
     async (req, res) => {
-        const { requestId, reviewer_id } = req.body;
+        const { requestId, reviewer_id, content } = req.body;
 
-        if (!requestId || !reviewer_id) {
-            return res.status(400).json({ message: "Request ID and Reviewer ID are required" });
+        if (!requestId || !reviewer_id || !content) {
+            return res.status(400).json({ message: "Request ID and Reviewer ID, content are required" });
         }
 
         try {
@@ -488,7 +496,7 @@ module.exports.publishImprovement = expressAsyncHandler(
 
             article.status = statusEnum.statusEnum.PUBLISHED;
             //  article.publishedDate = new Date();
-            article.content = editRequest.edited_content;
+            article.content = content;
             article.lastUpdated = new Date();
             article.contributors.push(contributor._id);
             // update contributor improvement section
