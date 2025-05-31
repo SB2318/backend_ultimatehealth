@@ -46,7 +46,7 @@ const uploadFile = async (req, res) => {
 
                     const fileNameWithoutExt = path.basename(file.originalname, path.extname(file.originalname));
                     const params = {
-                        Bucket: 'ultimatehealth-01',
+                        Bucket: 'ultimate-health-new',
                         Key: `${fileNameWithoutExt}.webp`, // replace operation needed
                         Body: buffer,
                         ContentType: 'image/webp',
@@ -81,7 +81,7 @@ const uploadFile = async (req, res) => {
         } else if (file.mimetype === 'text/html') {
             // Handle html file upload
             const params = {
-                Bucket: 'ultimatehealth-01',
+                Bucket: 'ultimate-health-new',
                 Key: `${file.originalname}`, // Keep original extension, unique file name needed
                 Body: fs.createReadStream(file.path), // Use stream for larger files
                 ContentType: 'text/html; charset=UTF-8'
@@ -114,7 +114,7 @@ const uploadFile = async (req, res) => {
         else if (file.mimetype === 'audio/mpeg') {
             // Handle MP3 file upload
             const params = {
-                Bucket: 'ultimatehealth-01',
+                Bucket: 'ultimate-health-new',
                 Key: `${file.originalname}`, // Keep original filename and extension
                 Body: fs.createReadStream(file.path),
                 ContentType: 'audio/mpeg',
@@ -153,7 +153,7 @@ const uploadFile = async (req, res) => {
 // get file
 const getFile = async (req, res) => {
     const params = {
-        Bucket: 'ultimatehealth-01',
+        Bucket: 'ultimate-health-new',
         Key: req.params.key,
     };
 
@@ -173,7 +173,7 @@ const getFile = async (req, res) => {
 // We will  not usually remove anything from bucket, we only remove it from our dataase
 const deleteFile = async (req, res) => {
     const params = {
-        Bucket: 'ultimatehealth-01',
+        Bucket: 'ultimate-health-new',
         Key: req.params.key,
     };
 
