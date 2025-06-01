@@ -830,24 +830,26 @@ module.exports.getSocials = expressAsyncHandler(
       return res.status(200).json({ followers: article.contributors });
     }
     let id = social_user_id ? social_user_id : req.userId;
-    const author = await User.findById(id).
-      populate({
-        path: "followings",
-        select: "user_id user_name followers Profile_image",
-        match: {
-          isBannedUser: false,
-          isBlockUser: false
-        }
-      })
-      .populate({
-        path: "followers",
-        select: "user_id user_name followers Profile_image",
-        match: {
-          isBannedUser: false,
-          isBlockUser: false
-        }
-      })
-      .exec();
+   
+    const author = await User.findById(id)
+    .populate({
+     path: "followings",
+     select: "user_id user_name followers Profile_image",
+    match: {
+      isBannedUser: false,
+      isBlockUser: false
+    }
+  })
+  .populate({
+    path: "followers",
+    select: "user_id user_name followers Profile_image",
+    match: {
+      isBannedUser: false,
+      isBlockUser: false
+    }
+  })
+  .exec();
+
 
     if (!author) {
       return res.status(404).json({ error: "Author not found" });

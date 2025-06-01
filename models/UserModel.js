@@ -120,16 +120,16 @@ const userSchema = new mongoose.Schema({
         ref: 'Article',
         default: []
     },
-    followers: {
-        type: [Schema.Types.ObjectId],
+    followers: [{
+        type: Schema.Types.ObjectId,
         ref: 'User',
         default: []
-    },
-    followings: {
-        type: [Schema.Types.ObjectId],
+    }],
+    followings: [{
+        type: Schema.Types.ObjectId,
         ref: 'User',
         default: []
-    },
+    }],
 
     followerCount: {
         type: Number,

@@ -100,6 +100,7 @@ module.exports.getAllArticles = expressAsyncHandler(
         })
         .exec();
 
+        //console.log("Author", articles);
       articles.filter(r => r.article?.authorId !== null);
 
       for (const article of articles) {

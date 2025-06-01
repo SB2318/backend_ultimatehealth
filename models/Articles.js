@@ -34,11 +34,11 @@ const articleSchema = new Schema({
     ref: 'User'
   },
   contributors:
-    {
-      type: [Schema.Types.ObjectId], // Reference to User ho edited the article
+    [{
+      type: Schema.Types.ObjectId, // Reference to User ho edited the article
       ref: 'User',
       default:[]
-    },
+    }],
   
   content: {
     type: String,
@@ -89,32 +89,32 @@ const articleSchema = new Schema({
     required: true,
     default: false,
   },
-  likedUsers: {
-    type: [Schema.Types.ObjectId],
+  likedUsers: [{
+    type: Schema.Types.ObjectId,
     ref: 'User', // Reference to User
     default: []
-  },
+  }],
 
-  repostUsers: {
-    type: [Schema.Types.ObjectId],
+  repostUsers: [{
+    type: Schema.Types.ObjectId,
     ref: 'User', // Reference to User
     default: []
-  },
-  savedUsers: {
-    type: [Schema.Types.ObjectId],
+  }],
+  savedUsers: [{
+    type: Schema.Types.ObjectId,
     ref: 'User', // Reference to User
     default: []
-  },
-  viewUsers: {
-    type: [Schema.Types.ObjectId],
+  }],
+  viewUsers: [{
+    type: Schema.Types.ObjectId,
     ref: 'User', 
     default: []
-  },
-  mentionedUsers: {
-    type: [Schema.Types.ObjectId],
+  }],
+  mentionedUsers: [{
+    type: Schema.Types.ObjectId,
     ref: 'User', 
     default: []
-  },
+  }],
 
   status :{
     type: String,
@@ -133,11 +133,11 @@ const articleSchema = new Schema({
  },
 
   review_comments:
-  {
-      type: [Schema.Types.ObjectId],
+  [{
+      type: Schema.Types.ObjectId,
       ref: 'Comment',
       default: []
-  },
+  }],
   
 
   discardReason:{
