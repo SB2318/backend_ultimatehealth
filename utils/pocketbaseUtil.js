@@ -5,6 +5,7 @@ const pb = new Pocketbase(process.env.DATASORCE_URL);
 
 const getHTMLFileContent = async (collectionName, recordId) => {
 
+    await authenticateAdmin();
     const record = await pb.collection(collectionName).getOne(recordId);
 
     if(!record){
@@ -21,4 +22,28 @@ const getHTMLFileContent = async (collectionName, recordId) => {
     return { htmlContent: htmlContent, fileName: fileName }
 }
 
-module.exports = getHTMLFileContent;
+
+
+const authenticateAdmin = async () => {
+
+
+    const ADMIN_EMAIL = process.env.DATASOURCE_USERNAME;
+    const ADMIN_PASSWORD = process.env.DATASOURCE_PASSWORD;
+
+    //console.log('admin email',ADMIN_EMAIL);
+    //console.log('admin-pass',ADMIN_PASSWORD);
+
+    try {
+        const authData = await pb.admins.authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
+        console.log('✅ Admin authenticated');
+        return authData;
+    } catch (err) {
+        console.error("Admin authentication failed:", err.message);
+    
+    }
+};
+
+module.exports = {
+    getHTMLFileContent,
+    authenticateAdmin
+};

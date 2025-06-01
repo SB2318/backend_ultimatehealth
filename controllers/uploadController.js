@@ -7,7 +7,7 @@ const path = require('path');
 const os = require('os');
 const Pocketbase = require('pocketbase/cjs');
 const expressAsyncHandler = require('express-async-handler');
-const getHTMLFileContent = require('../utils/pocketbaseUtil');
+const {getHTMLFileContent, authenticateAdmin} = require('../utils/pocketbaseUtil');
 
 require('dotenv').config();
 
@@ -195,6 +195,7 @@ const uploadFileToPocketBase = expressAsyncHandler(
     async (req, res) => {
         try {
             
+            await authenticateAdmin();
             const { record_id, title } = req.body;
             const file = req.file;
 
@@ -237,6 +238,7 @@ const getPbFile = expressAsyncHandler(
     async (req, res) => {
 
         try {
+
             const id = req.params.id;
             const result = await getHTMLFileContent('content', id);
             //const record = await pb.collection('content').getOne(id);
@@ -265,6 +267,7 @@ const uploadImprovementFileToPocketbase = expressAsyncHandler(
 
         try {
 
+            await authenticateAdmin();
             const formData = new FormData();
             formData.append('user_id', user_id);
             formData.append('article_id', article_id);
@@ -307,6 +310,7 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
 
          try{
 
+            await authenticateAdmin();
             const improvementRecord = await pb.collection('edit_requests').get(record_id);
 
             if(!improvementRecord || !improvementRecord.edited_html_file){
