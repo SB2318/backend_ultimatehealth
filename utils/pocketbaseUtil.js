@@ -1,11 +1,15 @@
 
-const Pocketbase = require('pocketbase/cjs');
+//const Pocketbase = require('pocketbase');
 
-const pb = new Pocketbase(process.env.DATASORCE_URL);
+//const pb = new Pocketbase(process.env.DATASORCE_URL);
+
+let cachePBClient = null;
 
 const getHTMLFileContent = async (collectionName, recordId) => {
 
-    await authenticateAdmin();
+    const pb = await getPocketbaseClient();
+    await authenticateAdmin(pb);
+    
     const record = await pb.collection(collectionName).getOne(recordId);
 
     if(!record){
@@ -24,26 +28,51 @@ const getHTMLFileContent = async (collectionName, recordId) => {
 
 
 
-const authenticateAdmin = async () => {
+const authenticateAdmin = async (pb) => {
 
 
     const ADMIN_EMAIL = process.env.DATASOURCE_USERNAME;
     const ADMIN_PASSWORD = process.env.DATASOURCE_PASSWORD;
 
     //console.log('admin email',ADMIN_EMAIL);
-    //console.log('admin-pass',ADMIN_PASSWORD);
+  //  console.log('admin-pass',ADMIN_PASSWORD);
 
     try {
+      
+        pb.authStore.clear();
         const authData = await pb.admins.authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
+        //const authData = await pb.collection('users').authWithPassword('test@example.com', '1234567890');
         console.log('✅ Admin authenticated');
         return authData;
     } catch (err) {
-        console.error("Admin authentication failed:", err.message);
+       // console.error("Admin authentication failed:", err.message);
+
+        const mfaId = err.response?.mfaId;
+  if (!mfaId) {
+    throw err; // not mfa -> rethrow
+  }
+
+  // the user needs to authenticate again with another auth method, for example OTP
+     const result = await pb.collection('users').requestOTP(process.env.USER_NAME);
+  // ... show a modal for users to check their email and to enter the received code ...
+    await pb.collection('users').authWithOTP(result.otpId, 'EMAIL_CODE', { 'mfaId': mfaId });
     
     }
 };
 
+const getPocketbaseClient = async () =>{
+
+    if(cachePBClient){
+        return cachePBClient;
+    }
+    const Pocketbase = (await import('pocketbase')).default;
+    const client = new Pocketbase(process.env.DATASOURCE_URL);
+    cachePBClient = client;
+    return client;
+}
+
 module.exports = {
     getHTMLFileContent,
-    authenticateAdmin
+    authenticateAdmin,
+    getPocketbaseClient
 };

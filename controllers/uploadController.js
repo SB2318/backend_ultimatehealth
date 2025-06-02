@@ -5,9 +5,9 @@ const axios = require('axios');
 const sharp = require('sharp');
 const path = require('path');
 const os = require('os');
-const Pocketbase = require('pocketbase/cjs');
+//const Pocketbase = require('pocketbase');
 const expressAsyncHandler = require('express-async-handler');
-const {getHTMLFileContent, authenticateAdmin} = require('../utils/pocketbaseUtil');
+const {getHTMLFileContent, authenticateAdmin, getPocketbaseClient} = require('../utils/pocketbaseUtil');
 
 require('dotenv').config();
 
@@ -19,7 +19,7 @@ const s3Client = new S3Client({
     },
 });
 
-const pb = new Pocketbase(process.env.DATASORCE_URL);
+//const pb = new Pocketbase(process.env.DATASORCE_URL);
 
 
 // upload file
@@ -195,7 +195,8 @@ const uploadFileToPocketBase = expressAsyncHandler(
     async (req, res) => {
         try {
             
-            await authenticateAdmin();
+           const pb = await getPocketbaseClient();
+            await authenticateAdmin(pb);
             const { record_id, title } = req.body;
             const file = req.file;
 
@@ -267,7 +268,8 @@ const uploadImprovementFileToPocketbase = expressAsyncHandler(
 
         try {
 
-            await authenticateAdmin();
+            const pb = await getPocketbaseClient();
+            await authenticateAdmin(pb);
             const formData = new FormData();
             formData.append('user_id', user_id);
             formData.append('article_id', article_id);
@@ -309,8 +311,9 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
          }
 
          try{
-
-            await authenticateAdmin();
+            
+            const pb = getPocketbaseClient();
+            await authenticateAdmin(pb);
             const improvementRecord = await pb.collection('edit_requests').get(record_id);
 
             if(!improvementRecord || !improvementRecord.edited_html_file){
