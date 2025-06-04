@@ -360,7 +360,7 @@ const getIMPFile = expressAsyncHandler(
         try {
             const {recordid, articleRecordId} = req.query;
 
-            if(!recordid || !articleRecordId){
+            if(!recordid && !articleRecordId){
                 res.status(400).json({ message: 'Invalid request: missing recordid or articleRecordId' });
             }
             let result;
