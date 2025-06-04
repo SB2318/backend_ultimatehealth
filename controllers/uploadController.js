@@ -365,7 +365,7 @@ const getIMPFile = expressAsyncHandler(
             }
             let result;
             if(recordid){
-              result = await getHTMLFileContent('edit_requests', id);
+              result = await getHTMLFileContent('edit_requests', recordid);
             }else{
                 result = await getHTMLFileContent('content', articleRecordId);
             }
