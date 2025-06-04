@@ -358,9 +358,18 @@ const getIMPFile = expressAsyncHandler(
     async (req, res) => {
 
         try {
-            const id = req.params.id;
+            const {recordid, articleRecordId} = req.query;
 
-            const result = await getHTMLFileContent('edit_requests', id);
+            if(!recordid || !articleRecordId){
+                res.status(400).json({ message: 'Invalid request: missing recordid or articleRecordId' });
+            }
+            let result;
+            if(recordid){
+              result = await getHTMLFileContent('edit_requests', id);
+            }else{
+                result = await getHTMLFileContent('content', articleRecordId);
+            }
+       
             //const record = await pb.collection('content').getOne(id);
             //const htmlFileUrl = pb.getFileUrl(record, record.html_file);
 
