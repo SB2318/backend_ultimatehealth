@@ -7,7 +7,7 @@ const path = require('path');
 const os = require('os');
 //const Pocketbase = require('pocketbase');
 const expressAsyncHandler = require('express-async-handler');
-const {getHTMLFileContent, authenticateAdmin, getPocketbaseClient} = require('../utils/pocketbaseUtil');
+const { getHTMLFileContent, authenticateAdmin, getPocketbaseClient } = require('../utils/pocketbaseUtil');
 
 require('dotenv').config();
 
@@ -194,25 +194,32 @@ const uploadFileToPocketBase = expressAsyncHandler(
 
     async (req, res) => {
         try {
-            
-           const pb = await getPocketbaseClient();
-            await authenticateAdmin(pb);
-            const { record_id, title } = req.body;
-            const file = req.file;
 
-            if (!file) {
-                return res.status(400).send({ message: 'No file uploaded' });
+            const pb = await getPocketbaseClient();
+            await authenticateAdmin(pb);
+            const { record_id, title, htmlContent } = req.body;
+
+
+            if (!title && !htmlContent) {
+                return res.status(400).send({ message: 'Please provide title and htmlContent' });
             }
 
+            // create html file
+            const fileName = `${title?.replace(/\s+/g, '_') || 'file'}.html`;
+            const filePath = path.join(os.tmpdir(), fileName);
+            fs.writeFileSync(filePath, htmlContent, 'utf8');
+
             const formData = new FormData();
-            formData.append('title', title);
-            formData.append('html_file', fs.createReadStream(file.path), file.originalname);
+            formData.append('title', title || 'Untitled');
+            formData.append('html_file', fs.createReadStream(filePath), fileName);
+
+
 
             let record;
             if (record_id) {
                 record = await pb.collection('content').update(record_id, formData);
 
-                if(!record){
+                if (!record) {
                     return res.status(404).json({ message: 'Record not found' });
                 }
             }
@@ -220,6 +227,7 @@ const uploadFileToPocketBase = expressAsyncHandler(
                 record = await pb.collection('content').create(formData);
             }
 
+            fs.unlinkSync(filePath);
             return res.status(200).json({
                 message: 'File uploaded successfully',
                 recordId: record.id,
@@ -259,11 +267,10 @@ const getPbFile = expressAsyncHandler(
 const uploadImprovementFileToPocketbase = expressAsyncHandler(
     async (req, res) => {
 
-        const { record_id, user_id, article_id, improvement_id } = req.body;
-        const file = req.file;
+        const { record_id, user_id, article_id, title, improvement_id, htmlContent } = req.body;
 
-        if (!user_id || !article_id || !improvement_id || !file) {
-            return res.status(400).json({ message: 'Missing required fields: user_id, article_id, improvement_id, file' });
+        if (!user_id || !article_id || !improvement_id || !htmlContent || !title) {
+            return res.status(400).json({ message: 'Missing required fields: user_id, article_id, improvement_id , htmlContent, title' });
         }
 
         try {
@@ -274,19 +281,31 @@ const uploadImprovementFileToPocketbase = expressAsyncHandler(
             formData.append('user_id', user_id);
             formData.append('article_id', article_id);
             formData.append('improvement_id', improvement_id);
-            formData.append('edited_html_file', fs.createReadStream(file.path), file.originalname);
+
+            // Create Html file
+
+            const fileName = `${title?.replace(/\s+/g, '_') || 'file'}.html`;
+            const filePath = path.join(os.tmpdir(), fileName);
+            fs.writeFileSync(filePath, htmlContent, 'utf8');
+
+
+            //formData.append('title', title || 'Untitled');
+            formData.append('edited_html_file', fs.createReadStream(filePath), fileName);
+            //formData.append('edited_html_file', fs.createReadStream(file.path), file.originalname);
 
             let record;
             if (record_id) {
                 record = await pb.collection('edit_requests').update(record_id, formData);
 
-                if(!record){
+                if (!record) {
                     return res.status(404).json({ message: 'Record not found' });
                 }
             }
             else {
                 record = await pb.collection('edit_requests').create(formData);
             }
+
+            fs.unlinkSync(filePath);
 
             return res.status(200).json({
                 message: 'File uploaded successfully',
@@ -302,31 +321,31 @@ const uploadImprovementFileToPocketbase = expressAsyncHandler(
 )
 
 const publishImprovementFileFromPocketbase = expressAsyncHandler(
-    async (req, res) =>{
-     
-         const {record_id, article_id} = req.body;
+    async (req, res) => {
 
-         if(!record_id || !article_id){
-            return res.status(400).json({message: 'Missing required fields: record_id, article_id'});
-         }
+        const { record_id, article_id } = req.body;
 
-         try{
-            
+        if (!record_id || !article_id) {
+            return res.status(400).json({ message: 'Missing required fields: record_id, article_id' });
+        }
+
+        try {
+
             const pb = getPocketbaseClient();
             await authenticateAdmin(pb);
             const improvementRecord = await pb.collection('edit_requests').get(record_id);
 
-            if(!improvementRecord || !improvementRecord.edited_html_file){
+            if (!improvementRecord || !improvementRecord.edited_html_file) {
                 return res.status(404).json({ message: 'Record not found' });
             }
 
             const fileUrl = pb.files.getUrl(improvementRecord, improvementRecord.edited_html_file, { download: true });
-            const tempFilePath = path.join(os.tempdir(), improvementRecord.edited_html_file);
-            
+            const tempFilePath = path.join(os.tmpdir(), improvementRecord.edited_html_file);
+
             const response = await axios.get(fileUrl, { responseType: 'stream' });
             const writer = fs.createWriteStream(tempFilePath);
 
-            await new Promise((resolve, reject)=>{
+            await new Promise((resolve, reject) => {
                 response.data.pipe(writer);
                 writer.on('finish', resolve);
                 writer.on('error', reject);
@@ -339,17 +358,17 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
             await pb.collection('content').update(article_id, formData);
 
             fs.unlinkSync(tempFilePath);
-            
+
             // delete record
             await pb.collection('edit_requests').delete(record_id);
 
             return res.status(200).json({ message: 'Improvement published successfully' });
-            
 
-         }catch(err){
+
+        } catch (err) {
             console.log("Error publishing improvement file from pocketbase:", err);
-            return res.status(500).json({message: 'Internal server error'});
-         }
+            return res.status(500).json({ message: 'Internal server error' });
+        }
     }
 )
 
@@ -358,23 +377,19 @@ const getIMPFile = expressAsyncHandler(
     async (req, res) => {
 
         try {
-            const {recordid, articleRecordId} = req.query;
+            const { recordid, articleRecordId } = req.query;
 
-            if(!recordid && !articleRecordId){
+            if (!recordid && !articleRecordId) {
                 res.status(400).json({ message: 'Invalid request: missing recordid or articleRecordId' });
+                return;
             }
             let result;
-            if(recordid){
-              result = await getHTMLFileContent('edit_requests', recordid);
-            }else{
+            if (recordid) {
+                result = await getHTMLFileContent('edit_requests', recordid);
+            } else {
                 result = await getHTMLFileContent('content', articleRecordId);
             }
-       
-            //const record = await pb.collection('content').getOne(id);
-            //const htmlFileUrl = pb.getFileUrl(record, record.html_file);
 
-            //const response = await fetch(htmlFileUrl);
-            //const htmlContent = await response.text();
 
             return res.status(200).json(result);
         } catch (err) {

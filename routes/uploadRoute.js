@@ -11,8 +11,8 @@ uploadRoute.get('/getFile/:key', controller.getFile);
 uploadRoute.delete('/deleteFile/:key',authenticateToken, controller.deleteFile);
 
 /** Pocketbase */
-uploadRoute.post('/upload-pocketbase/article', authenticateToken, upload.single('html_file'),controller.uploadFileToPocketBase);
-uploadRoute.post('/upload-pocketbase/improvement', authenticateToken,  upload.single('edited_html_file'), controller.uploadImprovementFileToPocketbase);
+uploadRoute.post('/upload-pocketbase/article', authenticateToken, controller.uploadFileToPocketBase);
+uploadRoute.post('/upload-pocketbase/improvement', authenticateToken,  controller.uploadImprovementFileToPocketbase);
 uploadRoute.post('/publish-improvement-from-pocketbase', authenticateToken, controller.publishImprovementFileFromPocketbase);
 uploadRoute.get('/articles/get-article-content/:id', authenticateToken, controller.getPbFile);
 uploadRoute.get('/articles/get-improve-content', authenticateToken, controller.getIMPFile);
