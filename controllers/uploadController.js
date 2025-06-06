@@ -5,7 +5,8 @@ const axios = require('axios');
 const sharp = require('sharp');
 const path = require('path');
 const os = require('os');
-//const Pocketbase = require('pocketbase');
+const { FormData } = require('formdata-node')
+const { fileFromPath } = require('formdata-node/file-from-path')
 const expressAsyncHandler = require('express-async-handler');
 const { getHTMLFileContent, authenticateAdmin, getPocketbaseClient } = require('../utils/pocketbaseUtil');
 
@@ -211,7 +212,10 @@ const uploadFileToPocketBase = expressAsyncHandler(
 
             const formData = new FormData();
             formData.append('title', title || 'Untitled');
-            formData.append('html_file', fs.createReadStream(filePath), fileName);
+            const file = await fileFromPath(filePath);
+            //const file = await filesFromPaths(filePath);
+             //const [file] = await filesFromPaths([filePath])
+            formData.append('html_file', file);
 
 
 
@@ -283,16 +287,13 @@ const uploadImprovementFileToPocketbase = expressAsyncHandler(
             formData.append('improvement_id', improvement_id);
 
             // Create Html file
-
             const fileName = `${title?.replace(/\s+/g, '_') || 'file'}.html`;
             const filePath = path.join(os.tmpdir(), fileName);
             fs.writeFileSync(filePath, htmlContent, 'utf8');
 
-
-            //formData.append('title', title || 'Untitled');
-            formData.append('edited_html_file', fs.createReadStream(filePath), fileName);
-            //formData.append('edited_html_file', fs.createReadStream(file.path), file.originalname);
-
+            const file = await fileFromPath(filePath);
+            formData.append('edited_html_file', file);
+           
             let record;
             if (record_id) {
                 record = await pb.collection('edit_requests').update(record_id, formData);
@@ -353,7 +354,9 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
 
             // Prepare formdata to upload to pocketbase
             const formData = new FormData();
-            formData.append('html-file', fs.createReadStream(tempFilePath));
+            
+            const file = await fileFromPath(tempFilePath);
+            formData.append('html_file', file);
 
             await pb.collection('content').update(article_id, formData);
 
