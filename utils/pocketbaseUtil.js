@@ -18,7 +18,7 @@ const getHTMLFileContent = async (collectionName, recordId) => {
 
     const fileName = collectionName === 'content' ? record.html_file : record.edited_html_file;
 
-    const htmlFileUrl = pb.getFileUrl(record, fileName);
+    const htmlFileUrl = pb.files.getUrl(record, fileName);
 
     const response = await fetch(htmlFileUrl);
     const htmlContent = await response.text();

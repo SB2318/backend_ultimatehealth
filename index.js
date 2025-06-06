@@ -250,7 +250,7 @@ io.on('connection', (socket) => {
                             body: content
                         });
                     }
-                    console.log("Mentioned Users", mentionedUsers);
+                  //  console.log("Mentioned Users", mentionedUsers);
                     
                     sendCommentNotification(article.authorId, articleId, {
                         title: `${user.user_handle} commented on your post`,
@@ -486,7 +486,7 @@ io.on('connection', (socket) => {
                 }
 
                 // Fetch all active comments related to the article
-                const comments = await Comment.find({ articleId: articleId, status: 'Active', is_removed: false })
+                let comments = await Comment.find({ articleId: articleId, status: 'Active', is_removed: false })
                    // .populate('userId', 'user_handle Profile_image')
                       .populate({
                         path: 'userId',

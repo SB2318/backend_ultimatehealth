@@ -255,7 +255,7 @@ const getPbFile = expressAsyncHandler(
             const id = req.params.id;
             const result = await getHTMLFileContent('content', id);
             //const record = await pb.collection('content').getOne(id);
-            //const htmlFileUrl = pb.getFileUrl(record, record.html_file);
+            //const htmlFileUrl = pb.files.getUrl(record, record.html_file);
 
             //const response = await fetch(htmlFileUrl);
             //const htmlContent = await response.text();

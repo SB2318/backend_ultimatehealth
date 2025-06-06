@@ -151,7 +151,7 @@ const deleteOldNotifications = async () => {
     try {
 
         const onedayago = new Date();
-        onedayago.setDate(date.getDate() - 1);
+        onedayago.setDate(onedayago.getDate() - 1);
 
         await Notification.deleteMany({
             read: true,  // Only delete read notifications
