@@ -16,6 +16,7 @@ uploadRoute.post('/upload-pocketbase/improvement', authenticateToken,  controlle
 uploadRoute.post('/publish-improvement-from-pocketbase', authenticateToken, controller.publishImprovementFileFromPocketbase);
 uploadRoute.get('/articles/get-article-content/:id', authenticateToken, controller.getPbFile);
 uploadRoute.get('/articles/get-improve-content', authenticateToken, controller.getIMPFile);
+uploadRoute.delete('/delete-improvement/:record_id', authenticateToken, controller.deleteImprovementRecordFromPocketbase);
 
    
 

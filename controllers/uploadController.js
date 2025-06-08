@@ -323,6 +323,34 @@ const uploadImprovementFileToPocketbase = expressAsyncHandler(
     }
 )
 
+// User & Admin
+const getIMPFile = expressAsyncHandler(
+
+    async (req, res) => {
+
+        try {
+            const { recordid, articleRecordId } = req.query;
+
+            if (!recordid && !articleRecordId) {
+                res.status(400).json({ message: 'Invalid request: missing recordid or articleRecordId' });
+                return;
+            }
+            let result;
+            if (recordid) {
+                result = await getHTMLFileContent('edit_requests', recordid);
+            } else {
+                result = await getHTMLFileContent('content', articleRecordId);
+            }
+
+
+            return res.status(200).json(result);
+        } catch (err) {
+            console.log("Error getting file from pocketbase:", err);
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+    }
+)
+
 // Admin app
 const publishImprovementFileFromPocketbase = expressAsyncHandler(
     async (req, res) => {
@@ -369,7 +397,7 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
             await pb.collection('edit_requests').delete(record_id);
 
             return res.status(200).json({
-                message: 'Improvement published successfully', 
+                message: 'Improvement published successfully',
                 recordId: record.id,
                 html_file: record.html_file
             });
@@ -382,33 +410,44 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
     }
 )
 
-// User & Admin
-const getIMPFile = expressAsyncHandler(
+// Admin App
 
+const deleteImprovementRecordFromPocketbase = expressAsyncHandler(
     async (req, res) => {
 
+        const { record_id } = req.params;
+
+        if (!record_id) {
+            return res.status(400).json({ message: 'Missing required fields: record_id' });
+        }
+
         try {
-            const { recordid, articleRecordId } = req.query;
 
-            if (!recordid && !articleRecordId) {
-                res.status(400).json({ message: 'Invalid request: missing recordid or articleRecordId' });
-                return;
-            }
-            let result;
-            if (recordid) {
-                result = await getHTMLFileContent('edit_requests', recordid);
-            } else {
-                result = await getHTMLFileContent('content', articleRecordId);
+            const pb = getPocketbaseClient();
+            await authenticateAdmin(pb);
+            const improvementRecord = await pb.collection('edit_requests').get(record_id);
+
+            if (!improvementRecord) {
+                return res.status(404).json({ message: 'Record not found' });
             }
 
+            // delete record
+            await pb.collection('edit_requests').delete(record_id);
 
-            return res.status(200).json(result);
+            return res.status(200).json({
+                status: true,
+                message: 'Improvement deleted successfully',
+            });
+
+
         } catch (err) {
-            console.log("Error getting file from pocketbase:", err);
+            console.log("Error deleteing improvement file from pocketbase:", err);
             return res.status(500).json({ message: 'Internal server error' });
         }
     }
 )
+
+
 
 
 
@@ -420,5 +459,6 @@ module.exports = {
     getPbFile,
     getIMPFile,
     uploadImprovementFileToPocketbase,
-    publishImprovementFileFromPocketbase
+    publishImprovementFileFromPocketbase,
+    deleteImprovementRecordFromPocketbase
 };
