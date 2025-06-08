@@ -389,6 +389,8 @@ module.exports.discardChanges = expressAsyncHandler(
             article.status = statusEnum.statusEnum.DISCARDED;
             article.lastUpdated = new Date();
 
+          
+
             await article.save();
             if (user) {
 
@@ -505,6 +507,9 @@ async function unassignArticle() {
 
     }
 }
+
+// Task Left: For discarded article, there will be a 30-50 days timeline, after that
+// It will remove from storage, coming to the next task
 // cron job for article discarded
 
 async function discardArticle() {
@@ -544,6 +549,8 @@ async function discardArticle() {
         console.error(err);
     }
 }
+
+
 
 cron.schedule('0 0 * * *', async () => {
 
