@@ -191,6 +191,7 @@ const deleteFile = async (req, res) => {
 
 /** Pocketbase work */
 
+// User app
 const uploadFileToPocketBase = expressAsyncHandler(
 
     async (req, res) => {
@@ -214,7 +215,7 @@ const uploadFileToPocketBase = expressAsyncHandler(
             formData.append('title', title || 'Untitled');
             const file = await fileFromPath(filePath);
             //const file = await filesFromPaths(filePath);
-             //const [file] = await filesFromPaths([filePath])
+            //const [file] = await filesFromPaths([filePath])
             formData.append('html_file', file);
 
 
@@ -246,7 +247,7 @@ const uploadFileToPocketBase = expressAsyncHandler(
     }
 )
 
-
+// User & Admin
 const getPbFile = expressAsyncHandler(
     async (req, res) => {
 
@@ -268,6 +269,7 @@ const getPbFile = expressAsyncHandler(
     }
 )
 
+// User app
 const uploadImprovementFileToPocketbase = expressAsyncHandler(
     async (req, res) => {
 
@@ -293,7 +295,7 @@ const uploadImprovementFileToPocketbase = expressAsyncHandler(
 
             const file = await fileFromPath(filePath);
             formData.append('edited_html_file', file);
-           
+
             let record;
             if (record_id) {
                 record = await pb.collection('edit_requests').update(record_id, formData);
@@ -321,6 +323,7 @@ const uploadImprovementFileToPocketbase = expressAsyncHandler(
     }
 )
 
+// Admin app
 const publishImprovementFileFromPocketbase = expressAsyncHandler(
     async (req, res) => {
 
@@ -354,18 +357,22 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
 
             // Prepare formdata to upload to pocketbase
             const formData = new FormData();
-            
+
             const file = await fileFromPath(tempFilePath);
             formData.append('html_file', file);
 
-            await pb.collection('content').update(article_id, formData);
+            const record = await pb.collection('content').update(article_id, formData);
 
             fs.unlinkSync(tempFilePath);
 
             // delete record
             await pb.collection('edit_requests').delete(record_id);
 
-            return res.status(200).json({ message: 'Improvement published successfully' });
+            return res.status(200).json({
+                message: 'Improvement published successfully', 
+                recordId: record.id,
+                html_file: record.html_file
+            });
 
 
         } catch (err) {
@@ -375,6 +382,7 @@ const publishImprovementFileFromPocketbase = expressAsyncHandler(
     }
 )
 
+// User & Admin
 const getIMPFile = expressAsyncHandler(
 
     async (req, res) => {
