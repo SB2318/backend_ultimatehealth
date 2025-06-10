@@ -189,6 +189,19 @@ const deleteFile = async (req, res) => {
     }
 };
 
+const deleteFileFn = async (url) => {
+    const params = {
+        Bucket: 'ultimate-health-new',
+        Key: url,
+    };
+    const command = new DeleteObjectCommand(params);
+    try {
+        await s3Client.send(command);
+    } catch (err) {
+        console.log("Error deleting file:", err);
+    }
+};
+
 /** Pocketbase work */
 
 // User app
@@ -420,7 +433,6 @@ const deleteImprovementRecordFromPocketbase = expressAsyncHandler(
         if (!record_id) {
             return res.status(400).json({ message: 'Missing required fields: record_id' });
         }
-
         try {
 
             const pb = getPocketbaseClient();
@@ -460,5 +472,6 @@ module.exports = {
     getIMPFile,
     uploadImprovementFileToPocketbase,
     publishImprovementFileFromPocketbase,
-    deleteImprovementRecordFromPocketbase
+    deleteImprovementRecordFromPocketbase,
+    deleteFileFn
 };

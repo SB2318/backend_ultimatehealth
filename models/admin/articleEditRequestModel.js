@@ -50,6 +50,12 @@ const editRequestSchema = new Schema(
             type: String,
             default: null,
         },
+
+        imageUtils: {
+            type: [String],
+            required: true,
+            default:[],
+        },
         editComments: [
             {
                 type: Schema.Types.ObjectId,

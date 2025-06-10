@@ -11,6 +11,7 @@ const statusEnum = require('../../utils/StatusEnum');
 const AdminAggregate = require('../../models/events/adminContributionEvent');
 
 const jwt = require("jsonwebtoken");
+const { deleteArticleRecordFromPocketbase } = require('../../utils/pocketbaseUtil');
 // article review section
 
 // getallDraftArticle
@@ -21,10 +22,10 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
                 status: statusEnum.statusEnum.UNASSIGNED,
                 is_removed: false
             })
-            .populate('tags')
-            .populate({
-              path: 'authorId',
-              select: 'user_name email',
+                .populate('tags')
+                .populate({
+                    path: 'authorId',
+                    select: 'user_name email',
                     match: {
                         isBlockUser: false,
                         isBannedUser: false
@@ -48,7 +49,7 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
         }
         try {
             const articles = await Article.find({
-                reviewer_id: reviewer_id, 
+                reviewer_id: reviewer_id,
                 is_removed: false,
                 status: {
                     $in: [statusEnum.statusEnum.IN_PROGRESS, statusEnum.statusEnum.AWAITING_USER, statusEnum.statusEnum.REVIEW_PENDING]
@@ -82,7 +83,7 @@ module.exports.getAllReviewCompletedArticles = expressAsyncHandler(
             const articles = await Article.find({
                 reviewer_id: reviewer_id,
                 is_removed: false,
-                 status: {
+                status: {
                     $in: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
                 }
             }).populate('tags').exec();
@@ -126,7 +127,7 @@ module.exports.assignModerator = expressAsyncHandler(
                 return;
             }
 
-            if(article.authorId === null){
+            if (article.authorId === null) {
                 res.status(400).json({ message: 'Article author either block or banned' });
                 return;
             }
@@ -318,7 +319,7 @@ module.exports.publishArticle = expressAsyncHandler(
                 return res.status(404).json({ message: "Article or Reviewer not found" });
             }
 
-            if(article.authorId === null){
+            if (article.authorId === null) {
                 return res.status(404).json({ message: "Article author either block or banned" });
                 return;
             }
@@ -328,7 +329,7 @@ module.exports.publishArticle = expressAsyncHandler(
             }
             //const user = await User.findById(article.authorId);
             //if (!user) {
-               // return res.status(404).json({ message: "Author not found" });
+            // return res.status(404).json({ message: "Author not found" });
             //}
             article.status = statusEnum.statusEnum.PUBLISHED;
             article.publishedDate = new Date();
@@ -389,7 +390,16 @@ module.exports.discardChanges = expressAsyncHandler(
             article.status = statusEnum.statusEnum.DISCARDED;
             article.lastUpdated = new Date();
 
-          
+            // delete record from pb
+            await deleteArticleRecordFromPocketbase(article.pb_recordId);
+
+            for (const url of article.imageUtils) {
+                // delete image from aws
+                const parts = url.split('/api/getFile/');
+                if (parts.length >= 2) {
+                    await deleteFileFn(parts[1]);
+                }
+            }
 
             await article.save();
             if (user) {
@@ -508,9 +518,7 @@ async function unassignArticle() {
     }
 }
 
-// Task Left: For discarded article, there will be a 30-50 days timeline, after that
-// It will remove from storage, coming to the next task
-// cron job for article discarded
+// discarded article will not be clickable
 
 async function discardArticle() {
 
@@ -537,6 +545,14 @@ async function discardArticle() {
             article.assigned_at = null;
             article.status = statusEnum.statusEnum.DISCARDED;
 
+            await deleteArticleRecordFromPocketbase(article.pb_recordId);
+            for (const url of article.imageUtils) {
+                // delete image from aws
+                const parts = url.split('/api/getFile/');
+                if (parts.length >= 2) {
+                    await deleteFileFn(parts[1]);
+                }
+            }
             await article.save();
 
             if (article.authorId?.email && article.title) {
@@ -554,13 +570,13 @@ async function discardArticle() {
 
 cron.schedule('0 0 * * *', async () => {
 
-   
+
     await unassignArticle();
 });
 
 cron.schedule('0 0 * * *', async () => {
 
-   
+
     await discardArticle();
 });
 

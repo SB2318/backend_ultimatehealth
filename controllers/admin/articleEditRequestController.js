@@ -11,7 +11,9 @@ const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
 const AdminAggregate = require('../../models/events/adminContributionEvent');
 const diff = require('diff');
+
 const getHTMLFileContent = require('../../utils/pocketbaseUtil');
+const { deleteFileFn } = require('../uploadController');
 // Flow
 
 // Submit Edit request
@@ -117,19 +119,19 @@ module.exports.getAllInProgressImprovementsForAdmin = expressAsyncHandler(
                 }
             }).populate({
                 path: 'article',
-                populate:[ 
+                populate: [
                     {
-                    path: 'tags',
-                  },
-                 {
-                    path: 'authorId',
-                    select: 'user_name email',
-                    match: {
-                        isBlockUser: false,
-                        isBannedUser: false
+                        path: 'tags',
+                    },
+                    {
+                        path: 'authorId',
+                        select: 'user_name email',
+                        match: {
+                            isBlockUser: false,
+                            isBannedUser: false
+                        }
                     }
-                }
-            ]
+                ]
             }).exec();
 
             articles.filter(r => r.article?.authorId !== null);
@@ -307,18 +309,16 @@ module.exports.submitImprovement = expressAsyncHandler(
 
     async (req, res) => {
 
-        const { requestId, edited_content, pb_recordId } = req.body;
+        const { requestId, edited_content, pb_recordId, imageUtils } = req.body;
 
-        if (!requestId || !edited_content || !pb_recordId) {
-            return res.status(400).json({ message: "Request Id, Edited Content, pb recordid, Author Id and Reviewer Id required" });
+        if (!requestId || !edited_content || !pb_recordId || !imageUtils) {
+            return res.status(400).json({ message: "Request Id, Edited Content, pb recordid, Author Id and Reviewer Id and imageUtils required" });
         }
 
         try {
 
             const editRequest = await EditRequest.findById(requestId).populate('article')
                 .populate('user_id').exec();
-
-
 
             if (!editRequest) {
                 return res.status(400).json({ message: "Edit request not found" });
@@ -332,6 +332,7 @@ module.exports.submitImprovement = expressAsyncHandler(
             }
 
             editRequest.edited_content = edited_content;
+            editRequest.imageUtils = imageUtils;
             editRequest.status = statusEnum.statusEnum.REVIEW_PENDING;
             editRequest.pb_recordId = pb_recordId;
             editRequest.last_updated = new Date();
@@ -381,18 +382,18 @@ module.exports.detectContentLoss = expressAsyncHandler(
                 return res.status(403).json({ message: "The request has not been approved yet." });
             }
 
-            if(!editRequest.pb_record || !editRequest.article_recordId){
+            if (!editRequest.pb_record || !editRequest.article_recordId) {
                 return res.status(400).json({ message: "Missing required fields, record id not found" });
             }
 
             let original_content = await getHTMLFileContent('content', editRequest.pb_recordId);
-            let new_content =  await getHTMLFileContent('edit_requests', editRequest.article_recordId);
-           // if (editRequest.article.content.endsWith('.html')) {
-             //   original_content = await getContent(editRequest.article.content);
-          //  }
-          //  else {
+            let new_content = await getHTMLFileContent('edit_requests', editRequest.article_recordId);
+            // if (editRequest.article.content.endsWith('.html')) {
+            //   original_content = await getContent(editRequest.article.content);
+            //  }
+            //  else {
             //    original_content = editRequest.article.content;
-           // }
+            // }
 
             const differences = diff.diffWords(original_content.htmlContent, new_content.htmlContent);
 
@@ -433,7 +434,14 @@ module.exports.discardImprovement = expressAsyncHandler(
                 return res.status(404).json({ message: "Request not found" });
             }
 
-
+            const imageSet = new Set(editRequest.article.imageUtils);
+            for (const url of editRequest.imageUtils) {
+                // delete image from aws
+                const parts = url.split('/api/getFile/');
+                if (!imageSet.has(url) && parts.length >= 2) {
+                    await deleteFileFn(parts[1]);
+                }
+            }
 
             editRequest.reviewer_id = null;
             editRequest.status = statusEnum.statusEnum.DISCARDED;
@@ -563,7 +571,6 @@ module.exports.unassignModerator = expressAsyncHandler(
 
             return res.status(200).json({ message: "Unassigned moderator" });
 
-
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: "Internal server error" });
@@ -627,6 +634,15 @@ async function discardImprovements() {
             editRequest.status = statusEnum.statusEnum.DISCARDED;
 
             await editRequest.save();
+
+            const imageSet = new Set(editRequest.article.imageUtils);
+            for (const url of editRequest.imageUtils) {
+                // delete image from aws
+                const parts = url.split('/api/getFile/');
+                if (!imageSet.has(url) && parts.length >= 2) {
+                    await deleteFileFn(parts[1]);
+                }
+            }
 
             if (editRequest.user_id.email && editRequest.article.title) {
                 sendMailArticleDiscardByAdmin(editRequest.user_id.email, editRequest.article.title, "Discarded by system");
