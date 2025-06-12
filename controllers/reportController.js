@@ -220,7 +220,7 @@ module.exports.getAllPendingReports = expressAsyncHandler(
 
       const pendingReports = await ReportAction.find(
         {
-          status: reportActionEnum.PENDING,
+          action_taken: reportActionEnum.PENDING,
           admin_id: null
         })
         .populate({
@@ -423,18 +423,18 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
       }
 
       if (
-        report.status === reportActionEnum.RESOLVED ||
-        report.status === reportActionEnum.DISMISSED ||
-        report.status === reportActionEnum.IGNORE ||
-        report.status === reportActionEnum.WARN_CONVICT ||
-        report.status === reportActionEnum.REMOVE_CONTENT ||
-        report.status === reportActionEnum.BLOCK_CONVICT
+        report.action_taken === reportActionEnum.RESOLVED ||
+        report.action_taken === reportActionEnum.DISMISSED ||
+        report.action_taken === reportActionEnum.IGNORE ||
+        report.action_taken === reportActionEnum.WARN_CONVICT ||
+        report.action_taken === reportActionEnum.REMOVE_CONTENT ||
+        report.action_taken === reportActionEnum.BLOCK_CONVICT
 
       ) {
 
         return res.status(400).json({
           success: false,
-          message: `This report (Issue No. ${report.id}) has already been resolved with status: ${report.status}.`,
+          message: `This report (Issue No. ${report.id}) has already been resolved with status: ${report.action_taken}.`,
         });
       }
 
@@ -449,7 +449,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
       if (convict.isBlockUser || victim.isBlockUser) {
         // Ignore Report
-        report.status = reportActionEnum.IGNORE;
+        report.action_taken = reportActionEnum.IGNORE;
         convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
         report.last_action_date = new Date();
         await report.save();
@@ -461,7 +461,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
       if (convict.isBannedUser || victim.isBannedUser) {
         // Ignore Report
-        report.status = reportActionEnum.IGNORE;
+        report.action_taken = reportActionEnum.IGNORE;
         report.last_action_date = new Date();
         await report.save();
         await convict.save();
@@ -478,7 +478,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
       switch (action.toString()) {
 
         case reportActionEnum.RESOLVED: {
-          report.status = reportActionEnum.RESOLVED;
+          report.action_taken = reportActionEnum.RESOLVED;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
 
           report.last_action_date = new Date();
@@ -500,7 +500,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
         case reportActionEnum.DISMISSED: {
 
-          report.status = reportActionEnum.DISMISSED;
+          report.action_taken = reportActionEnum.DISMISSED;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
 
           victim.reportFeatureMisuse = victim.reportFeatureMisuse + 1;
@@ -530,7 +530,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
         case reportActionEnum.IGNORE: {
 
-          report.status = reportActionEnum.IGNORE;
+          report.action_taken = reportActionEnum.IGNORE;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
           report.last_action_date = new Date();
           await report.save();
@@ -542,7 +542,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
         case reportActionEnum.WARN_CONVICT: {
 
-          report.status = reportActionEnum.WARN_CONVICT;
+          report.action_taken = reportActionEnum.WARN_CONVICT;
 
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
           convict.strikeCount = convict.strikeCount + 1;
@@ -585,7 +585,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           break;
         }
         case reportActionEnum.REMOVE_CONTENT: {
-          report.status = reportActionEnum.REMOVE_CONTENT;
+          report.action_taken = reportActionEnum.REMOVE_CONTENT;
 
           // Remove that content
           if (report.commentId) {
@@ -623,7 +623,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
         case reportActionEnum.BLOCK_CONVICT: {
 
-          report.status = reportActionEnum.BLOCK_CONVICT;
+          report.action_taken = reportActionEnum.BLOCK_CONVICT;
           convict.activeReportCount = Math.max(0, convict.activeReportCount + 1);
           convict.isBlockUser = true;
           convict.blockedAt = new Date(); // Temporary block for 1 month
@@ -645,7 +645,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
         }
         case reportActionEnum.RESTORE_CONTENT: {
 
-          report.status = reportActionEnum.RESTORE_CONTENT;
+          report.action_taken = reportActionEnum.RESTORE_CONTENT;
           // Restore post
           const art = await Article.findById(report.articleId._id);
           art.is_removed = false;
@@ -661,7 +661,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
         }
         case reportActionEnum.BAN_CONVICT: {
 
-          report.status = reportActionEnum.BAN_CONVICT;
+          report.action_taken = reportActionEnum.BAN_CONVICT;
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
           convict.isBannedUser = true; // Permanent banned account
           report.last_action_date = new Date();
