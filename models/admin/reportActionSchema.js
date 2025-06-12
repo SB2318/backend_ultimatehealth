@@ -19,11 +19,7 @@ const reportActionEnum = {
 };
 const reportActionSchema = new Schema({
 
-    _id:{
-        type: Schema.Types.ObjectId,
-        required: true,
-        unique: true,
-    },
+    
     admin_id:{
         type: Schema.Types.ObjectId,
         ref: 'admin', 
