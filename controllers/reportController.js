@@ -237,13 +237,13 @@ module.exports.getAllPendingReports = expressAsyncHandler(
         }).
         populate({
           path: "articleId",
-          select: "title"
+          select: "title status pb_recordId authorId"
         }).
         populate({
           path: "commentId",
           select: "content"
         }).
-        exec();
+        lean();
 
       return res.status(200).json(pendingReports);
 
@@ -278,13 +278,13 @@ module.exports.getAllReportsForModerator = expressAsyncHandler(
         }).
         populate({
           path: "articleId",
-          select: "title"
+          select: "title status pb_recordId authorId"
         }).
         populate({
           path: "commentId",
           select: "content"
         }).
-        exec();
+        lean();
 
       return res.status(200).json(pendingReports);
 
@@ -322,13 +322,13 @@ module.exports.getReportDetails = expressAsyncHandler(
         }).
         populate({
           path: "articleId",
-          select: "title"
+          select: "title status pb_recordId authorId"
         }).
         populate({
           path: "commentId",
           select: "content"
         }).
-        exec();
+        lean();
 
       if (!report) {
         return res.status(404).json({ message: 'Report not found' });
@@ -403,13 +403,13 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           select: 'reason',
         }).populate({
           path: 'articleId',
-          select: 'title',
+          select: 'title status pb_recordId authorId',
         })
           .populate({
             path: 'commentId',
             select: 'content',
           })
-          .exec(),
+          .lean(),
         Admin.findById(admin_id)
       ]);
 
@@ -779,13 +779,13 @@ module.exports.getAllReportsAgainstConvict = expressAsyncHandler(
       }).
         populate({
           path: "articleId",
-          select: "title"
+          select: "title status pb_recordId authorId"
         }).
         populate({
           path: "commentId",
           select: "content"
         }).
-        exec();
+        lean();
 
       return res.status(200).json(reports);
     } catch (err) {

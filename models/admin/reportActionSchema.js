@@ -19,7 +19,6 @@ const reportActionEnum = {
 };
 const reportActionSchema = new Schema({
 
-    
     admin_id:{
         type: Schema.Types.ObjectId,
         ref: 'admin', 
