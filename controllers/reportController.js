@@ -458,7 +458,7 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
             path: 'commentId',
             select: 'content',
           })
-          .lean(),
+          .exec(),
         Admin.findById(admin_id)
       ]);
 
