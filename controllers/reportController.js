@@ -258,11 +258,60 @@ module.exports.getAllPendingReports = expressAsyncHandler(
 module.exports.getAllReportsForModerator = expressAsyncHandler(
   async (req, res) => {
 
+    const { isCompleted } = req.query;
     try {
 
+
+      if (isCompleted) {
+
+        const pendingReports = await ReportAction.find(
+          {
+            admin_id: req.userId,
+            action_taken: {
+              $in: [reportActionEnum.RESOLVED,
+              reportActionEnum.DISMISSED,
+              reportActionEnum.IGNORE,
+              reportActionEnum.WARN_CONVICT,
+              reportActionEnum.REMOVE_CONTENT,
+              reportActionEnum.BLOCK_CONVICT]
+            }
+          })
+          .populate({
+            path: 'reportedBy',
+            select: 'user_name',
+          })
+          .populate({
+            path: 'convictId',
+            select: 'user_name',
+          })
+          .populate({
+            path: 'reasonId',
+            select: 'reason',
+          }).
+          populate({
+            path: "articleId",
+            select: "title status pb_recordId authorId"
+          }).
+          populate({
+            path: "commentId",
+            select: "content"
+          }).
+          lean();
+
+        return res.status(200).json(pendingReports);
+
+      }
       const pendingReports = await ReportAction.find(
         {
-          admin_id: req.userId
+          admin_id: req.userId,
+          action_taken: {
+            $nin: [reportActionEnum.RESOLVED,
+            reportActionEnum.DISMISSED,
+            reportActionEnum.IGNORE,
+            reportActionEnum.WARN_CONVICT,
+            reportActionEnum.REMOVE_CONTENT,
+            reportActionEnum.BLOCK_CONVICT]
+          }
         })
         .populate({
           path: 'reportedBy',
@@ -418,9 +467,12 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
       }
 
 
+
+      /*
       if (report.admin_id !== null && report.admin_id !== admin._id) {
         return res.status(403).json({ message: 'Report already picked by another moderator' });
       }
+        */
 
       if (
         report.action_taken === reportActionEnum.RESOLVED ||
