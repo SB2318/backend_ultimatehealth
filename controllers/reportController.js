@@ -86,7 +86,7 @@ module.exports.deleteReason = expressAsyncHandler(
 
     try {
 
-      const reason = await Reason.findOne({id});
+      const reason = await Reason.findById(id);
       if (!reason) {
         return res.status(404).json({ message: "Reason not found." });
       }
