@@ -539,7 +539,7 @@ module.exports.deleteArticleTagByIds = expressAsyncHandler(
       if (!deletedTag) {
         return res.status(404).json({ error: "Tag not found" });
       }
-      res.status(200).json({ message: "Tag deleted successfully" });
+      res.status(200).json({ message: "Tag deleted successfully", data: deletedTag });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
