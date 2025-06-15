@@ -500,7 +500,7 @@ module.exports.addNewTag = expressAsyncHandler(
 module.exports.getAllTags = expressAsyncHandler(
   async (req, res) => {
     try {
-      const tags = await ArticleTag.find();
+      const tags = await ArticleTag.find().sort({ id: -1 });
       res.status(200).json(tags);
     } catch (err) {
       res.status(500).json({ error: err.message });
