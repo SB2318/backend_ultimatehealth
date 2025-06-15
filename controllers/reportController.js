@@ -85,12 +85,21 @@ module.exports.deleteReason = expressAsyncHandler(
     }
 
     try {
-      const reason = await Reason.deleteOne({ _id: Number(id) });
+
+      const reason = await Reason.findOne({id});
       if (!reason) {
         return res.status(404).json({ message: "Reason not found." });
       }
 
-      res.status(200).json({ message: "Reason deleted successfully." });
+      const existingReport = await ReportAction.findOne({reasonId: reason._id});
+
+      if(existingReport){
+        return res.status(400).json({ message: "Reason is associated with a report, cannot delete" });
+      }
+
+      await Reason.findByIdAndDelete(reason._id);
+      
+      res.status(200).json({ message: "Reason deleted successfully.", data: reason });
     }
     catch (err) {
       console.log(err);

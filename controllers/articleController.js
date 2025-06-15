@@ -7,7 +7,6 @@ const ReadAggregate = require("../models/events/readEventSchema");
 const WriteAggregate = require("../models/events/writeEventSchema");
 const statusEnum = require("../utils/StatusEnum");
 
-
 const mongoose = require('mongoose');
 // Create a new article
 module.exports.createArticle = expressAsyncHandler(
@@ -17,7 +16,7 @@ module.exports.createArticle = expressAsyncHandler(
       const { authorId, title, authorName, description, content, tags, imageUtils, pb_recordId } = req.body; // Destructure required fields from req.body
 
 
-      if (!authorId || !title || !authorName || !description || !content 
+      if (!authorId || !title || !authorName || !description || !content
         || !tags || !imageUtils || !pb_recordId) {
         return res.status(400).json({ message: "Please fill in all fields: authorId, title, authorName, description, content, tags, imageUtils, pb_recordId" });
       }
@@ -100,7 +99,7 @@ module.exports.getAllArticles = expressAsyncHandler(
         })
         .exec();
 
-        //console.log("Author", articles);
+      //console.log("Author", articles);
       articles.filter(r => r.article?.authorId !== null);
 
       for (const article of articles) {
@@ -531,17 +530,36 @@ module.exports.updateTagById = expressAsyncHandler(
 )
 
 // Delete a tag by id
+// findById -> Auto cast
+// find & findOne -> need explicit cast sometimes
 module.exports.deleteArticleTagByIds = expressAsyncHandler(
   async (req, res) => {
     try {
       const { id } = req.params;
-      const deletedTag = await ArticleTag.findOneAndDelete({ id });
-      if (!deletedTag) {
-        return res.status(404).json({ error: "Tag not found" });
+
+
+      const tag = await ArticleTag.findOne({ id });
+
+      if (!tag) {
+        return res.status(404).json({ message: "Tag not found" });
       }
-      res.status(200).json({ message: "Tag deleted successfully", data: deletedTag });
+
+      const articleExist = await Article.findOne({
+        tags: mongoose.Types.ObjectId(tag._id), status: {
+          $ne: statusEnum.statusEnum.DISCARDED
+        }
+      })
+
+      if(articleExist){
+        return res.status(400).json({ message: "Tag is used in an article" });
+      }
+
+      await ArticleTag.findByIdAndDelete(tag._id);
+      
+
+      res.status(200).json({ message: "Tag deleted successfully", data: tag });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ message: err.message });
     }
   }
 )
