@@ -8,7 +8,7 @@ const WriteAggregate = require("../models/events/writeEventSchema");
 const statusEnum = require("../utils/StatusEnum");
 
 const mongoose = require('mongoose');
-// Create a new article
+
 module.exports.createArticle = expressAsyncHandler(
   async (req, res) => {
     try {
