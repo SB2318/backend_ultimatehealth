@@ -13,12 +13,12 @@ module.exports.createArticle = expressAsyncHandler(
   async (req, res) => {
     try {
 
-      const { authorId, title, authorName, description, content, tags, imageUtils, pb_recordId } = req.body; // Destructure required fields from req.body
+      const { authorId, title, authorName, description, content, tags, imageUtils, pb_recordId, allow_podcast } = req.body; // Destructure required fields from req.body
 
 
       if (!authorId || !title || !authorName || !description || !content
-        || !tags || !imageUtils || !pb_recordId) {
-        return res.status(400).json({ message: "Please fill in all fields: authorId, title, authorName, description, content, tags, imageUtils, pb_recordId" });
+        || !tags || !imageUtils || !pb_recordId || !allow_podcast) {
+        return res.status(400).json({ message: "Please fill in all fields: authorId, title, authorName, description, content, tags, imageUtils, pb_recordId, allow_podcast" });
       }
       // Find the user by ID
       const user = await User.findById(authorId);
@@ -41,6 +41,7 @@ module.exports.createArticle = expressAsyncHandler(
         imageUtils,
         authorId: user._id, // Set authorId to the user's ObjectId
         pb_recordId,
+        allow_for_podcast: allow_podcast
       });
 
       newArticle.mentionedUsers.push(user._id); // Initially all can mention the author.
@@ -69,7 +70,16 @@ module.exports.getAllArticles = expressAsyncHandler(
   async (req, res) => {
     try {
 
-      const articles = await Article.find({ status: statusEnum.statusEnum.PUBLISHED, is_removed: false })
+      const { allow_podcast } = req.query;
+
+      const query = { 
+        status: statusEnum.statusEnum.PUBLISHED, 
+        is_removed: false 
+      };
+      if (allow_podcast === 'true') {
+        query.allow_for_podcast = true;
+      }
+      const articles = await Article.find(query)
         .populate('tags')
         //.populate('mentionedUsers', 'user_handle user_name Profile_image')
         .populate({
@@ -550,12 +560,12 @@ module.exports.deleteArticleTagByIds = expressAsyncHandler(
         }
       })
 
-      if(articleExist){
+      if (articleExist) {
         return res.status(400).json({ message: "Tag is used in an article" });
       }
 
       await ArticleTag.findByIdAndDelete(tag._id);
-      
+
 
       res.status(200).json({ message: "Tag deleted successfully", data: tag });
     } catch (err) {
@@ -803,3 +813,8 @@ module.exports.getImprovementById = expressAsyncHandler(
     }
   }
 )
+
+
+
+
+

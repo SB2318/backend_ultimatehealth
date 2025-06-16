@@ -155,6 +155,12 @@ const articleSchema = new Schema({
     ref:"ReportAction"
   },
 
+
+  allow_for_podcast:{
+    type: Boolean,
+    default: false
+  },
+
 });
 
 // Apply the autoIncrement plugin to the schema
