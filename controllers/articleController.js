@@ -69,7 +69,6 @@ module.exports.createArticle = expressAsyncHandler(
 module.exports.getAllArticles = expressAsyncHandler(
   async (req, res) => {
     try {
-
       const { allow_podcast } = req.query;
 
       const query = { 
@@ -655,8 +654,6 @@ module.exports.getReadDataForGraphs = expressAsyncHandler(
     }
   }
 )
-
-
 
 
 

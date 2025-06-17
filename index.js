@@ -24,6 +24,7 @@ const reportRoute = require('./routes/reportRoute');
 const adminAuthRoute = require('./routes/adminAuthRoute');
 const articleEditRoute = require('./routes/articleEditRequestRoute');
 const adminRoute = require('./routes/adminRoute');
+const podcastRoute = require('./routes/podcastRoute');
 const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification, repostNotification, mentionNotification } = require('./controllers/notifications/notificationHelper');
 
 const app = express();
@@ -51,6 +52,7 @@ app.use("/api", reportRoute);
 app.use("/api", adminAuthRoute);
 app.use("/api", adminRoute);
 app.use("/api", articleEditRoute);
+app.use("/api", podcastRoute);
 
 // Test route (can be removed later)
 app.get("/hello", (req, res) => {
