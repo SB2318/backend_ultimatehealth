@@ -10,14 +10,50 @@ const PlayList = require("../models/playlistSchema");
 
 const mongoose = require('mongoose');
 
-const getMyPodcasts = expressAsyncHandler(
+const getPodcastProfile = expressAsyncHandler(
 
     async (req, res) => {
 
+        let userId = req.query.userId;
         try {
-            const userId = req.userId;
-            const podcast = await Podcast.find({ user_id: userId }).populate('tags').exec();
-            res.status(200).json(podcast);
+            if (!userId) {
+                userId = req.userId;
+            }
+            const user = await User.findById(userId).populate('user_name Profile_image followers').lean().exec();
+
+            if (!user) {
+                return res.status(400).json({ message: "User not found" });
+            }
+            const allPodcasts = await Podcast.find({
+                user_id: userId,
+                status: statusEnum.statusEnum.PUBLISHED
+            })
+                .populate('tags')
+                .sort({ updated_at: -1 });
+
+            const allPlaylists = await PlayList.find({ user: userId })
+                .populate({
+                    path: 'podcasts',
+                    match: { user_id: userId, status: statusEnum.statusEnum.PUBLISHED },
+                    populate: {
+                        path: 'tags',
+                    }
+                }).sort({
+                    updated_at: -1
+                });
+
+            // filter all standalonepodcast and playlists
+            const playListPodcastIds =
+                allPlaylists.map((playlist) => playlist.podcasts.map(p => p._id.toString()));
+
+            const standalonepodcast = allPodcasts.filter((podcast) => !playListPodcastIds.has(podcast._id.toString()));
+
+            res.status(200).json({
+                podcasts: standalonepodcast,
+                playlists: allPlaylists,
+                user: user
+            });
+
         }
         catch (err) {
             console.log(err);
@@ -48,8 +84,13 @@ const getFollowingsPodcasts = expressAsyncHandler(
             })
                 .populate('tags')
                 .populate('user_id', 'user_name Profile_image followers')
+                .sort({
+                    updated_at: -1
+                })
                 .lean()
                 .exec();
+
+
 
             res.status(200).json(podcasts);
 
@@ -65,7 +106,10 @@ const getMyPlayLists = expressAsyncHandler(
     async (req, res) => {
 
         try {
-            const playlists = await PlayList.find({ user: req.userId });
+            const playlists = await PlayList.find({ user: req.userId })
+                .sort({
+                    updated_at: -1
+                });
             return res.status(200).json(playlists);
         } catch (err) {
             console.log(err);
@@ -97,7 +141,11 @@ const getPodcastsByPlaylistId = expressAsyncHandler(
                         path: 'tags'
                     }
                 ]
-            }).lean().exec();
+            })
+                .sort({
+                    updated_at: -1
+                })
+                .lean().exec();
 
             if (!playlist) {
                 return res.status(404).json({ message: 'Playlist not found' });
@@ -127,7 +175,7 @@ const getPodcastById = expressAsyncHandler(
                 lean().
                 exec();
 
-            if(!podcast){
+            if (!podcast) {
                 return res.status(404).json({ message: 'Podcast not found' });
             }
             return res.status(200).json(podcast);
@@ -139,11 +187,54 @@ const getPodcastById = expressAsyncHandler(
     }
 )
 
+const searchPodcast = expressAsyncHandler(
+    async (req, res) => {
+        const { q } = req.query;
+        if (!q) {
+            return res.status(400).json({ message: 'Search query is required' })
+        }
+        try {
+            const regex = new RegExp(q, 'i');
+            // Find all article title matches with the rejex
+            const matchingArticles = await Article.find({ title: regex }).select('_id title');
+            const articleIds = matchingArticles.map(a => a._id);
+
+            const matchPodcasts = await Podcast.
+                find(
+                    {
+                        $or: [
+                            { article_id: { $in: articleIds } },
+                            { title: regex },
+                            { description: regex }]
+                    }
+                )
+                .select('_id title description article_id tags')
+                .populate('tags')
+                .populate('article_id', 'title')
+                .sort({
+                    updated_at: -1
+                })
+                .lean()
+                .exec();
+
+
+            return res.status(200).json(matchPodcasts);
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
+
+
+
 
 module.exports = {
-    getMyPodcasts,
+    getPodcastProfile,
     getFollowingsPodcasts,
     getMyPlayLists,
     getPodcastsByPlaylistId,
-    getPodcastById
+    getPodcastById,
+    searchPodcast
 }

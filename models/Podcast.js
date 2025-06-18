@@ -72,7 +72,15 @@ const podcastSchema = new Schema({
         enum: ['in-progress', 'review-pending', 'published', 'discarded'],
         default: 'review-pending'
     },
-
+    created_at: {
+        type: Date,
+        default: Date.now
+    },
+    updated_at: {
+        type: Date,
+        default: Date.now
+    }
+   
 })
 
 const Podcast = mongoose.model('Podcast', podcastSchema);
