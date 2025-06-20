@@ -227,6 +227,182 @@ const searchPodcast = expressAsyncHandler(
     }
 )
 
+const createPodcast = expressAsyncHandler(
+    async (req, res) => {
+        const { title, description, tags, article_id, audio_url, duration } = req.body;
+
+        if (!title || !description || !tags || !article_id || !audio_url || !duration) {
+            return res.status(400).json({ message: 'All fields are required: title, description, tags, article_id, audio_url, duration' });
+        }
+
+        try {
+
+            const user = await User.findById(req.userId);
+
+            if (user.isBlockUser || user.isBannedUser) {
+                return res.status(403).json({ error: "User is blocked or banned." });
+            }
+            const podcast = new Podcast({
+                title,
+                description,
+                tags,
+                article_id,
+                audio_url,
+                duration
+            });
+
+            await podcast.save();
+            res.status(201).json({ message: 'Podcast created successfully.', podcast: podcast });
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
+
+// Save Podcast : (published podcast)
+const savePodcast = expressAsyncHandler(
+    async (req, res) => {
+        try {
+            const { podcast_id } = req.body;
+
+            if (!podcast_id) {
+                return res.status(400).json({ message: "Podcast id required" });
+            }
+            const user = await User.findById(req.userId);
+            const podcast = await Podcast.findById(podcast_id)
+                .populate('tags') 
+                .exec();
+
+            if (!user || !podcast || podcast.is_removed) {
+                return res.status(404).json({ error: 'User or podcast not found' });
+            }
+
+            if (user.isBannedUser) {
+                return res.status(403).json({ error: 'User is banned' });
+            }
+
+            if (podcast.status !== statusEnum.statusEnum.PUBLISHED) {
+                return res.status(400).json({ message: 'Podcast is not published' });
+            }
+        
+            const savedUserSet = new Set(podcast.savedUsers.map((id)=> id.toString()));
+            const isPodcastSaved = savedUserSet.has(req.userId);
+
+            if (isPodcastSaved) {
+
+                // unsave podcast
+                await Podcast.findByIdAndUpdate(podcast_id, {
+                        $pull: { savedUsers: user._id } 
+                    });
+                
+                res.status(200).json({ message: 'Podcast unsaved' });
+            }
+            else {
+            
+                    Podcast.findByIdAndUpdate(podcast_id, {
+                        $addToSet: { savedUsers: user._id } 
+                    });
+                
+                res.status(200).json({ message: 'Podcast saved successfully' });
+            }
+        } catch (error) {
+            res.status(500).json({ error: 'Error saving podcast', details: error.message });
+        }
+    }
+)
+// Like Articles (published podcast)
+const likePodcast = expressAsyncHandler(
+    async (req, res) => {
+        try {
+            const { podcast_id } = req.body;
+            if (!podcast_id) {
+                return res.status(400).json({ message: "Podcast id required" });
+            }
+
+            const user = await User.findById(req.userId);
+            const podcast = await Podcast.findById(podcast_id);
+
+            if (!user || !podcast || podcast.is_removed) {
+                return res.status(404).json({ error: 'User or Article not found' });
+            }
+
+            if (user.isBlockUser || user.isBannedUser) {
+                return res.status(403).json({ error: 'User is blocked or banned' });
+            }
+
+            if (podcast.status !== statusEnum.statusEnum.PUBLISHED) {
+                return res.status(400).json({ message: 'Article is not published' });
+            }
+            // Check if the article is already liked
+            const likedUserSet = new Set(podcast.likedUsers.map(u => u.toString()));
+            const isUserLiked = likedUserSet.has(req.userId);
+
+            if (isUserLiked) {
+                // Unlike It
+                await Podcast.findByIdAndUpdate(podcast._id, {
+                    $pull: { likedUsers: user._id } // Remove user from likedUsers
+                });
+
+                return res.status(200).json({
+                    message: 'Podcast unliked successfully',
+                    likeStatus: false
+                });
+            } else {
+
+                await Podcast.findByIdAndUpdate(podcast._id, {
+                    $addToSet: { likedUsers: user._id }
+                });
+
+                return res.status(200).json({
+                    message: 'Podcast liked successfully',
+                    likeStatus: true
+                });
+            }
+
+        } catch (error) {
+            res.status(500).json({ error: 'Error liking podcast', details: error.message });
+        }
+    }
+)
+
+// Update View Count (Published article)
+const updatePodcastViewCount = expressAsyncHandler(
+    async (req, res) => {
+        const { podcast_id } = req.body;
+        try {
+
+            const user = await User.findById(req.userId);
+            const podcast = await Podcast.findById(podcast_id);
+
+            if (!user || !podcast || podcast.is_removed) {
+                return res.status(404).json({ error: 'User or Article not found' });
+            }
+
+            if (user.isBlockUser || user.isBannedUser) {
+                return res.status(403).json({ error: 'User is blocked or banned' });
+            }
+
+            if (podcast.status !== statusEnum.statusEnum.PUBLISHED) {
+                return res.status(400).json({ message: 'Article is not published' });
+            }
+   
+            const hasViewed = podcast.viewUsers.some(id => id.toString().equals(req.userId));
+        
+            if (hasViewed) {
+                return res.status(200).json({ message: 'Podcast already viewed by user', data: podcast });
+            }
+
+            podcast.viewUsers.push(req.userId);
+
+            await podcast.save();
+            res.status(200).json({ message: 'Podcast view count updated', data: podcast });
+
+        } catch (err) {
+            res.status(500).json({ error: 'Error updating view', details: err.message });
+        }
+    }
+)
 
 
 
@@ -236,5 +412,11 @@ module.exports = {
     getMyPlayLists,
     getPodcastsByPlaylistId,
     getPodcastById,
-    searchPodcast
+    searchPodcast,
+
+    // post
+    createPodcast,
+    savePodcast,
+    likePodcast,
+    updatePodcastViewCount
 }
