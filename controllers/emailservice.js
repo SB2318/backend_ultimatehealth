@@ -586,11 +586,10 @@ const sendInitialReportMailtoVictim = async (email) => {
 
 const sendInitialReportMailtoConvict = async (email, details, reportType) => {
 
-
   const reportDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFFAF0; border-radius: 8px;">
        <h3 style="color: #FF6347;">Reported Content:</h3>
-       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.title}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #4682B4; background-color: #F0F8FF; border-radius: 8px;">
@@ -699,7 +698,7 @@ const sendResolvedMailToVictim = async (email, details, reportType, resolution) 
   const resolvedDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
        <h3 style="color: #32CD32;">Reported Content (Resolved):</h3>
-       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId: details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
@@ -782,7 +781,7 @@ const sendResolvedMailToConvict = async (email, details, reportType) => {
   const resolvedDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #FFA500; background-color: #FFF8DC; border-radius: 8px;">
        <h3 style="color: #FFA500;">Your Content Was Reported:</h3>
-       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId: details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #FFA500; background-color: #FFF8DC; border-radius: 8px;">
@@ -866,7 +865,7 @@ const sendWarningMailToVictimOnReportDismissOrIgnore = async (email, details, re
   const reportSummary = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #FFD700; background-color: #FFFACD; border-radius: 8px;">
        <h3 style="color: #DAA520;">Reported Content:</h3>
-       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #FFD700; background-color: #FFFACD; border-radius: 8px;">
@@ -964,7 +963,7 @@ const sendDismissedOrIgnoreMailToConvict = async (email, details, reportType) =>
   const dismissedDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #90EE90; background-color: #F0FFF0; border-radius: 8px;">
        <h3 style="color: #228B22;">Content Report Dismissed:</h3>
-       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId? details.articleId: details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #90EE90; background-color: #F0FFF0; border-radius: 8px;">
@@ -1048,7 +1047,7 @@ const sendWarningMailToConvict = async (email, details, reportType, reason, stri
   const warningDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
        <h3 style="color: #FF6347;">Violated Content:</h3>
-       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
@@ -1155,7 +1154,7 @@ const  sendRemoveContentMailToConvict = async (email, details, reportType, reaso
   const warningDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
        <h3 style="color: #FF6347;">Violated Content:</h3>
-       <p><strong>Content ID:</strong> ${details.articleId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId: details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
@@ -1524,7 +1523,7 @@ const sendBlockConvictMail = async (email, details, reportType, reason) => {
   const reportedItem = reportType === 'content'
     ? `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
          <h3 style="color: #DC143C;">Violated Content:</h3>
-         <p><strong>Content ID:</strong> ${details.articleId}</p>
+         <p><strong>Content ID:</strong> ${details.articleId ? details.articleId: details.podcastId}</p>
          <p><strong>Description:</strong> ${details.content}</p>
        </div>`
     : `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
@@ -1653,7 +1652,7 @@ const sendBannedUserMail = async (email, details, reportType, reason) => {
   const reportedItem = reportType === 'content'
     ? `<div style="padding: 15px; border: 2px solid #8B0000; background-color: #FFF0F0; border-radius: 8px;">
          <h3 style="color: #8B0000;">Violated Content:</h3>
-         <p><strong>Content ID:</strong> ${details.articleId}</p>
+         <p><strong>Content ID:</strong> ${details.articleId? details.articleId: details.podcastId}</p>
          <p><strong>Description:</strong> ${details.content}</p>
        </div>`
     : `<div style="padding: 15px; border: 2px solid #8B0000; background-color: #FFF0F0; border-radius: 8px;">

@@ -4,6 +4,7 @@ const expressAsyncHandler = require("express-async-handler");
 const { ReportAction, reportActionEnum } = require("../models/admin/reportActionSchema");
 const Reason = require("../models/reasonSchema");
 const Article = require('../models/Articles');
+const Podcast = require('../models/Podcast');
 const User = require("../models/UserModel");
 const Comment = require('../models/commentSchema');
 const Admin = require('../models/admin/adminModel');
@@ -91,14 +92,14 @@ module.exports.deleteReason = expressAsyncHandler(
         return res.status(404).json({ message: "Reason not found." });
       }
 
-      const existingReport = await ReportAction.findOne({reasonId: reason._id});
+      const existingReport = await ReportAction.findOne({ reasonId: reason._id });
 
-      if(existingReport){
+      if (existingReport) {
         return res.status(400).json({ message: "Reason is associated with a report, cannot delete" });
       }
 
       await Reason.findByIdAndDelete(reason._id);
-      
+
       res.status(200).json({ message: "Reason deleted successfully.", data: reason });
     }
     catch (err) {
@@ -125,19 +126,30 @@ module.exports.getAllReasons = expressAsyncHandler(
 module.exports.submitReport = expressAsyncHandler(
   async (req, res) => {
 
-    const { articleId, commentId, reportedBy, reasonId, authorId } = req.body;
+    const { podcastId, articleId, commentId, reportedBy, reasonId, authorId } = req.body;
 
-    //console.log("Reason Id", reasonId);
-
-    if (!articleId || !reportedBy || !reasonId || !authorId) {
+    if (!reportedBy || !reasonId || !authorId) {
       return res.status(400).json({ message: "Please fill in all fields." });
+    }
+
+    if (!articleId && !commentId && !podcastId) {
+      return res.status(400).json({ message: "Please provide either articleId, podcastId or commentId." });
     }
 
     try {
 
-      const [article, user, reason, author] = await Promise.all(
+      let article, podcast;
+
+      if (articleId) {
+        article = await Article.findById(articleId);
+      }
+
+      if (podcastId) {
+        podcast = await Podcast.findById(podcastId);
+      }
+
+      const [user, reason, author] = await Promise.all(
         [
-          Article.findById(Number(articleId)),
           User.findById(reportedBy),
           Reason.findById(reasonId),
           User.findById(authorId)
@@ -153,13 +165,18 @@ module.exports.submitReport = expressAsyncHandler(
         }
       }
 
-      if (!author) {
+      if (!author || author.isBannedUser || author.isBlockUser) {
         return res.status(404).json({ message: "Author of the content not found." });
       }
-      if (!article) {
+      if (articleId && (!article || article.is_removed)) {
         return res.status(404).json({ message: "Article not found." });
       }
-      if (!user) {
+
+      if (podcastId && (!podcast || podcast.is_removed)) {
+        return res.status(404).json({ message: "Podcast not found." });
+      }
+
+      if (!user || user.isBannedUser || user.isBlockUser) {
         return res.status(404).json({ message: "User not found." });
       }
       if (!reason) {
@@ -177,16 +194,23 @@ module.exports.submitReport = expressAsyncHandler(
           content: comment.content,
         }
 
-      } else {
+      } else if (article) {
         details = {
           articleId: article._id,
           title: article.title,
           content: article.title,
         }
+      } else {
+        details = {
+          podcastId: podcast._id,
+          title: podcast.title,
+          content: podcast.audio_url,
+        }
       }
 
       const report = new ReportAction({
-        articleId: Number(articleId),
+        articleId: articleId,
+        podcastId: podcastId,
         commentId: commentId,
         reportedBy: reportedBy,
         reasonId: reasonId,
@@ -249,10 +273,15 @@ module.exports.getAllPendingReports = expressAsyncHandler(
           select: "title status pb_recordId authorId"
         }).
         populate({
+          path: "podcastId",
+          select: "title status user_id"
+        }).
+        populate({
           path: "commentId",
           select: "content"
-        }).
-        lean();
+        })
+        .lean()
+        .exec();
 
       return res.status(200).json(pendingReports);
 
@@ -269,7 +298,6 @@ module.exports.getAllReportsForModerator = expressAsyncHandler(
 
     const { isCompleted } = req.query;
     try {
-
 
       if (isCompleted) {
 
@@ -302,10 +330,15 @@ module.exports.getAllReportsForModerator = expressAsyncHandler(
             select: "title status pb_recordId authorId"
           }).
           populate({
+            path: "podcastId",
+            select: "title status user_id"
+          }).
+          populate({
             path: "commentId",
             select: "content"
-          }).
-          lean();
+          })
+          .lean()
+          .exec();
 
         return res.status(200).json(pendingReports);
 
@@ -314,12 +347,14 @@ module.exports.getAllReportsForModerator = expressAsyncHandler(
         {
           admin_id: req.userId,
           action_taken: {
-            $nin: [reportActionEnum.RESOLVED,
-            reportActionEnum.DISMISSED,
-            reportActionEnum.IGNORE,
-            reportActionEnum.WARN_CONVICT,
-            reportActionEnum.REMOVE_CONTENT,
-            reportActionEnum.BLOCK_CONVICT]
+            $nin: [
+              reportActionEnum.RESOLVED,
+              reportActionEnum.DISMISSED,
+              reportActionEnum.IGNORE,
+              reportActionEnum.WARN_CONVICT,
+              reportActionEnum.REMOVE_CONTENT,
+              reportActionEnum.BLOCK_CONVICT
+            ]
           }
         })
         .populate({
@@ -339,10 +374,15 @@ module.exports.getAllReportsForModerator = expressAsyncHandler(
           select: "title status pb_recordId authorId"
         }).
         populate({
+          path: "podcastId",
+          select: "title status user_id"
+        }).
+        populate({
           path: "commentId",
           select: "content"
-        }).
-        lean();
+        })
+        .lean()
+        .exec();
 
       return res.status(200).json(pendingReports);
 
@@ -383,10 +423,15 @@ module.exports.getReportDetails = expressAsyncHandler(
           select: "title status pb_recordId authorId"
         }).
         populate({
+          path: "podcastId",
+          select: "title status user_id"
+        }).
+        populate({
           path: "commentId",
           select: "content"
-        }).
-        lean();
+        })
+        .lean()
+        .exec();
 
       if (!report) {
         return res.status(404).json({ message: 'Report not found' });
@@ -464,6 +509,10 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
           select: 'title status pb_recordId authorId',
         })
           .populate({
+            path: "podcastId",
+            select: "title status user_id"
+          })
+          .populate({
             path: 'commentId',
             select: 'content',
           })
@@ -531,7 +580,8 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
       }
 
       const details = {
-        articleId: report.articleId._id,
+        podcastId: report.podcastId ? report.podcastId._id : null,
+        articleId: report.articleId ? report.articleId._id : null,
         content: report.commentId ? report.commentId.content : report.articleId.title,
         commentId: report.commentId ? report.commentId._id : null,
       }
@@ -625,12 +675,19 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
             comment.is_removed = true;
 
             await comment.save();
-          } else {
+          } else if (report.articleId) {
             // Remove post
             const art = await Article.findById(report.articleId._id);
             art.is_removed = true;
             art.reportId = report._id;
             await art.save();
+          } else if (report.podcastId) {
+
+            const p = await Podcast.findById(report.podcastId._id);
+            p.is_removed = true;
+            p.reportId = report._id;
+
+            await p.save();
           }
 
           // send warn mail to convict, and resolve mail to victim 
@@ -653,14 +710,22 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
             // Remove comment
             const comment = await Comment.findById(report.commentId._id);
             comment.is_removed = true;
-
             await comment.save();
-          } else {
+
+          } else if (report.articleId) {
             // Remove post
             const art = await Article.findById(report.articleId._id);
             art.is_removed = true;
             art.reportId = report._id;
             await art.save();
+          }
+          else if (report.podcastId) {
+
+            const p = await Podcast.findById(report.podcastId._id);
+            p.is_removed = true;
+            p.reportId = report._id;
+            await p.save();
+
           }
           convict.activeReportCount = Math.max(0, convict.activeReportCount - 1);
           report.last_action_date = new Date();
@@ -708,10 +773,21 @@ module.exports.takeAdminActionOnReport = expressAsyncHandler(
 
           report.action_taken = reportActionEnum.RESTORE_CONTENT;
           // Restore post
-          const art = await Article.findById(report.articleId._id);
-          art.is_removed = false;
-          art.reportId = null;
-          await art.save();
+
+          if (report.articleId) {
+
+            const art = await Article.findById(report.articleId._id);
+            art.is_removed = false;
+            art.reportId = null;
+            await art.save();
+
+          } else if (report.podcastId) {
+            const p = await Podcast.findById(report.podcastId._id);
+            p.is_removed = false;
+            p.reportId = null;
+            await p.save();
+          }
+
           report.last_action_date = new Date();
           await report.save();
           await convict.save();
@@ -841,6 +917,10 @@ module.exports.getAllReportsAgainstConvict = expressAsyncHandler(
         populate({
           path: "articleId",
           select: "title status pb_recordId authorId"
+        }).
+        populate({
+          path: "podcastId",
+          select: "title status user_id"
         }).
         populate({
           path: "commentId",

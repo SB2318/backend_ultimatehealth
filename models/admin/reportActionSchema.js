@@ -33,8 +33,15 @@ const reportActionSchema = new Schema({
 
     articleId:{
         type: Number,
-        required: true,
-        ref:'Article'
+        //required: true,
+        ref:'Article',
+        default: null
+    },
+    podcastId:{
+        type: Schema.Types.ObjectId,
+       // required: true,
+        ref:'Podcast',
+        default: null,
     },
     commentId:{
        type: Schema.Types.ObjectId,
