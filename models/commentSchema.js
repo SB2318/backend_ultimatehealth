@@ -10,8 +10,14 @@ const commentSchema = new Schema({
     },
     articleId: {
         type: Number,
-        required: true,
-        ref: 'Article'
+        //required: true,
+        ref: 'Article',
+        default: null,
+    },
+    podcastId:{
+        type: Schema.Types.ObjectId,
+        ref: 'Podcast',
+        default: null
     },
     userId: {
         type: Schema.Types.ObjectId,

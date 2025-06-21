@@ -61,6 +61,12 @@ const podcastSchema = new Schema({
         type: Boolean,
         default: false
     },
+
+    mentionedUsers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        default: []
+    }],
     reportId: {
         type: Schema.Types.ObjectId,
         default: null,
@@ -80,7 +86,7 @@ const podcastSchema = new Schema({
         type: Date,
         default: Date.now
     }
-   
+
 })
 
 const Podcast = mongoose.model('Podcast', podcastSchema);
