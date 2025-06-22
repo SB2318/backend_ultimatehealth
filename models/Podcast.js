@@ -85,6 +85,11 @@ const podcastSchema = new Schema({
     updated_at: {
         type: Date,
         default: Date.now
+    },
+    admin_id:{
+        type: Schema.Types.ObjectId,
+        ref: 'admin',
+        default: null
     }
 
 })

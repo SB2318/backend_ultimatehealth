@@ -21,7 +21,7 @@ const adminAggregateSchema = new Schema({
    
     contributionType:{
         type: Number, 
-        required: true //  1 -> Article Publish Event Contribution, 2 -> Existing Article Edit Request Contribution, 3 -> Report User Contribution
+        required: true //  1 -> Article Publish Event Contribution, 2 -> Existing Article Edit Request Contribution, 3 -> Report User Contribution, 4 -> Podcast Contribution
     },
 
     day:{
