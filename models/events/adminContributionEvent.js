@@ -9,7 +9,7 @@ const Schema = mongoose.Schema;
 // All contribution will collect monthly and yearly basis
 const adminAggregateSchema = new Schema({
     userId: {
-        type: Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId, 
         required: true,
         ref: 'admin',
     },

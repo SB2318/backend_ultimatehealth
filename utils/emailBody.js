@@ -342,6 +342,178 @@ module.exports.ARTICLE_FEEDBACK= `<html>
 </html>
 `;
 
+module.exports.PODCAST_PUBLISH = `<html>
+    <head>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                color: #333;
+                line-height: 1.6;
+                margin: 0;
+                padding: 0;
+                background-color: #f4f7fc;
+            }
+            .container {
+                width: 80%;
+                margin: 0 auto;
+                background-color: #ffffff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+                background-color: #00BFFF;
+                color: white;
+                padding: 15px;
+                border-radius: 8px 8px 0 0;
+                text-align: center;
+            }
+            .header h1 {
+                font-size: 24px;
+                margin: 0;
+            }
+            .content {
+                padding: 20px;
+            }
+            .footer {
+                text-align: center;
+                font-size: 14px;
+                color: #777;
+                padding: 10px;
+            }
+            .note {
+                background-color: #e7f4e7;
+                padding: 10px;
+                border-left: 5px solid #28a745;
+                margin-top: 20px;
+            }
+            .btn {
+                background-color: #28a745;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px;
+                text-decoration: none;
+                display: inline-block;
+                margin-top: 20px;
+            }
+            .btn:hover {
+                background-color: #218838;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Podcast Published: {title}</h1>
+            </div>
+            <div class="content">
+                <p>Dear Author,</p>
+                <p>We are excited to inform you that your podcast titled "<strong>{title}</strong>" has been successfully published on UltimateHealth!</p>
+
+                <p>Your work is now live for our listeners to enjoy, and we are thrilled to share your insights with the community. We sincerely appreciate the effort you’ve put into this content and hope it resonates with many!</p>
+
+                <div class="note">
+                    <p><strong>Note:</strong> You can view your podcast by following this <a href="{podcastLink}" class="btn">link</a>.</p>
+                </div>
+
+                <p>Thank you for contributing to UltimateHealth. If you have any questions or need further assistance, don’t hesitate to reach out!</p>
+            </div>
+            <div class="footer">
+                <p>Best regards,<br>UltimateHealth Team</p>
+            </div>
+        </div>
+    </body>
+</html>`;
+
+module.exports.PODCAST_DISCARDED =  `<html>
+  <head>
+      <style>
+          body {
+              font-family: Arial, sans-serif;
+              color: #333;
+              line-height: 1.6;
+              margin: 0;
+              padding: 0;
+              background-color: #f4f7fc;
+          }
+          .container {
+              width: 80%;
+              margin: 0 auto;
+              background-color: #ffffff;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+              background-color: #dc3545;
+              color: white;
+              padding: 15px;
+              border-radius: 8px 8px 0 0;
+              text-align: center;
+          }
+          .header h1 {
+              font-size: 24px;
+              margin: 0;
+          }
+          .content {
+              padding: 20px;
+          }
+          .footer {
+              text-align: center;
+              font-size: 14px;
+              color: #777;
+              padding: 10px;
+          }
+          .note {
+              background-color: #ffecb3;
+              padding: 10px;
+              border-left: 5px solid #ffb300;
+              margin-top: 20px;
+          }
+          .btn {
+              background-color: #28a745;
+              color: white;
+              padding: 10px 20px;
+              border-radius: 5px;
+              text-decoration: none;
+              display: inline-block;
+              margin-top: 20px;
+          }
+          .btn:hover {
+              background-color: #218838;
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <h1>Podcast Discarded: "{title}"</h1>
+          </div>
+          <div class="content">
+              <p>Dear Author,</p>
+              <p>We regret to inform you that your podcast titled "<strong>{title}</strong>" has been discarded from our review process.</p>
+
+              <p><strong>Reason for Discard:</strong> {reason} </p>
+
+              <p>Our review system automatically discards submissions that do not meet the necessary criteria or deadlines.</p>
+
+              <p>If you would like to address the issue and resubmit your podcast, or if you have any questions regarding this decision, please don’t hesitate to contact us. We would be happy to review your work again.</p>
+
+              <div class="note">
+                  <p><strong>Note:</strong> You can submit new podcasts for review at any time.</p>
+              </div>
+
+              <p>We appreciate your effort and wish you success in your creative journey.</p>
+          </div>
+          <div class="footer">
+              <p>Best regards,<br>UltimateHealth Team</p>
+          </div>
+      </div>
+  </body>
+</html>
+`;
+
+
 
 
  

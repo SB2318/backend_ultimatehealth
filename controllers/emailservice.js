@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const { verifyToken, verifyUser } = require("../middleware/authMiddleware");
-const { ARTICLE_FEEDBACK, ARTICLE_PUBLISH, ARTICLE_DISCARDED_FROM_SYSTEM, ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION } = require("../utils/emailBody");
+const { ARTICLE_FEEDBACK, ARTICLE_PUBLISH, ARTICLE_DISCARDED_FROM_SYSTEM, ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION, PODCAST_PUBLISH } = require("../utils/emailBody");
 const jwt = require('jsonwebtoken');
 const UnverifiedUser = require("../models/UnverifiedUserModel");
 const User = require("../models/UserModel");
@@ -288,6 +288,26 @@ const sendArticlePublishedEmail = (email, articleLink, title) => {
     });
 };
 
+const sendPodcastPublishedEmail = (email, podcastLink, title) => {
+
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: `New Feedback on Your Article: ${title}`,
+        html: PODCAST_PUBLISH
+            .replace("{title}", title)
+            .replace("{podcastLink}", podcastLink),
+    };
+
+    transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+            console.error('Error sending email:', err);
+        } else {
+            console.log('Verification email sent:', info.response);
+        }
+    });
+};
 const sendArticleDiscardEmail = (email, status, title) => {
 
 
@@ -1884,7 +1904,8 @@ module.exports = {
     sendRestoreContentMailToUser,
     sendUnblockUserMail,
     sendRestoreRequestReceivedMail,
-    sendRestoreRequestDisapprovedMail
+    sendRestoreRequestDisapprovedMail,
+    sendPodcastPublishedEmail
 };
 
 
