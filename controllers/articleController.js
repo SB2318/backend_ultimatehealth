@@ -655,8 +655,6 @@ module.exports.getReadDataForGraphs = expressAsyncHandler(
   }
 )
 
-
-
 // GET ALL Write EVENTS STATUS DAILY, WEEKLY, MONTHLY
 module.exports.getWriteDataForGraphs = expressAsyncHandler(
   async (req, res) => {

@@ -2,11 +2,11 @@ const expressAsyncHandler = require("express-async-handler");
 const ArticleTag = require("../models/ArticleModel");
 const Article = require("../models/Articles");
 const User = require("../models/UserModel");
-const ReadAggregate = require("../models/events/readEventSchema");
-const WriteAggregate = require("../models/events/writeEventSchema");
 const statusEnum = require("../utils/StatusEnum");
 const Podcast = require("../models/Podcast");
 const PlayList = require("../models/playlistSchema");
+const AudioLikeAggregate = require('../models/events/audioLikeEventSchema');
+const AudioViewAggregate = require('../models/events/audioViewEventSchema');
 
 const mongoose = require('mongoose');
 
@@ -311,6 +311,7 @@ const savePodcast = expressAsyncHandler(
         }
     }
 )
+
 // Like Articles (published podcast)
 const likePodcast = expressAsyncHandler(
     async (req, res) => {
@@ -343,7 +344,7 @@ const likePodcast = expressAsyncHandler(
                 await Podcast.findByIdAndUpdate(podcast._id, {
                     $pull: { likedUsers: user._id } // Remove user from likedUsers
                 });
-
+              
                 return res.status(200).json({
                     message: 'Podcast unliked successfully',
                     likeStatus: false
@@ -353,6 +354,9 @@ const likePodcast = expressAsyncHandler(
                 await Podcast.findByIdAndUpdate(podcast._id, {
                     $addToSet: { likedUsers: user._id }
                 });
+
+                // Increase like contribution
+                await updatePodcastLikeContribution(user._id);
 
                 return res.status(200).json({
                     message: 'Podcast liked successfully',
@@ -396,6 +400,8 @@ const updatePodcastViewCount = expressAsyncHandler(
             podcast.viewUsers.push(req.userId);
 
             await podcast.save();
+
+            await updatePodcastViewContribution(req.userId);
             res.status(200).json({ message: 'Podcast view count updated', data: podcast });
 
         } catch (err) {
@@ -404,8 +410,147 @@ const updatePodcastViewCount = expressAsyncHandler(
     }
 )
 
+async function updatePodcastLikeContribution(userId) {
 
+    const now = new Date();
+    const today = new Date(now.setHours(0, 0, 0, 0));
 
+    try {
+
+        const event = await AudioLikeAggregate.findOne({ userId: userId, date: today });
+
+        if (!event) {
+            const newEvent = new AudioLikeAggregate({
+                userId: userId,
+                date: today,
+                dailyLikes: 1,
+                monthlyLikes: 1,
+                yearlyLikes: 1
+            });
+
+            await newEvent.save();
+        } else {
+
+            event.dailyLikes += 1;
+            event.monthlyLikes += 1;
+            event.yearlyLikes += 1;
+            await event.save();
+        }
+    } catch (err) {
+        console.log(err);
+    }
+
+}
+
+async function updatePodcastViewContribution(userId) {
+
+    const now = new Date();
+    const today = new Date(now.setHours(0, 0, 0, 0));
+
+    try {
+
+        const user = await User.findById(userId);
+        if(!user){
+            return;
+        }
+        const event = await AudioViewAggregate.findOne({ userId: user._id, date: today });
+
+        if (!event) {
+            const newEvent = new AudioViewAggregate({
+                userId: userId,
+                date: today,
+                dailyViews: 1,
+                monthlyViews: 1,
+                yearlyViews: 1
+            });
+
+            await newEvent.save();
+        } else {
+            event.dailyViews += 1;
+            event.monthlyViews += 1;
+            event.yearlyViews += 1;
+            await event.save();
+        }
+    } catch (err) {
+        console.log(err);
+    }
+
+}
+
+// Get analytics
+
+// GET ALL LIKE EVENTS STATUS DAILY, WEEKLY, MONTHLY
+// TODO: LOCATION ANALYSIS
+const getPodcastLikeDataForGraphs = expressAsyncHandler(
+  async (req, res) => {
+
+    const userId = req.userId;
+
+    try {
+      const today = new Date();
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const yearStart = new Date(today.getFullYear(), 0, 1);
+
+      const dailyData = await AudioLikeAggregate.find({ userId, date: today });
+      const monthlyData = await AudioLikeAggregate.find({ userId, date: { $gte: monthStart } });
+      const yearlyData = await AudioLikeAggregate.find({ userId, date: { $gte: yearStart } });
+
+      res.status(200).json({
+        dailyLikes: {
+          date: today.toISOString().slice(0, 10), 
+          count: dailyData ? dailyData.dailyLikes : 0 
+        },
+        monthlyLikes: monthlyData.map(entry => ({
+          date: entry.date.toISOString().slice(0, 10), 
+          count: entry.monthlyLikes 
+        })),
+        yearlyLikes: yearlyData.map(entry => ({
+          month: entry.date.toISOString().slice(0, 7), 
+          count: entry.yearlyLikes 
+        })),
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'An error occurred while fetching read data' });
+    }
+  }
+)
+
+// GET ALL VIEW EVENTS STATUS DAILY, WEEKLY, MONTHLY
+// TODO: LOCATION ANALYSIS
+// TODO: AVERAGE CALCULATION
+const getPodcastViewDataForGraphs = expressAsyncHandler(
+  async (req, res) => {
+
+    const userId = req.userId;
+
+    try {
+      const today = new Date();
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const yearStart = new Date(today.getFullYear(), 0, 1);
+
+      const dailyData = await AudioViewAggregate.find({ userId, date: today });
+      const monthlyData = await AudioViewAggregate.find({ userId, date: { $gte: monthStart } });
+      const yearlyData = await AudioViewAggregate.find({ userId, date: { $gte: yearStart } });
+
+      res.status(200).json({
+        dailyViews: {
+          date: today.toISOString().slice(0, 10), 
+          count: dailyData ? dailyData.dailyViews : 0 
+        },
+        monthlyViews: monthlyData.map(entry => ({
+          date: entry.date.toISOString().slice(0, 10),
+          count: entry.monthlyViews
+        })),
+        yearlyViews: yearlyData.map(entry => ({
+          month: entry.date.toISOString().slice(0, 7), 
+          count: entry.yearlyViews 
+        })),
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'An error occurred while fetching read data' });
+    }
+  }
+)
 
 
 module.exports = {
@@ -420,5 +565,7 @@ module.exports = {
     createPodcast,
     savePodcast,
     likePodcast,
-    updatePodcastViewCount
+    updatePodcastViewCount,
+    getPodcastViewDataForGraphs,
+    getPodcastLikeDataForGraphs
 }

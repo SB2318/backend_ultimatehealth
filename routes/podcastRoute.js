@@ -13,7 +13,10 @@ const {
     createPodcast,
     savePodcast,
     likePodcast,
-    updatePodcastViewCount
+    updatePodcastViewCount,
+
+    getPodcastLikeDataForGraphs,
+    getPodcastViewDataForGraphs
 } = require('../controllers/podcastController');
 
 router.get('/podcast/profile', authenticateToken, getPodcastProfile);
@@ -22,6 +25,8 @@ router.get('/podcast/get-my-playlists', authenticateToken, getMyPlayLists);
 router.get('/podcast/playlist-details', authenticateToken, getPodcastsByPlaylistId);
 router.get('/podcast/details', authenticateToken, getPodcastById);
 router.get('/podcast/search', authenticateToken, searchPodcast);
+router.get('/podcast/view-graph', authenticateToken, getPodcastViewDataForGraphs);
+router.get('/podcast/like-graph', authenticateToken, getPodcastLikeDataForGraphs);
 router.post('/podcast/create', authenticateToken, createPodcast);
 router.post('/podcast/like', authenticateToken, likePodcast);
 router.post('/podcast/save', authenticateToken, savePodcast);
