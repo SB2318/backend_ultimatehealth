@@ -26,6 +26,7 @@ const adminAuthRoute = require('./routes/adminAuthRoute');
 const articleEditRoute = require('./routes/articleEditRequestRoute');
 const adminRoute = require('./routes/adminRoute');
 const podcastRoute = require('./routes/podcastRoute');
+const podcastAdminRoute = require('./routes/podcastReviewRoute');
 const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification, repostNotification, mentionNotification } = require('./controllers/notifications/notificationHelper');
 
 const app = express();
@@ -54,6 +55,7 @@ app.use("/api", adminAuthRoute);
 app.use("/api", adminRoute);
 app.use("/api", articleEditRoute);
 app.use("/api", podcastRoute);
+app.use("/api", podcastAdminRoute);
 
 // Test route (can be removed later)
 app.get("/hello", (req, res) => {
@@ -115,7 +117,7 @@ io.on('connection', (socket) => {
         // console.log(type, "received");
         if (data.type === 'openPost') {
             console.log('open post notification');
-            sendPostNotification(data.postId, data.message, data.authorId);
+            sendPostNotification(data.postId, data.message, data.authorId,1);
         }
         else if (data.type === 'likePost') {
             console.log('like post notification');

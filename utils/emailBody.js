@@ -170,7 +170,7 @@ module.exports.ARTICLE_FEEDBACK= `<html>
                 </body>
             </html>`;
 
- module.exports.ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION =  `<html>
+ module.exports.ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION =   `<html>
   <head>
       <style>
           body {
@@ -236,17 +236,19 @@ module.exports.ARTICLE_FEEDBACK= `<html>
           </div>
           <div class="content">
               <p>Dear Author,</p>
-              <p>We regret to inform you that your article titled "<strong>{title}</strong>" has been discarded from our review process due to the lack of action within the required review period.</p>
+              <p>We regret to inform you that your article titled "<strong>{title}</strong>" has been discarded from our review process.</p>
 
-              <p>Our review system automatically discards articles that do not receive feedback or revisions within the set time frame. Unfortunately, we did not receive any updates or revisions from your side within the 4-day deadline.</p>
+              <p><strong>Reason for Discard:</strong> {reason} </p>
 
-              <p>If you would like to resubmit your article or have any questions, feel free to contact us for further assistance. We would be happy to consider your work again in the future.</p>
+              <p>Our review system automatically discards submissions that do not meet the necessary criteria or deadlines.</p>
+
+              <p>If you would like to address the issue and resubmit your article, or if you have any questions regarding this decision, please don’t hesitate to contact us. We would be happy to review your work again.</p>
 
               <div class="note">
-                  <p><strong>Note:</strong> You can submit new articles for review at any time.</p>
+                  <p><strong>Note:</strong> You can submit new article for review at any time.</p>
               </div>
 
-              <p>We wish you the best in your future writing endeavors!</p>
+              <p>We appreciate your effort and wish you success in your creative journey.</p>
           </div>
           <div class="footer">
               <p>Best regards,<br>UltimateHealth Team</p>
@@ -254,7 +256,7 @@ module.exports.ARTICLE_FEEDBACK= `<html>
       </div>
   </body>
 </html>
-`;
+`
 
  module.exports.ARTICLE_DISCARDED_FROM_SYSTEM = `<html>
   <head>
@@ -324,7 +326,7 @@ module.exports.ARTICLE_FEEDBACK= `<html>
               <p>Dear Author,</p>
               <p>We regret to inform you that your article titled "<strong>{title}</strong>" has been discarded from our review process due to the lack of action taken within the required review period of 30 days.</p>
 
-              <p>Our review system automatically discards articles that do not receive feedback or revisions within the set time frame. Unfortunately, we did not receive any updates or revisions from your side within the 30-day deadline.</p>
+              <p>Our review system automatically discards articles that do not receive feedback or revisions within the set time frame. Unfortunately, we did not receive any updates or revisions within the 30-day deadline.</p>
 
               <p>If you would like to resubmit your article or have any questions, feel free to contact us for further assistance. We would be happy to consider your work again in the future.</p>
 
@@ -504,6 +506,92 @@ module.exports.PODCAST_DISCARDED =  `<html>
               </div>
 
               <p>We appreciate your effort and wish you success in your creative journey.</p>
+          </div>
+          <div class="footer">
+              <p>Best regards,<br>UltimateHealth Team</p>
+          </div>
+      </div>
+  </body>
+</html>
+`;
+
+ module.exports.PODCAST_DISCARDED_FROM_SYSTEM = `<html>
+  <head>
+      <style>
+          body {
+              font-family: Arial, sans-serif;
+              color: #333;
+              line-height: 1.6;
+              margin: 0;
+              padding: 0;
+              background-color: #f4f7fc;
+          }
+          .container {
+              width: 80%;
+              margin: 0 auto;
+              background-color: #ffffff;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+              background-color: #dc3545;
+              color: white;
+              padding: 15px;
+              border-radius: 8px 8px 0 0;
+              text-align: center;
+          }
+          .header h1 {
+              font-size: 24px;
+              margin: 0;
+          }
+          .content {
+              padding: 20px;
+          }
+          .footer {
+              text-align: center;
+              font-size: 14px;
+              color: #777;
+              padding: 10px;
+          }
+          .note {
+              background-color: #ffecb3;
+              padding: 10px;
+              border-left: 5px solid #ffb300;
+              margin-top: 20px;
+          }
+          .btn {
+              background-color: #28a745;
+              color: white;
+              padding: 10px 20px;
+              border-radius: 5px;
+              text-decoration: none;
+              display: inline-block;
+              margin-top: 20px;
+          }
+          .btn:hover {
+              background-color: #218838;
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <h1>Podcast Discarded: "{title}"</h1>
+          </div>
+          <div class="content">
+              <p>Dear Author,</p>
+              <p>We regret to inform you that your podcast titled "<strong>{title}</strong>" has been discarded from our review process due to the lack of action taken within the required review period of 30 days.</p>
+
+              <p>Our review system automatically discards contents that do not receive feedback or revisions within the set time frame. Unfortunately, we did not receive any updates or revisions within the 30-day deadline.</p>
+
+              <p>If you would like to resubmit your podcast or have any questions, feel free to contact us for further assistance. We would be happy to consider your work again in the future.</p>
+
+              <div class="note">
+                  <p><strong>Note:</strong> You can submit new podcasts for review at any time.</p>
+              </div>
+
+              <p>We wish you the best in your future!</p>
           </div>
           <div class="footer">
               <p>Best regards,<br>UltimateHealth Team</p>

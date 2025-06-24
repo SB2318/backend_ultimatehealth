@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const { verifyToken, verifyUser } = require("../middleware/authMiddleware");
-const { ARTICLE_FEEDBACK, ARTICLE_PUBLISH, ARTICLE_DISCARDED_FROM_SYSTEM, ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION, PODCAST_PUBLISH } = require("../utils/emailBody");
+const { ARTICLE_FEEDBACK, ARTICLE_PUBLISH, ARTICLE_DISCARDED_FROM_SYSTEM, ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION, PODCAST_PUBLISH, PODCAST_DISCARDED_FROM_SYSTEM, PODCAST_DISCARDED } = require("../utils/emailBody");
 const jwt = require('jsonwebtoken');
 const UnverifiedUser = require("../models/UnverifiedUserModel");
 const User = require("../models/UserModel");
@@ -308,7 +308,30 @@ const sendPodcastPublishedEmail = (email, podcastLink, title) => {
         }
     });
 };
-const sendArticleDiscardEmail = (email, status, title) => {
+
+const sendPodcastDiscardEmail = (email, status, title, reason) => {
+
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: `Podcast Discarded ${title}`,
+        html: status === statusEnum.statusEnum.REVIEW_PENDING ? PODCAST_DISCARDED_FROM_SYSTEM
+            .replace("{title}", title) :
+            PODCAST_DISCARDED
+                .replace("{title}", title)
+                .replace("{reason}", reason),
+    };
+
+    transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+            console.error('Error sending email:', err);
+        } else {
+            console.log('Verification email sent:', info.response);
+        }
+    });
+};
+const sendArticleDiscardEmail = (email, status, title, reason) => {
 
 
     const mailOptions = {
@@ -318,7 +341,8 @@ const sendArticleDiscardEmail = (email, status, title) => {
         html: status === statusEnum.statusEnum.UNASSIGNED ? ARTICLE_DISCARDED_FROM_SYSTEM
             .replace("{title}", title) :
             ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION
-                .replace("{title}", title),
+                .replace("{title}", title)
+                .replace("{reason}", reason),
     };
 
     transporter.sendMail(mailOptions, (err, info) => {
@@ -1905,7 +1929,8 @@ module.exports = {
     sendUnblockUserMail,
     sendRestoreRequestReceivedMail,
     sendRestoreRequestDisapprovedMail,
-    sendPodcastPublishedEmail
+    sendPodcastPublishedEmail,
+    sendPodcastDiscardEmail
 };
 
 

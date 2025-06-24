@@ -77,7 +77,8 @@ const sendPushNotification = (deviceToken, message, data, id, role) => {
  * @param {*} authorId  // author id
  */
 // Open NotificationScreen -> ArticleViewScreen
-module.exports.sendPostNotification = async (postId, message, authorId) => {
+// Upcoming task -> Post type (1-> Article, 2-> Podcast , 3-> Comment)
+module.exports.sendPostNotification = async (postId, message, authorId, postType=1) => {
 
     try {
         const user = await User.findById(authorId).populate('followers').exec();
@@ -89,7 +90,8 @@ module.exports.sendPostNotification = async (postId, message, authorId) => {
                         action: 'openPost',
                         data: {
                             postId: postId,
-                            authorId: authorId
+                            authorId: authorId,
+                            postType: postType
                         },
                         
                     }, u._id, 2);

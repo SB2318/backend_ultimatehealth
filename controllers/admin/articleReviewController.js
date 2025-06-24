@@ -2,15 +2,15 @@ const expressAsyncHandler = require('express-async-handler');
 const Article = require('../../models/Articles');
 const admin = require('../../models/admin/adminModel');
 const User = require('../../models/UserModel');
-const { articleReviewNotificationsToUser, sendCommentNotification } = require('../notifications/notificationHelper');
+const { articleReviewNotificationsToUser, sendPostNotification } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
 const WriteAggregate = require("../../models/events/writeEventSchema");
 const { sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail, sendMailArticleDiscardByAdmin } = require('../emailservice');
 const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
+const {deleteFileFn} = require('../uploadController');
 const AdminAggregate = require('../../models/events/adminContributionEvent');
 
-const jwt = require("jsonwebtoken");
 const { deleteArticleRecordFromPocketbase } = require('../../utils/pocketbaseUtil');
 // article review section
 
@@ -404,6 +404,11 @@ module.exports.discardChanges = expressAsyncHandler(
             await article.save();
             if (user) {
 
+                await sendPostNotification(article._id, {
+                    title: "Article discarded",
+                    body: "Your article with title " + article.title + " has been discarded by admin",
+                }, article.authorId, 1);
+
                 sendMailArticleDiscardByAdmin(user.email, article.title, discardReason);
             }
 
@@ -443,6 +448,11 @@ module.exports.unassignModerator = expressAsyncHandler(
             article.lastUpdated = new Date();
 
             await article.save();
+
+            await sendPostNotification(article._id, {
+                title: "Moderator Unassigned",
+                body: "The moderator has unassigned themselves from your article titled \"" + article.title + "\".",
+            }, article.authorId, 1);
 
             res.status(200).json({ message: "Article unassigned" });
 
@@ -489,7 +499,7 @@ async function unassignArticle() {
 
     try {
         const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 30);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const articles = await Article.find({
             status: {
                 $in: [statusEnum.statusEnum.IN_PROGRESS]
@@ -508,6 +518,11 @@ async function unassignArticle() {
             article.lastUpdated = new Date();
 
             await article.save();
+
+            await sendPostNotification(article._id, {
+                title: "Moderator Unassigned",
+                body: "The moderator has unassigned themselves from your article titled \"" + article.title + "\".",
+            }, article.authorId, 1);
 
         });
 
@@ -556,7 +571,12 @@ async function discardArticle() {
             await article.save();
 
             if (article.authorId?.email && article.title) {
-                sendArticleDiscardEmail(article.authorId.email, previousStatus, article.title);
+
+                await sendPostNotification(article._id, {
+                    title: "Article discarded",
+                    body: "Your article with title " + article.title + " has been discarded by system",
+                }, article.authorId._id, 1);
+                sendArticleDiscardEmail(article.authorId.email, previousStatus, article.title, "");
             }
 
 
