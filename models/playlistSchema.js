@@ -11,6 +11,7 @@ const playListSchema = new Schema({
         ref: 'User',
         required: true
     },
+    
     podcasts: [{
         type: Schema.Types.ObjectId,
         ref: 'Podcast',

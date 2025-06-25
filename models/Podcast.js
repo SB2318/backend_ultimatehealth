@@ -28,6 +28,11 @@ const podcastSchema = new Schema({
         type: String,
         required: true
     },
+
+    cover_image:{
+        type:String,
+        required:true,
+    },
     duration: {
         type: Number,
         required: true

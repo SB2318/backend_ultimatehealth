@@ -7,6 +7,7 @@ const Podcast = require("../models/Podcast");
 const PlayList = require("../models/playlistSchema");
 const AudioLikeAggregate = require('../models/events/audioLikeEventSchema');
 const AudioViewAggregate = require('../models/events/audioViewEventSchema');
+const { deleteFileFn } = require('./uploadController');
 
 const mongoose = require('mongoose');
 
@@ -132,6 +133,7 @@ const getPodcastsByPlaylistId = expressAsyncHandler(
 
             const playlist = await PlayList.findById(playlist_id).populate({
                 path: 'podcasts',
+                match: { is_removed: false, status: statusEnum.statusEnum.PUBLISHED },
                 populate: [
                     {
                         path: 'user_id',
@@ -229,10 +231,10 @@ const searchPodcast = expressAsyncHandler(
 
 const createPodcast = expressAsyncHandler(
     async (req, res) => {
-        const { title, description, tags, article_id, audio_url, duration } = req.body;
+        const { title, description, tags, article_id, audio_url, cover_image, duration } = req.body;
 
-        if (!title || !description || !tags || !article_id || !audio_url || !duration) {
-            return res.status(400).json({ message: 'All fields are required: title, description, tags, article_id, audio_url, duration' });
+        if (!title || !description || !tags || !article_id || !audio_url || !duration || !cover_image) {
+            return res.status(400).json({ message: 'All fields are required: title, description, tags, article_id, audio_url, duration, cover_image' });
         }
 
         try {
@@ -248,7 +250,8 @@ const createPodcast = expressAsyncHandler(
                 tags,
                 article_id,
                 audio_url,
-                duration
+                duration,
+                cover_image,
             });
 
             await podcast.save();
@@ -260,7 +263,7 @@ const createPodcast = expressAsyncHandler(
     }
 )
 
-// Save Podcast : (published podcast)
+// Save Podcast : (published podcast) (equivalent to add podcast to playlist)
 const savePodcast = expressAsyncHandler(
     async (req, res) => {
         try {
@@ -271,7 +274,7 @@ const savePodcast = expressAsyncHandler(
             }
             const user = await User.findById(req.userId);
             const podcast = await Podcast.findById(podcast_id)
-                .populate('tags') 
+                .populate('tags')
                 .exec();
 
             if (!user || !podcast || podcast.is_removed) {
@@ -285,25 +288,25 @@ const savePodcast = expressAsyncHandler(
             if (podcast.status !== statusEnum.statusEnum.PUBLISHED) {
                 return res.status(400).json({ message: 'Podcast is not published' });
             }
-        
-            const savedUserSet = new Set(podcast.savedUsers.map((id)=> id.toString()));
+
+            const savedUserSet = new Set(podcast.savedUsers.map((id) => id.toString()));
             const isPodcastSaved = savedUserSet.has(req.userId);
 
             if (isPodcastSaved) {
 
                 // unsave podcast
                 await Podcast.findByIdAndUpdate(podcast_id, {
-                        $pull: { savedUsers: user._id } 
-                    });
-                
+                    $pull: { savedUsers: user._id }
+                });
+
                 res.status(200).json({ message: 'Podcast unsaved' });
             }
             else {
-            
-                    Podcast.findByIdAndUpdate(podcast_id, {
-                        $addToSet: { savedUsers: user._id } 
-                    });
-                
+
+                Podcast.findByIdAndUpdate(podcast_id, {
+                    $addToSet: { savedUsers: user._id }
+                });
+
                 res.status(200).json({ message: 'Podcast saved successfully' });
             }
         } catch (error) {
@@ -312,7 +315,7 @@ const savePodcast = expressAsyncHandler(
     }
 )
 
-// Like Articles (published podcast)
+// Like Podcast (published podcast)
 const likePodcast = expressAsyncHandler(
     async (req, res) => {
         try {
@@ -344,7 +347,7 @@ const likePodcast = expressAsyncHandler(
                 await Podcast.findByIdAndUpdate(podcast._id, {
                     $pull: { likedUsers: user._id } // Remove user from likedUsers
                 });
-              
+
                 return res.status(200).json({
                     message: 'Podcast unliked successfully',
                     likeStatus: false
@@ -370,7 +373,7 @@ const likePodcast = expressAsyncHandler(
     }
 )
 
-// Update View Count (Published article)
+// Update View Count (Published podcast)
 const updatePodcastViewCount = expressAsyncHandler(
     async (req, res) => {
         const { podcast_id } = req.body;
@@ -390,9 +393,9 @@ const updatePodcastViewCount = expressAsyncHandler(
             if (podcast.status !== statusEnum.statusEnum.PUBLISHED) {
                 return res.status(400).json({ message: 'Article is not published' });
             }
-   
+
             const hasViewed = podcast.viewUsers.some(id => id.toString().equals(req.userId));
-        
+
             if (hasViewed) {
                 return res.status(200).json({ message: 'Podcast already viewed by user', data: podcast });
             }
@@ -409,6 +412,97 @@ const updatePodcastViewCount = expressAsyncHandler(
         }
     }
 )
+
+// Create playlist
+
+const createPlaylist = expressAsyncHandler(
+    async (req, res) => {
+
+        const { name, podcast_ids } = req.body;
+
+        if (!name || !podcast_ids || podcast_ids.length === 0) {
+            return res.status(400).json({ message: 'Invalid request: name, description, and podcast_ids are required' });
+        }
+
+        try {
+
+            const playlist = await PlayList.create({
+                title: name,
+                podcasts: podcast_ids,
+                user: req.userId,
+            });
+
+            return res.status(201).json({ message: 'Playlist created', data: playlist });
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ error: 'Error creating playlist', details: err.message });
+        }
+    }
+)
+// Add podcast into a playlist
+const addPodcastToPlaylist = expressAsyncHandler(
+    async (req, res) => {
+        const { podcast_id, playlist_id } = req.body;
+
+        if (!podcast_id || !playlist_id) {
+            return res.status(400).json({ error: 'Podcast and Playlist IDs are required' });
+        }
+
+        try {
+
+            const podcast = await Podcast.findById(podcast_id);
+            const playlist = await PlayList.findById(playlist_id);
+
+            if (!podcast || !playlist || podcast.is_removed) {
+                return res.status(404).json({ error: 'Podcast or Playlist not found' });
+            }
+
+            playlist.podcasts.add(podcast._id);
+            playlist.updated_at = new Date();
+            await playlist.save();
+
+            res.status(200).json({ message: 'Podcast added to playlist', data: playlist });
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ error: 'Error adding podcast to playlist', details: err.message });
+        }
+    }
+
+);
+
+// Remove podcast from a playlist
+const removePodcastFromPlaylist = expressAsyncHandler(
+    async (req, res) => {
+        const { podcast_id, playlist_id } = req.body;
+
+        if (!podcast_id || !playlist_id) {
+            return res.status(400).json({ error: 'Podcast and Playlist IDs are required' });
+        }
+
+        try {
+            const podcast = await Podcast.findById(podcast_id);
+            const playlist = await PlayList.findById(playlist_id);
+
+            if (!podcast || !playlist) {
+                return res.status(404).json({ error: 'Podcast or Playlist not found' });
+            }
+
+            // Remove podcast from the playlist
+            playlist.podcasts.pull(podcast._id);
+            playlist.updated_at = new Date();
+            await playlist.save();
+
+            res.status(200).json({ message: 'Podcast removed from playlist', data: playlist });
+
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Error removing podcast from playlist', details: err.message });
+        }
+    }
+);
+
 
 async function updatePodcastLikeContribution(userId) {
 
@@ -450,7 +544,7 @@ async function updatePodcastViewContribution(userId) {
     try {
 
         const user = await User.findById(userId);
-        if(!user){
+        if (!user) {
             return;
         }
         const event = await AudioViewAggregate.findOne({ userId: user._id, date: today });
@@ -482,74 +576,189 @@ async function updatePodcastViewContribution(userId) {
 // GET ALL LIKE EVENTS STATUS DAILY, WEEKLY, MONTHLY
 // TODO: LOCATION ANALYSIS
 const getPodcastLikeDataForGraphs = expressAsyncHandler(
-  async (req, res) => {
+    async (req, res) => {
 
-    const userId = req.userId;
+        const userId = req.userId;
 
-    try {
-      const today = new Date();
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const yearStart = new Date(today.getFullYear(), 0, 1);
+        try {
+            const today = new Date();
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const yearStart = new Date(today.getFullYear(), 0, 1);
 
-      const dailyData = await AudioLikeAggregate.find({ userId, date: today });
-      const monthlyData = await AudioLikeAggregate.find({ userId, date: { $gte: monthStart } });
-      const yearlyData = await AudioLikeAggregate.find({ userId, date: { $gte: yearStart } });
+            const dailyData = await AudioLikeAggregate.find({ userId, date: today });
+            const monthlyData = await AudioLikeAggregate.find({ userId, date: { $gte: monthStart } });
+            const yearlyData = await AudioLikeAggregate.find({ userId, date: { $gte: yearStart } });
 
-      res.status(200).json({
-        dailyLikes: {
-          date: today.toISOString().slice(0, 10), 
-          count: dailyData ? dailyData.dailyLikes : 0 
-        },
-        monthlyLikes: monthlyData.map(entry => ({
-          date: entry.date.toISOString().slice(0, 10), 
-          count: entry.monthlyLikes 
-        })),
-        yearlyLikes: yearlyData.map(entry => ({
-          month: entry.date.toISOString().slice(0, 7), 
-          count: entry.yearlyLikes 
-        })),
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'An error occurred while fetching read data' });
+            res.status(200).json({
+                dailyLikes: {
+                    date: today.toISOString().slice(0, 10),
+                    count: dailyData ? dailyData.dailyLikes : 0
+                },
+                monthlyLikes: monthlyData.map(entry => ({
+                    date: entry.date.toISOString().slice(0, 10),
+                    count: entry.monthlyLikes
+                })),
+                yearlyLikes: yearlyData.map(entry => ({
+                    month: entry.date.toISOString().slice(0, 7),
+                    count: entry.yearlyLikes
+                })),
+            });
+        } catch (error) {
+            res.status(500).json({ error: 'An error occurred while fetching read data' });
+        }
     }
-  }
 )
 
 // GET ALL VIEW EVENTS STATUS DAILY, WEEKLY, MONTHLY
 // TODO: LOCATION ANALYSIS
 // TODO: AVERAGE CALCULATION
 const getPodcastViewDataForGraphs = expressAsyncHandler(
-  async (req, res) => {
+    async (req, res) => {
 
-    const userId = req.userId;
+        const userId = req.userId;
 
-    try {
-      const today = new Date();
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const yearStart = new Date(today.getFullYear(), 0, 1);
+        try {
+            const today = new Date();
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const yearStart = new Date(today.getFullYear(), 0, 1);
 
-      const dailyData = await AudioViewAggregate.find({ userId, date: today });
-      const monthlyData = await AudioViewAggregate.find({ userId, date: { $gte: monthStart } });
-      const yearlyData = await AudioViewAggregate.find({ userId, date: { $gte: yearStart } });
+            const dailyData = await AudioViewAggregate.find({ userId, date: today });
+            const monthlyData = await AudioViewAggregate.find({ userId, date: { $gte: monthStart } });
+            const yearlyData = await AudioViewAggregate.find({ userId, date: { $gte: yearStart } });
 
-      res.status(200).json({
-        dailyViews: {
-          date: today.toISOString().slice(0, 10), 
-          count: dailyData ? dailyData.dailyViews : 0 
-        },
-        monthlyViews: monthlyData.map(entry => ({
-          date: entry.date.toISOString().slice(0, 10),
-          count: entry.monthlyViews
-        })),
-        yearlyViews: yearlyData.map(entry => ({
-          month: entry.date.toISOString().slice(0, 7), 
-          count: entry.yearlyViews 
-        })),
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'An error occurred while fetching read data' });
+            res.status(200).json({
+                dailyViews: {
+                    date: today.toISOString().slice(0, 10),
+                    count: dailyData ? dailyData.dailyViews : 0
+                },
+                monthlyViews: monthlyData.map(entry => ({
+                    date: entry.date.toISOString().slice(0, 10),
+                    count: entry.monthlyViews
+                })),
+                yearlyViews: yearlyData.map(entry => ({
+                    month: entry.date.toISOString().slice(0, 7),
+                    count: entry.yearlyViews
+                })),
+            });
+        } catch (error) {
+            res.status(500).json({ error: 'An error occurred while fetching read data' });
+        }
     }
-  }
+)
+
+// Update and delete action
+// Update podcast
+const updatePodcast = expressAsyncHandler(
+    async (req, res) => {
+        const { podcastId, name, cover_image } = req.body;
+
+        if (!podcastId || !name) {
+            return res.status(400).json({ error: 'Invalid request: podcastId and name are required' });
+        }
+
+        try {
+
+            const podcast = await Podcast.findByIdAndUpdate(
+                podcastId,
+                { title: name, updated_at: new Date() },
+                { new: true }
+            );
+
+            if (!podcast) {
+                return res.status(404).json({ error: 'Podcast not found' });
+            }
+            if (cover_image) {
+                // delete previous
+                const coverParts = podcast.cover_image.split('/api/getFile/');
+                if (coverParts.length >= 2) {
+                    await deleteFileFn(coverParts[1]);
+                }
+                podcast.cover_image = cover_image;
+                await podcast.save();
+            }
+            res.status(200).json({ message: 'Podcast updated successfully' });
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ error: 'An error occurred while updating podcast' });
+        }
+
+    }
+
+)
+
+const updatePlaylist = expressAsyncHandler(
+    async (req, res) => {
+        const { playlistId, name } = req.body;
+
+        if (!playlistId || !name) {
+            return res.status(400).json({ error: 'Invalid request: playlistId and name are required' });
+        }
+
+        try {
+            const playlist = await PlayList.findByIdAndUpdate(playlistId, { title: name, updated_at: Date.now() }, {  new: true });
+            if (!playlist) {
+                return res.status(404).json({ error: 'Playlist not found' });
+            }
+            res.status(200).json({ message: 'Playlist updated successfully' });
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ error: 'An error occurred while updating podcast' });
+        }
+
+    }
+
+)
+// Delete Podcast
+const deletePodcast = expressAsyncHandler(
+    async (req, res) => {
+        const { podcastId } = req.body;
+        if (!podcastId) {
+            return res.status(400).json({ error: 'Invalid request: podcastId is required' });
+        }
+        try {
+            const podcast = await Podcast.findByIdAndDelete(podcastId);
+            if (!podcast) {
+                return res.status(404).json({ error: 'Podcast not found' });
+            }
+            // Delete audio url
+            const parts = podcast.audio_url.split('/api/getFile/');
+            const coverParts = podcast.cover_image.split('/api/getFile/');
+            if (coverParts.length >= 2) {
+                await deleteFileFn(coverParts[1]);
+            }
+
+            if (parts.length >= 2) {
+                await deleteFileFn(parts[1]);
+            }
+
+
+            res.status(200).json({ message: 'Podcast deleted successfully' });
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ error: 'An error occurred while deleting podcast' });
+        }
+    }
+)
+// Delete Playlist
+
+const deletePlaylist = expressAsyncHandler(
+    async (req, res) => {
+        const { playlistId } = req.body;
+        if (!playlistId) {
+            return res.status(400).json({ error: 'Invalid request: playlistId is required' });
+        }
+        try {
+            const playlist = await PlayList.findByIdAndDelete(playlistId);
+            if (!playlist) {
+                return res.status(404).json({ error: 'Playlist not found' });
+            }
+
+            res.status(200).json({ message: 'Playlist deleted successfully' });
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ error: 'An error occurred while deleting playlist' });
+        }
+    }
 )
 
 
@@ -567,5 +776,18 @@ module.exports = {
     likePodcast,
     updatePodcastViewCount,
     getPodcastViewDataForGraphs,
-    getPodcastLikeDataForGraphs
+    getPodcastLikeDataForGraphs,
+
+    // Playlist
+    addPodcastToPlaylist,
+    createPlaylist,
+    removePodcastFromPlaylist,
+
+    // Update
+    updatePlaylist,
+    updatePodcast,
+
+    // Delete
+    deletePodcast,
+    deletePlaylist
 }

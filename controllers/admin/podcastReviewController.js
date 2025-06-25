@@ -173,6 +173,11 @@ const discardPodcast = expressAsyncHandler(
             podcast.discardReason = discardReason;
             podcast.updated_at = new Date();
 
+            // delete cover image
+            const coverParts = podcast.cover_image.split('/api/getFile/');
+            if (coverParts.length >= 2) {
+                await deleteFileFn(coverParts[1]);
+            }
             // delete audio file from aws
             const parts = podcast.audio_url.split('/api/getFile/');
             if (parts.length >= 2) {
@@ -300,6 +305,11 @@ async function discardPodcastFn() {
             podcast.admin_id = null;
             // article.assigned_at = null;
             podcast.status = statusEnum.statusEnum.DISCARDED;
+
+            const coverParts = podcast.cover_image.split('/api/getFile/');
+            if (coverParts.length >= 2) {
+                await deleteFileFn(coverParts[1]);
+            }
             const parts = podcast.audio_url.split('/api/getFile/');
             if (parts.length >= 2) {
                 await deleteFileFn(parts[1]);
