@@ -45,7 +45,7 @@ router.post('/podcast/save', authenticateToken, savePodcast);
 router.post('/podcast/update-view-count', authenticateToken, updatePodcastViewCount);
 
 router.post('/podcast/create-playlist', authenticateToken, createPlaylist);
-router.post('/podcast/add-podcast-to-playlist', authenticateToken, addPodcastToPlaylist);
+router.post('/podcast/add-podcast-form-playlist', authenticateToken, addPodcastToPlaylist);
 router.post('/podcast/remove-podcast-to-playlist', authenticateToken, removePodcastFromPlaylist);
 
 router.put('/podcast/update', authenticateToken, updatePodcast);
