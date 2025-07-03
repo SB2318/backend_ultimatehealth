@@ -171,13 +171,12 @@ const getAllPublishedPodcasts = expressAsyncHandler(
     async (req, res) => {
         try {
             const allPodcasts = await Podcast.find({
-                //user_id: userId,
-                status: statusEnum.statusEnum.PUBLISHED
-            })
-            .populate('tags')
-            .sort({ updated_at: -1 });
-        
-            res.status(200).json(allPodcasts);
+                status: statusEnum.PUBLISHED
+            }).populate('tags')
+              .populate('user_id', 'user_name user_handle')
+              .sort({ updated_at: -1 });
+             
+             res.status(200).json(allPodcasts);
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: "Internal server error" });
