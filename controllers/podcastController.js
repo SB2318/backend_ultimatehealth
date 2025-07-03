@@ -251,6 +251,7 @@ const createPodcast = expressAsyncHandler(
                 article_id,
                 audio_url,
                 duration,
+                user_id: user._id,
                 cover_image,
             });
 
