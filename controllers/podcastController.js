@@ -171,7 +171,7 @@ const getAllPublishedPodcasts = expressAsyncHandler(
     async (req, res) => {
         try {
             const allPodcasts = await Podcast.find({
-                status: statusEnum.PUBLISHED
+                status: statusEnum.statusEnum.PUBLISHED
             }).populate('tags')
               .populate('user_id', 'user_name user_handle')
               .sort({ updated_at: -1 });
