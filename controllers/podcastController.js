@@ -11,6 +11,7 @@ const { deleteFileFn } = require('./uploadController');
 
 const mongoose = require('mongoose');
 
+/** Podcast profile */
 const getPodcastProfile = expressAsyncHandler(
 
     async (req, res) => {
@@ -63,6 +64,7 @@ const getPodcastProfile = expressAsyncHandler(
     }
 )
 
+/** Podcast of all following authors */
 const getFollowingsPodcasts = expressAsyncHandler(
     async (req, res) => {
 
@@ -102,6 +104,7 @@ const getFollowingsPodcasts = expressAsyncHandler(
     }
 )
 
+/** get all playlists of mine (for profile section) */
 const getMyPlayLists = expressAsyncHandler(
 
     async (req, res) => {
@@ -120,6 +123,7 @@ const getMyPlayLists = expressAsyncHandler(
 
 );
 
+/** Get all podcasts for one playlist */
 const getPodcastsByPlaylistId = expressAsyncHandler(
     async (req, res) => {
 
@@ -159,7 +163,29 @@ const getPodcastsByPlaylistId = expressAsyncHandler(
             res.status(500).json({ message: err.message });
         }
     }
+);
+
+/** Get all published podcasts (most recent uploaded) */
+
+const getAllPublishedPodcasts = expressAsyncHandler(
+    async (req, res) => {
+        try {
+            const allPodcasts = await Podcast.find({
+                //user_id: userId,
+                status: statusEnum.statusEnum.PUBLISHED
+            })
+            .populate('tags')
+            .sort({ updated_at: -1 });
+        
+            res.status(200).json(allPodcasts);
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ message: "Internal server error" });
+        }
+    }
 )
+
+/** Single podcast detail */
 
 const getPodcastById = expressAsyncHandler(
     async (req, res) => {
@@ -188,6 +214,8 @@ const getPodcastById = expressAsyncHandler(
         }
     }
 )
+
+/** Search podcast */
 
 const searchPodcast = expressAsyncHandler(
     async (req, res) => {
@@ -229,6 +257,7 @@ const searchPodcast = expressAsyncHandler(
     }
 )
 
+/** To create podcast */
 const createPodcast = expressAsyncHandler(
     async (req, res) => {
         const { title, description, tags, article_id, audio_url, cover_image, duration } = req.body;
@@ -696,7 +725,7 @@ const updatePlaylist = expressAsyncHandler(
         }
 
         try {
-            const playlist = await PlayList.findByIdAndUpdate(playlistId, { title: name, updated_at: Date.now() }, {  new: true });
+            const playlist = await PlayList.findByIdAndUpdate(playlistId, { title: name, updated_at: Date.now() }, { new: true });
             if (!playlist) {
                 return res.status(404).json({ error: 'Playlist not found' });
             }
@@ -767,6 +796,7 @@ module.exports = {
     getPodcastProfile,
     getFollowingsPodcasts,
     getMyPlayLists,
+    getAllPublishedPodcasts,
     getPodcastsByPlaylistId,
     getPodcastById,
     searchPodcast,

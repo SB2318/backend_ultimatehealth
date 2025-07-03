@@ -8,6 +8,7 @@ const {
     getPodcastsByPlaylistId,
     getPodcastById,
     getPodcastProfile,
+    getAllPublishedPodcasts,
     searchPodcast,
 
     createPodcast,
@@ -35,6 +36,7 @@ router.get('/podcast/profile', authenticateToken, getPodcastProfile);
 router.get('/podcast/followings', authenticateToken, getFollowingsPodcasts);
 router.get('/podcast/get-my-playlists', authenticateToken, getMyPlayLists);
 router.get('/podcast/playlist-details', authenticateToken, getPodcastsByPlaylistId);
+router.get('/podcast/published-podcasts', authenticateToken, getAllPublishedPodcasts);
 router.get('/podcast/details', authenticateToken, getPodcastById);
 router.get('/podcast/search', authenticateToken, searchPodcast);
 router.get('/podcast/view-graph', authenticateToken, getPodcastViewDataForGraphs);
