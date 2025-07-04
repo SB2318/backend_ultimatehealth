@@ -369,7 +369,7 @@ const likePodcast = expressAsyncHandler(
             }
             // Check if the article is already liked
             const likedUserSet = new Set(podcast.likedUsers.map(u => u.toString()));
-            const isUserLiked = likedUserSet.has(req.userId);
+            const isUserLiked = likedUserSet.has(req.userId.toString());
 
             if (isUserLiked) {
                 // Unlike It
@@ -423,10 +423,15 @@ const updatePodcastViewCount = expressAsyncHandler(
                 return res.status(400).json({ message: 'Article is not published' });
             }
 
-            console.log('Podcast view users', podcast.viewUsers[0].toString());
-            const hasViewed = podcast.viewUsers.some(id => id.toString() === req.userId);
+           // console.log('Podcast view users', podcast.viewUsers[0].toString());
+              
+            const viewUserSet = new Set(podcast.viewUsers.map(u => u.toString()));
+            const isUserViewed = viewUserSet.has(req.userId.toString());
+            //console.log("View User set", viewUserSet);
+            //console.log("Req User Id", req.userId);
+            //const hasViewed = podcast.viewUsers.some(id => id.toString() === req.userId);
 
-            if (hasViewed) {
+            if (isUserViewed) {
                 return res.status(200).json({ message: 'Podcast already viewed by user', data: podcast });
             }
 
