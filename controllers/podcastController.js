@@ -423,7 +423,8 @@ const updatePodcastViewCount = expressAsyncHandler(
                 return res.status(400).json({ message: 'Article is not published' });
             }
 
-            const hasViewed = podcast.viewUsers.some(id => id.toString().equals(req.userId));
+            console.log('Podcast view users', podcast.viewUsers[0].toString());
+            const hasViewed = podcast.viewUsers.some(id => id.toString() === req.userId);
 
             if (hasViewed) {
                 return res.status(200).json({ message: 'Podcast already viewed by user', data: podcast });
