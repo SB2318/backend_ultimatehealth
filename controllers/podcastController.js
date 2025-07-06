@@ -199,6 +199,7 @@ const getPodcastById = expressAsyncHandler(
 
             const podcast = await Podcast.findById(podcast_id).
                 populate('user_id', 'user_name Profile_image followers').
+                populate('mentionedUsers', 'user_name user_handle Profile_image').
                 populate('tags').
                 lean().
                 exec();
@@ -288,6 +289,8 @@ const createPodcast = expressAsyncHandler(
                 user_id: user._id,
                 cover_image,
             });
+
+            podcast.mentionedUsers.push(user._id);
 
             await podcast.save();
             res.status(201).json({ message: 'Podcast created successfully.', podcast: podcast });
