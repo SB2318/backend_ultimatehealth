@@ -4,6 +4,7 @@ const Article = require("../models/Articles");
 const User = require("../models/UserModel");
 const statusEnum = require("../utils/StatusEnum");
 const Podcast = require("../models/Podcast");
+const Comment = require("../models/commentSchema");
 const PlayList = require("../models/playlistSchema");
 const AudioLikeAggregate = require('../models/events/audioLikeEventSchema');
 const AudioViewAggregate = require('../models/events/audioViewEventSchema');
@@ -201,11 +202,16 @@ const getPodcastById = expressAsyncHandler(
                 populate('tags').
                 lean().
                 exec();
+           
 
             if (!podcast) {
                 return res.status(404).json({ message: 'Podcast not found' });
             }
-            return res.status(200).json(podcast);
+            const commentCount = await Comment.countDocuments({
+                podcastId: podcast_id,
+                status:'Active'
+            });
+            return res.status(200).json({...podcast, commentCount});
 
         } catch (err) {
             console.log(err);
