@@ -166,11 +166,11 @@ io.on('connection', (socket) => {
                 let article, podcast;
                 const user = await User.findById(userId);
 
-                if (article) {
+                if (articleId) {
                     article = await Article.findById(articleId);
                 }
 
-                if (podcast) {
+                if (podcastId) {
                     podcast = await Podcast.findById(podcastId);
                 }
                 if (!user || (articleId && (!article || article.is_removed)) || (podcastId && (!podcast || podcast.is_removed))) {
@@ -478,11 +478,11 @@ io.on('connection', (socket) => {
 
                 let article, podcast;
 
-                if (article) {
+                if (articleId) {
                     article = await Article.findById(articleId);
                 }
 
-                if (podcast) {
+                if (podcastId) {
                     podcast = await Podcast.findById(podcastId);
                 }
                 const [comment, user] = await Promise.all([
