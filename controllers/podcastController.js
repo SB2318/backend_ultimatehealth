@@ -279,7 +279,8 @@ const filterPodcast = expressAsyncHandler(
 
             const matchTagIds = tags
                 .filter(mongoose.isValidObjectId)
-                .map(mongoose.Types.ObjectId);
+                .map(id => mongoose.Types.ObjectId.createFromHexString(id));
+
 
             const query = {
                 tags: { $in: matchTagIds },
