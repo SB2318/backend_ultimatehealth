@@ -244,7 +244,7 @@ const searchPodcast = expressAsyncHandler(
                             { description: regex }]
                     }
                 )
-                .select('_id title description article_id tags')
+                .select('_id title description article_id tags viewUsers')
                 .populate('tags')
                 .populate('article_id', 'title')
                 .populate('user_id', 'user_name user_handle Profile_image')
