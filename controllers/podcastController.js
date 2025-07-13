@@ -174,10 +174,10 @@ const getAllPublishedPodcasts = expressAsyncHandler(
             const allPodcasts = await Podcast.find({
                 status: statusEnum.statusEnum.PUBLISHED
             }).populate('tags')
-              .populate('user_id', 'user_name user_handle Profile_image')
-              .sort({ updated_at: -1 });
-             
-             res.status(200).json(allPodcasts);
+                .populate('user_id', 'user_name user_handle Profile_image')
+                .sort({ updated_at: -1 });
+
+            res.status(200).json(allPodcasts);
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: "Internal server error" });
@@ -203,16 +203,16 @@ const getPodcastById = expressAsyncHandler(
                 populate('tags').
                 lean().
                 exec();
-           
+
 
             if (!podcast) {
                 return res.status(404).json({ message: 'Podcast not found' });
             }
             const commentCount = await Comment.countDocuments({
                 podcastId: podcast_id,
-                status:'Active'
+                status: 'Active'
             });
-            return res.status(200).json({...podcast, commentCount});
+            return res.status(200).json({ ...podcast, commentCount });
 
         } catch (err) {
             console.log(err);
@@ -235,13 +235,17 @@ const searchPodcast = expressAsyncHandler(
             const matchingArticles = await Article.find({ title: regex }).select('_id title');
             const articleIds = matchingArticles.map(a => a._id);
 
+
+
             const matchPodcasts = await Podcast.
                 find(
                     {
                         $or: [
                             { article_id: { $in: articleIds } },
                             { title: regex },
-                            { description: regex }]
+                            { description: regex },
+
+                        ]
                     }
                 )
                 .select('_id title description article_id tags viewUsers duration')
@@ -251,6 +255,45 @@ const searchPodcast = expressAsyncHandler(
                 .sort({
                     updated_at: -1
                 })
+                .lean()
+                .exec();
+
+
+            return res.status(200).json(matchPodcasts);
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
+
+const filterPodcast = expressAsyncHandler(
+    async (req, res) => {
+        const { tags, sortType } = req.body;
+
+        if (!tags || !Array.isArray(tags) || tags.length === 0) {
+            return res.status(400).json({ message: 'Invalid tags' });
+        }
+        try {
+
+            const matchTagIds = tags
+                .filter(mongoose.isValidObjectId)
+                .map(mongoose.Types.ObjectId);
+
+            const query = {
+                tags: { $in: matchTagIds },
+                status: statusEnum.statusEnum.PUBLISHED,
+            };
+            const sort = {
+                updated_at: sortType === 0 ? 1 : -1
+            }
+            const matchPodcasts = await Podcast.find(query)
+                .select('_id title description article_id tags viewUsers duration')
+                .populate('tags')
+                .populate('article_id', 'title')
+                .populate('user_id', 'user_name user_handle Profile_image')
+                .sort(sort)
                 .lean()
                 .exec();
 
@@ -433,8 +476,8 @@ const updatePodcastViewCount = expressAsyncHandler(
                 return res.status(400).json({ message: 'Article is not published' });
             }
 
-           // console.log('Podcast view users', podcast.viewUsers[0].toString());
-              
+            // console.log('Podcast view users', podcast.viewUsers[0].toString());
+
             const viewUserSet = new Set(podcast.viewUsers.map(u => u.toString()));
             const isUserViewed = viewUserSet.has(req.userId.toString());
             //console.log("View User set", viewUserSet);
@@ -815,6 +858,7 @@ module.exports = {
     getPodcastsByPlaylistId,
     getPodcastById,
     searchPodcast,
+    filterPodcast,
 
     // post
     createPodcast,
