@@ -247,6 +247,7 @@ const searchPodcast = expressAsyncHandler(
                 .select('_id title description article_id tags')
                 .populate('tags')
                 .populate('article_id', 'title')
+                .populate('user_id', 'user_name user_handle Profile_image')
                 .sort({
                     updated_at: -1
                 })
