@@ -546,10 +546,12 @@ const addPodcastToPlaylist = expressAsyncHandler(
             if (!podcast || !playlist || podcast.is_removed) {
                 return res.status(404).json({ error: 'Podcast or Playlist not found' });
             }
+            if (!playlist.podcasts.includes(podcast._id)) {
+                playlist.podcasts.push(podcast._id);
+                playlist.updated_at = new Date();
+                await playlist.save();
+            }
 
-            playlist.podcasts.add(podcast._id);
-            playlist.updated_at = new Date();
-            await playlist.save();
 
             res.status(200).json({ message: 'Podcast added to playlist', data: playlist });
 
