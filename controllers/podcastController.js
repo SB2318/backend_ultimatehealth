@@ -563,6 +563,77 @@ const addPodcastToPlaylist = expressAsyncHandler(
 
 );
 
+/**
+ * User will randomly select or uncheck all playlist,
+
+Add to playlist always contains a list of playlist ids, with particular podcast id
+Remove playlist always contains a list of playlist ids, with particular podcast id
+
+Create playlist always contains a list of playlist ids, with particular podcast id, and the playlist name to create..
+
+ */
+const updatePlaylistwithPodcast = expressAsyncHandler(
+    async (req, res) => {
+
+        const { addPlaylistIds, removePlaylistIds, podcast_id, playlist_name } = req.body;
+
+        if (!addPlaylistIds || !removePlaylistIds || !podcast_id) {
+            res.status(400).json({ error: "Playlistids add or remove along with podcast id required" });
+            return;
+        }
+
+        if (!Array.isArray(addPlaylistIds) || !Array.isArray(removePlaylistIds)) {
+            res.status(400).json({ error: "Request format is invalid" });
+            return;
+        }
+
+        try {
+            const podcast = await Podcast.findById(podcast_id);
+            if (!podcast || podcast.is_removed) {
+                return res.status(404).json({ error: 'Podcast or Playlist not found' });
+            }
+            // First complete addition
+            for (const id of addPlaylistIds) {
+                const playlist = await PlayList.findById(id);
+                if (playlist && playlist.user.toString() === req.userId && !playlist.podcasts.some(i => i.toString() === podcast_id)) {
+                    playlist.podcasts.push(podcast_id);
+                    playlist.updated_at = new Date();
+                    await playlist.save();
+                }
+            }
+            // Complete deletion
+            for (const id of removePlaylistIds) {
+                const playlist = await PlayList.findById(id);
+
+                if (playlist && playlist.user.toString() === req.userId && playlist.podcasts.some(i => i.toString() === podcast_id)) {
+                    playlist.podcasts = playlist.podcasts.filter((i) => i.toString() !== podcast_id);
+                    playlist.updated_at = new Date();
+                    await playlist.save();
+                }
+            }
+
+            // If playlist creation
+
+            if (playlist_name && playlist_name !== '') {
+                const playlist = await PlayList.create({
+                    title: playlist_name,
+                    podcasts: [podcast_id],
+                    user: req.userId,
+                });
+
+                return res.status(201).json({ message: 'Playlist created', data: playlist });
+            }
+
+
+            res.status(200).json({ message: 'Podcast added to playlist' });
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ error: err.message });
+        }
+    }
+)
+
 // Remove podcast from a playlist
 const removePodcastFromPlaylist = expressAsyncHandler(
     async (req, res) => {
@@ -882,5 +953,6 @@ module.exports = {
 
     // Delete
     deletePodcast,
-    deletePlaylist
+    deletePlaylist,
+    updatePlaylistwithPodcast
 }

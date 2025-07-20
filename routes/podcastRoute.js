@@ -30,7 +30,8 @@ const {
     // Delete
     deletePodcast,
     deletePlaylist,
-    filterPodcast
+    filterPodcast,
+    updatePlaylistwithPodcast
 } = require('../controllers/podcastController');
 
 router.get('/podcast/profile', authenticateToken, getPodcastProfile);
@@ -51,6 +52,7 @@ router.post('/podcast/update-view-count', authenticateToken, updatePodcastViewCo
 router.post('/podcast/create-playlist', authenticateToken, createPlaylist);
 router.post('/podcast/add-podcast-form-playlist', authenticateToken, addPodcastToPlaylist);
 router.post('/podcast/remove-podcast-to-playlist', authenticateToken, removePodcastFromPlaylist);
+router.post('/podcast/update-playlist', authenticateToken, updatePlaylistwithPodcast);
 
 router.put('/podcast/update', authenticateToken, updatePodcast);
 router.put('/podcast/update-playlist', authenticateToken, updatePlaylist);
