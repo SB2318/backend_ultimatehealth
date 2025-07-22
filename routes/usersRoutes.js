@@ -121,7 +121,7 @@ router.post(
 router.get("/user/getdetails", authenticateToken, getUserDetails);
 
 // Update user password
-router.put("/user/update-password", authenticateToken, updateUserPassword);
+router.put("/user/update-password", updateUserPassword);
 
 // Update user general details
 router.put("/user/update-general-details", authenticateToken, updateUserGeneralDetails);
