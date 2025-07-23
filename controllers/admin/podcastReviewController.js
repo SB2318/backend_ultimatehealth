@@ -15,7 +15,9 @@ const availablePodcastsForReview = expressAsyncHandler(
         try {
             const podcasts = await Podcast.find({
                 status: statusEnum.statusEnum.REVIEW_PENDING
-            });
+            }).populate('tags')
+                .populate('user_id', 'user_name user_handle Profile_image')
+                .sort({ updated_at: -1 });
 
             res.status(200).json(podcasts);
         } catch (err) {
@@ -33,7 +35,9 @@ const getAllPodcastsOfModerator = expressAsyncHandler(
             const podcasts = await Podcast.find({
                 status: statusEnum.statusEnum.IN_PROGRESS,
                 admin_id: req.userId
-            });
+            }).populate('tags')
+                .populate('user_id', 'user_name user_handle Profile_image')
+                .sort({ updated_at: -1 });
 
             res.status(200).json(podcasts);
 
