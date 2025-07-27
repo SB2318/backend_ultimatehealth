@@ -55,7 +55,9 @@ const getAllCompletedPodcastsOfModerator = expressAsyncHandler(
             const podcasts = await Podcast.find({
                 status: statusEnum.statusEnum.PUBLISHED,
                 admin_id: req.userId
-            });
+            }).populate('tags')
+                .populate('user_id', 'user_name user_handle Profile_image')
+                .sort({ updated_at: -1 });
 
             res.status(200).json(podcasts);
 
