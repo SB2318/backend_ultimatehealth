@@ -152,7 +152,8 @@ module.exports.getAllCompletedImprovementsForAdmin = expressAsyncHandler(
         }
         try {
             const articles = await EditRequest.find({
-                reviewer_id: reviewer_id, status: {
+                reviewer_id: reviewer_id, 
+                status: {
                     $in: [statusEnum.statusEnum.PUBLISHED]
                 }
             }).populate({

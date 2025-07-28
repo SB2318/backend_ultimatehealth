@@ -85,7 +85,7 @@ const pickPodcast = expressAsyncHandler(
             if (podcast.admin_id !== null) {
                 return res.status(400).json({ message: "Podcast is already picked by another admin." });
             }
-            podcast.admin_id = req.userId;
+            podcast.admin_id = adminUser._id;
             podcast.status = statusEnum.statusEnum.IN_PROGRESS;
             podcast.updated_at = new Date();
 
@@ -116,7 +116,7 @@ const approvePodcast = expressAsyncHandler(
                 return res.status(404).json({ message: "Podcast or admin not found" });
             }
 
-            if (podcast.admin_id !== adminUser._id) {
+            if (podcast.admin_id.toString() !== adminUser._id.toString()) {
                 return res.status(400).json({ message: "You are not the admin of this podcast " });
             }
 
@@ -170,7 +170,7 @@ const discardPodcast = expressAsyncHandler(
                 return res.status(404).json({ message: "Podcast or admin not found" });
             }
 
-            if (podcast.admin_id !== adminUser._id) {
+            if (podcast.admin_id.toString() !== adminUser._id.toString()) {
                 return res.status(400).json({ message: "You are not the admin of this podcast " });
             }
 

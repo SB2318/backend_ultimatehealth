@@ -11,148 +11,148 @@ const statusEnum = require("../utils/StatusEnum");
 const cooldownTime = 3600;
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
 const sendVerificationEmail = (email, token, isAdmin) => {
 
-    const url = `${process.env.BASE_URL}api/user/verifyEmail?token=${token}&isAdmin=${isAdmin}`;
-    console.log("URL", url);
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Email Verification',
-        html: `<h3>Please verify your email by clicking the link below:</h3><a href="${url}">${url}</a>`,
-    };
+  const url = `${process.env.BASE_URL}api/user/verifyEmail?token=${token}&isAdmin=${isAdmin}`;
+  console.log("URL", url);
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Email Verification',
+    html: `<h3>Please verify your email by clicking the link below:</h3><a href="${url}">${url}</a>`,
+  };
 
-    transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-            console.error('Error sending email:', err);
-        } else {
-            console.log('Verification email sent:', info.response);
-        }
-    });
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Verification email sent:', info.response);
+    }
+  });
 };
 
 const Sendverifymail = async (req, res) => {
-    const { email, token, isAdmin } = req.body;
+  const { email, token, isAdmin } = req.body;
 
-    if (!email || !token) {
-        return res.status(400).json({ message: 'Email and token are required' });
-    }
+  if (!email || !token) {
+    return res.status(400).json({ message: 'Email and token are required' });
+  }
 
-    let user;
-    if (isAdmin) {
-        user = await admin.findOne({ email });
-    } else {
-        user = await UnverifiedUser.findOne({ email: email });
-    }
+  let user;
+  if (isAdmin) {
+    user = await admin.findOne({ email });
+  } else {
+    user = await UnverifiedUser.findOne({ email: email });
+  }
 
-    const cooldownKey = `verification-email:${email}`;
+  const cooldownKey = `verification-email:${email}`;
 
-    if (cache.get(cooldownKey)) {
-        return res.status(429).json({ message: 'Verification email already sent' });
-    }
+  if (cache.get(cooldownKey)) {
+    return res.status(429).json({ message: 'Verification email already sent' });
+  }
 
-    cache.put(cooldownKey, 'true', cooldownTime * 1000); // store for 1 hour
+  cache.put(cooldownKey, 'true', cooldownTime * 1000); // store for 1 hour
 
-    if (!user || user.isVerified) {
-        return res.status(400).json({ message: 'User not found or already verified' });
-    } else {
-        sendVerificationEmail(email, token, isAdmin);
-    }
+  if (!user || user.isVerified) {
+    return res.status(400).json({ message: 'User not found or already verified' });
+  } else {
+    sendVerificationEmail(email, token, isAdmin);
+  }
 
-    res.status(200).json({ message: 'Verification email sent' });
+  res.status(200).json({ message: 'Verification email sent' });
 };
 
 
 const resendVerificationEmail = async (req, res) => {
-    const { email, isAdmin } = req.body;
+  const { email, isAdmin } = req.body;
 
-    if (!email) {
-        return res.status(400).json({ message: 'Email is required' });
-    }
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
 
-    let user;
+  let user;
 
-    if (isAdmin) {
-        user = await admin.findOne({ email });
-    } else {
-        user = await UnverifiedUser.findOne({ email: email });
-    }
+  if (isAdmin) {
+    user = await admin.findOne({ email });
+  } else {
+    user = await UnverifiedUser.findOne({ email: email });
+  }
 
-    if (!user || user.isVerified) {
-        return res.status(400).json({ message: 'User not found or already verified' });
-    }
+  if (!user || user.isVerified) {
+    return res.status(400).json({ message: 'User not found or already verified' });
+  }
 
-    const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    sendVerificationEmail(email, verificationToken, isAdmin);
+  const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  sendVerificationEmail(email, verificationToken, isAdmin);
 
-    const cooldownKey = `resend-verification-email:${email}`;
+  const cooldownKey = `resend-verification-email:${email}`;
 
-    if (cache.get(cooldownKey)) {
-        return res.status(429).json({ message: 'Verification email already sent' });
-    }
+  if (cache.get(cooldownKey)) {
+    return res.status(429).json({ message: 'Verification email already sent' });
+  }
 
-    cache.put(cooldownKey, 'true', cooldownTime * 1000); // store for 1 hour
+  cache.put(cooldownKey, 'true', cooldownTime * 1000); // store for 1 hour
 
-    res.status(200).json({ message: 'Verification email sent' });
+  res.status(200).json({ message: 'Verification email sent' });
 };
 
 //verify email functionality
 const verifyEmail = async (req, res) => {
-    const { token, isAdmin } = req.query;
+  const { token, isAdmin } = req.query;
 
-    if (!token) {
-        return res.status(400).json({ error: 'Token is missing' });
+  if (!token) {
+    return res.status(400).json({ error: 'Token is missing' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (isAdmin) {
+      const user = await admin.findOne({ email: decoded.email });
+
+      if (!user) {
+        return res.status(201).json({ message: 'Admin user not found, register yourself first' });
+      }
+
+      user.isVerified = true;
+      await user.save();
+    }
+    else {
+
+      const unverifiedUser = await UnverifiedUser.findOne({ email: decoded.email });
+
+      if (!unverifiedUser) {
+        return res.status(201).json({ message: 'Either email already verified or register yourself first' });
+      }
+
+      // Move user from UnverifiedUser to User collection
+      const newUser = new User({
+        user_name: unverifiedUser.user_name,
+        user_handle: unverifiedUser.user_handle,
+        email: unverifiedUser.email,
+        password: unverifiedUser.password,
+        isDoctor: unverifiedUser.isDoctor,
+        specialization: unverifiedUser.specialization,
+        qualification: unverifiedUser.qualification,
+        Years_of_experience: unverifiedUser.Years_of_experience,
+        contact_detail: unverifiedUser.contact_detail,
+        Profile_image: unverifiedUser.Profile_image,
+        isVerified: true
+      });
+
+      await newUser.save();
+      await UnverifiedUser.deleteOne({ email: unverifiedUser.email });
     }
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        if (isAdmin) {
-            const user = await admin.findOne({ email: decoded.email });
-
-            if (!user) {
-                return res.status(201).json({ message: 'Admin user not found, register yourself first' });
-            }
-
-            user.isVerified = true;
-            await user.save();
-        }
-        else {
-
-            const unverifiedUser = await UnverifiedUser.findOne({ email: decoded.email });
-
-            if (!unverifiedUser) {
-                return res.status(201).json({ message: 'Either email already verified or register yourself first' });
-            }
-
-            // Move user from UnverifiedUser to User collection
-            const newUser = new User({
-                user_name: unverifiedUser.user_name,
-                user_handle: unverifiedUser.user_handle,
-                email: unverifiedUser.email,
-                password: unverifiedUser.password,
-                isDoctor: unverifiedUser.isDoctor,
-                specialization: unverifiedUser.specialization,
-                qualification: unverifiedUser.qualification,
-                Years_of_experience: unverifiedUser.Years_of_experience,
-                contact_detail: unverifiedUser.contact_detail,
-                Profile_image: unverifiedUser.Profile_image,
-                isVerified: true
-            });
-
-            await newUser.save();
-            await UnverifiedUser.deleteOne({ email: unverifiedUser.email });
-        }
-
-        // Respond with an HTML page
-        res.send(`
+    // Respond with an HTML page
+    res.send(`
             <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -238,129 +238,705 @@ const verifyEmail = async (req, res) => {
 </body>
 </html>
         `);
-    } catch (error) {
-        console.error('Error verifying email:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+  } catch (error) {
+    console.error('Error verifying email:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
 
 const sendArticleFeedbackEmail = (email, feedback, title) => {
 
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: `New Feedback on Your Article: ${title}`,
-        html: ARTICLE_FEEDBACK
-            .replace("{title}", title)
-            .replace("{feedback}", feedback),
-    };
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `New Feedback on Your Article: ${title}`,
+    html: `<html>
+                <head>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            color: #333;
+                            line-height: 1.6;
+                            margin: 0;
+                            padding: 0;
+                            background-color: #f4f7fc;
+                        }
+                        .container {
+                            width: 80%;
+                            margin: 0 auto;
+                            background-color: #ffffff;
+                            padding: 20px;
+                            border-radius: 8px;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        }
+                        .header {
+                            background-color: #00BFFF;
+                            color: white;
+                            padding: 15px;
+                            border-radius: 8px 8px 0 0;
+                            text-align: center;
+                        }
+                        .header h1 {
+                            font-size: 24px;
+                            margin: 0;
+                        }
+                        .content {
+                            padding: 20px;
+                        }
+                        .footer {
+                            text-align: center;
+                            font-size: 14px;
+                            color: #777;
+                            padding: 10px;
+                        }
+                        .note {
+                            background-color: #ffecb3;
+                            padding: 10px;
+                            border-left: 5px solid #ffb300;
+                            margin-top: 20px;
+                        }
+                        .btn {
+                            background-color: #28a745;
+                            color: white;
+                            padding: 10px 20px;
+                            border-radius: 5px;
+                            text-decoration: none;
+                            display: inline-block;
+                            margin-top: 20px;
+                        }
+                        .btn:hover {
+                            background-color: #218838;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1> Feedback for "${title}"</h1>
+                        </div>
+                        <div class="content">
+                            <p>Dear Author,</p>
+                            <p>I hope this message finds you well!</p>
+                            <p>We have reviewed your article titled "<strong>${title}</strong>" and would like to provide some feedback:</p>
 
-    transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-            console.error('Error sending email:', err);
-        } else {
-            console.log('Verification email sent:', info.response);
-        }
-    });
+                            <p><strong>Feedback:</strong></p>
+                            <p>${feedback}</p>
+
+                            <p>We believe your article has great potential, and with a few adjustments, it will be even more impactful. Please review the feedback and feel free to reach out if you need further clarification.</p>
+
+                            <div class="note">
+                                <p><strong>Note:</strong> If no action is taken within 4 days, the article will automatically be discarded from our review process.</p>
+                            </div>
+
+                            <p>We look forward to your revised article. Please don't hesitate to get in touch if you have any questions!</p>
+        
+                        </div>
+                        <div class="footer">
+                            <p>Best regards,<br>UltimateHealth Team</p>
+                        </div>
+                    </div>
+                </body>
+            </html>`,
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Verification email sent:', info.response);
+    }
+  });
 };
 
 // Later will centralize all email body, once the thing is integrated in frontend
 const sendArticlePublishedEmail = (email, articleLink, title) => {
 
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: `New Feedback on Your Article: ${title}`,
-        html: ARTICLE_PUBLISH
-            .replace("{title}", title)
-            .replace("{articleLink}", articleLink),
-    };
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `New Feedback on Your Article: ${title}`,
+    html: `<html>
+    <head>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                color: #333;
+                line-height: 1.6;
+                margin: 0;
+                padding: 0;
+                background-color: #f4f7fc;
+            }
+            .container {
+                width: 80%;
+                margin: 0 auto;
+                background-color: #ffffff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+                background-color: #00BFFF;
+                color: white;
+                padding: 15px;
+                border-radius: 8px 8px 0 0;
+                text-align: center;
+            }
+            .header h1 {
+                font-size: 24px;
+                margin: 0;
+            }
+            .content {
+                padding: 20px;
+            }
+            .footer {
+                text-align: center;
+                font-size: 14px;
+                color: #777;
+                padding: 10px;
+            }
+            .note {
+                background-color: #e7f4e7;
+                padding: 10px;
+                border-left: 5px solid #28a745;
+                margin-top: 20px;
+            }
+            .btn {
+                background-color: #28a745;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px;
+                text-decoration: none;
+                display: inline-block;
+                margin-top: 20px;
+            }
+            .btn:hover {
+                background-color: #218838;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Article Published: ${title}</h1>
+            </div>
+            <div class="content">
+                <p>Dear Author,</p>
+                <p>We are excited to inform you that your article titled "<strong>${title}</strong>" has been successfully published on UltimateHealth!</p>
 
-    transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-            console.error('Error sending email:', err);
-        } else {
-            console.log('Verification email sent:', info.response);
-        }
-    });
+                <p>Your work is now live for our readers to enjoy, and we are thrilled to share your insights with the community. We sincerely appreciate the effort you’ve put into this article and hope it resonates with many!</p>
+
+                <div class="note">
+                    <p><strong>Note:</strong> You can view your article by following this <a href="${articleLink}" class="btn">link</a>.</p>
+                </div>
+
+                <p>Thank you for contributing to UltimateHealth. If you have any questions or need further assistance, don’t hesitate to reach out!</p>
+            </div>
+            <div class="footer">
+                <p>Best regards,<br>UltimateHealth Team</p>
+            </div>
+        </div>
+    </body>
+</html>`,
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Verification email sent:', info.response);
+    }
+  });
 };
 
 const sendPodcastPublishedEmail = (email, podcastLink, title) => {
 
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: `New Feedback on Your Article: ${title}`,
-        html: PODCAST_PUBLISH
-            .replace("{title}", title)
-            .replace("{podcastLink}", podcastLink),
-    };
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `New Feedback on Your Podcast: ${title}`,
+    html: `<html>
+    <head>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                color: #333;
+                line-height: 1.6;
+                margin: 0;
+                padding: 0;
+                background-color: #f4f7fc;
+            }
+            .container {
+                width: 80%;
+                margin: 0 auto;
+                background-color: #ffffff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+                background-color: #00BFFF;
+                color: white;
+                padding: 15px;
+                border-radius: 8px 8px 0 0;
+                text-align: center;
+            }
+            .header h1 {
+                font-size: 24px;
+                margin: 0;
+            }
+            .content {
+                padding: 20px;
+            }
+            .footer {
+                text-align: center;
+                font-size: 14px;
+                color: #777;
+                padding: 10px;
+            }
+            .note {
+                background-color: #e7f4e7;
+                padding: 10px;
+                border-left: 5px solid #28a745;
+                margin-top: 20px;
+            }
+            .btn {
+                background-color: #28a745;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px;
+                text-decoration: none;
+                display: inline-block;
+                margin-top: 20px;
+            }
+            .btn:hover {
+                background-color: #218838;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Podcast Published: ${title}</h1>
+            </div>
+            <div class="content">
+                <p>Dear Author,</p>
+                <p>We are excited to inform you that your podcast titled "<strong>{title}</strong>" has been successfully published on UltimateHealth!</p>
 
-    transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-            console.error('Error sending email:', err);
-        } else {
-            console.log('Verification email sent:', info.response);
-        }
-    });
+                <p>Your work is now live for our listeners to enjoy, and we are thrilled to share your insights with the community. We sincerely appreciate the effort you’ve put into this content and hope it resonates with many!</p>
+
+                <div class="note">
+                    <p><strong>Note:</strong> You can view your podcast by following this <a href="${podcastLink}" class="btn">link</a>.</p>
+                </div>
+
+                <p>Thank you for contributing to UltimateHealth. If you have any questions or need further assistance, don’t hesitate to reach out!</p>
+            </div>
+            <div class="footer">
+                <p>Best regards,<br>UltimateHealth Team</p>
+            </div>
+        </div>
+    </body>
+</html>`,
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Verification email sent:', info.response);
+    }
+  });
 };
 
 const sendPodcastDiscardEmail = (email, status, title, reason) => {
 
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: `Podcast Discarded ${title}`,
-        html: status === statusEnum.statusEnum.REVIEW_PENDING ? PODCAST_DISCARDED_FROM_SYSTEM
-            .replace("{title}", title) :
-            PODCAST_DISCARDED
-                .replace("{title}", title)
-                .replace("{reason}", reason),
-    };
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Podcast Discarded ${title}`,
+    html: status !== statusEnum.statusEnum.REVIEW_PENDING ? `<html>
+  <head>
+      <style>
+          body {
+              font-family: Arial, sans-serif;
+              color: #333;
+              line-height: 1.6;
+              margin: 0;
+              padding: 0;
+              background-color: #f4f7fc;
+          }
+          .container {
+              width: 80%;
+              margin: 0 auto;
+              background-color: #ffffff;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+              background-color: #dc3545;
+              color: white;
+              padding: 15px;
+              border-radius: 8px 8px 0 0;
+              text-align: center;
+          }
+          .header h1 {
+              font-size: 24px;
+              margin: 0;
+          }
+          .content {
+              padding: 20px;
+          }
+          .footer {
+              text-align: center;
+              font-size: 14px;
+              color: #777;
+              padding: 10px;
+          }
+          .note {
+              background-color: #ffecb3;
+              padding: 10px;
+              border-left: 5px solid #ffb300;
+              margin-top: 20px;
+          }
+          .btn {
+              background-color: #28a745;
+              color: white;
+              padding: 10px 20px;
+              border-radius: 5px;
+              text-decoration: none;
+              display: inline-block;
+              margin-top: 20px;
+          }
+          .btn:hover {
+              background-color: #218838;
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <h1>Podcast Discarded: ${title}</h1>
+          </div>
+          <div class="content">
+              <p>Dear Author,</p>
+              <p>We regret to inform you that your podcast titled "<strong>{title}</strong>" has been discarded from our review process.</p>
 
-    transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-            console.error('Error sending email:', err);
-        } else {
-            console.log('Verification email sent:', info.response);
-        }
-    });
+              <p><strong>Reason for Discard:</strong> ${reason} </p>
+
+              <p>Our review system automatically discards submissions that do not meet the necessary criteria or deadlines.</p>
+
+              <p>If you would like to address the issue and resubmit your podcast, or if you have any questions regarding this decision, please don’t hesitate to contact us. We would be happy to review your work again.</p>
+
+              <div class="note">
+                  <p><strong>Note:</strong> You can submit new podcasts for review at any time.</p>
+              </div>
+
+              <p>We appreciate your effort and wish you success in your creative journey.</p>
+          </div>
+          <div class="footer">
+              <p>Best regards,<br>UltimateHealth Team</p>
+          </div>
+      </div>
+  </body>
+</html>
+` :
+      `<html>
+  <head>
+      <style>
+          body {
+              font-family: Arial, sans-serif;
+              color: #333;
+              line-height: 1.6;
+              margin: 0;
+              padding: 0;
+              background-color: #f4f7fc;
+          }
+          .container {
+              width: 80%;
+              margin: 0 auto;
+              background-color: #ffffff;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+              background-color: #dc3545;
+              color: white;
+              padding: 15px;
+              border-radius: 8px 8px 0 0;
+              text-align: center;
+          }
+          .header h1 {
+              font-size: 24px;
+              margin: 0;
+          }
+          .content {
+              padding: 20px;
+          }
+          .footer {
+              text-align: center;
+              font-size: 14px;
+              color: #777;
+              padding: 10px;
+          }
+          .note {
+              background-color: #ffecb3;
+              padding: 10px;
+              border-left: 5px solid #ffb300;
+              margin-top: 20px;
+          }
+          .btn {
+              background-color: #28a745;
+              color: white;
+              padding: 10px 20px;
+              border-radius: 5px;
+              text-decoration: none;
+              display: inline-block;
+              margin-top: 20px;
+          }
+          .btn:hover {
+              background-color: #218838;
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <h1>Podcast Discarded: "${title}"</h1>
+          </div>
+          <div class="content">
+              <p>Dear Author,</p>
+              <p>We regret to inform you that your podcast titled "<strong>${title}</strong>" has been discarded from our review process due to the lack of action taken within the required review period of 30 days.</p>
+
+              <p>Our review system automatically discards contents that do not receive feedback or revisions within the set time frame. Unfortunately, we did not receive any updates or revisions within the 30-day deadline.</p>
+
+              <p>If you would like to resubmit your podcast or have any questions, feel free to contact us for further assistance. We would be happy to consider your work again in the future.</p>
+
+              <div class="note">
+                  <p><strong>Note:</strong> You can submit new podcasts for review at any time.</p>
+              </div>
+
+              <p>We wish you the best in your future!</p>
+          </div>
+          <div class="footer">
+              <p>Best regards,<br>UltimateHealth Team</p>
+          </div>
+      </div>
+  </body>
+</html>
+`,
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Verification email sent:', info.response);
+    }
+  });
 };
 const sendArticleDiscardEmail = (email, status, title, reason) => {
 
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: `Article Discarded ${title}`,
-        html: status === statusEnum.statusEnum.UNASSIGNED ? ARTICLE_DISCARDED_FROM_SYSTEM
-            .replace("{title}", title) :
-            ARTICLE_DISCARDED_IN_REVIEW_STATE_NO_ACTION
-                .replace("{title}", title)
-                .replace("{reason}", reason),
-    };
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Article Discarded ${title}`,
+    html: status === statusEnum.statusEnum.UNASSIGNED ? `<html>
+  <head>
+      <style>
+          body {
+              font-family: Arial, sans-serif;
+              color: #333;
+              line-height: 1.6;
+              margin: 0;
+              padding: 0;
+              background-color: #f4f7fc;
+          }
+          .container {
+              width: 80%;
+              margin: 0 auto;
+              background-color: #ffffff;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+              background-color: #dc3545;
+              color: white;
+              padding: 15px;
+              border-radius: 8px 8px 0 0;
+              text-align: center;
+          }
+          .header h1 {
+              font-size: 24px;
+              margin: 0;
+          }
+          .content {
+              padding: 20px;
+          }
+          .footer {
+              text-align: center;
+              font-size: 14px;
+              color: #777;
+              padding: 10px;
+          }
+          .note {
+              background-color: #ffecb3;
+              padding: 10px;
+              border-left: 5px solid #ffb300;
+              margin-top: 20px;
+          }
+          .btn {
+              background-color: #28a745;
+              color: white;
+              padding: 10px 20px;
+              border-radius: 5px;
+              text-decoration: none;
+              display: inline-block;
+              margin-top: 20px;
+          }
+          .btn:hover {
+              background-color: #218838;
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <h1>Article Discarded: "${title}"</h1>
+          </div>
+          <div class="content">
+              <p>Dear Author,</p>
+              <p>We regret to inform you that your article titled "<strong>${title}</strong>" has been discarded from our review process due to the lack of action taken within the required review period of 30 days.</p>
 
-    transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-            console.error('Error sending email:', err);
-        } else {
-            console.log('Verification email sent:', info.response);
-        }
-    });
+              <p>Our review system automatically discards articles that do not receive feedback or revisions within the set time frame. Unfortunately, we did not receive any updates or revisions within the 30-day deadline.</p>
+
+              <p>If you would like to resubmit your article or have any questions, feel free to contact us for further assistance. We would be happy to consider your work again in the future.</p>
+
+              <div class="note">
+                  <p><strong>Note:</strong> You can submit new articles for review at any time.</p>
+              </div>
+
+              <p>We wish you the best in your future writing endeavors!</p>
+          </div>
+          <div class="footer">
+              <p>Best regards,<br>UltimateHealth Team</p>
+          </div>
+      </div>
+  </body>
+</html>
+` :
+      `<html>
+  <head>
+      <style>
+          body {
+              font-family: Arial, sans-serif;
+              color: #333;
+              line-height: 1.6;
+              margin: 0;
+              padding: 0;
+              background-color: #f4f7fc;
+          }
+          .container {
+              width: 80%;
+              margin: 0 auto;
+              background-color: #ffffff;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+              background-color: #dc3545;
+              color: white;
+              padding: 15px;
+              border-radius: 8px 8px 0 0;
+              text-align: center;
+          }
+          .header h1 {
+              font-size: 24px;
+              margin: 0;
+          }
+          .content {
+              padding: 20px;
+          }
+          .footer {
+              text-align: center;
+              font-size: 14px;
+              color: #777;
+              padding: 10px;
+          }
+          .note {
+              background-color: #ffecb3;
+              padding: 10px;
+              border-left: 5px solid #ffb300;
+              margin-top: 20px;
+          }
+          .btn {
+              background-color: #28a745;
+              color: white;
+              padding: 10px 20px;
+              border-radius: 5px;
+              text-decoration: none;
+              display: inline-block;
+              margin-top: 20px;
+          }
+          .btn:hover {
+              background-color: #218838;
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <h1>Article Discarded: "${title}"</h1>
+          </div>
+          <div class="content">
+              <p>Dear Author,</p>
+              <p>We regret to inform you that your article titled "<strong>${title}</strong>" has been discarded from our review process.</p>
+
+              <p><strong>Reason for Discard:</strong> ${reason} </p>
+
+              <p>Our review system automatically discards submissions that do not meet the necessary criteria or deadlines.</p>
+
+              <p>If you would like to address the issue and resubmit your article, or if you have any questions regarding this decision, please don’t hesitate to contact us. We would be happy to review your work again.</p>
+
+              <div class="note">
+                  <p><strong>Note:</strong> You can submit new article for review at any time.</p>
+              </div>
+
+              <p>We appreciate your effort and wish you success in your creative journey.</p>
+          </div>
+          <div class="footer">
+              <p>Best regards,<br>UltimateHealth Team</p>
+          </div>
+      </div>
+  </body>
+</html>
+`,
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Verification email sent:', info.response);
+    }
+  });
 };
 
 const sendMailArticleDiscardByAdmin = (email, title, discardReason) => {
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: `Article Discarded ${title}`,
-        html: `<!DOCTYPE html>
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Article Discarded ${title}`,
+    html: `<!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
@@ -417,26 +993,26 @@ const sendMailArticleDiscardByAdmin = (email, title, discardReason) => {
             </body>
             </html>
             `
-    };
+  };
 
-    transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-            console.error('Error sending email:', err);
-        } else {
-            console.log('Verification email sent:', info.response);
-        }
-    });
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Verification email sent:', info.response);
+    }
+  });
 
 }
 
 // send email on approval of edit request
 const sendMailOnEditRequestApproval = (email, title) => {
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: `Edit Request Accepted on article: ${title}`,
-        html: `<!DOCTYPE html>
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Edit Request Accepted on article: ${title}`,
+    html: `<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -490,24 +1066,24 @@ const sendMailOnEditRequestApproval = (email, title) => {
             </div>
         </body>
         </html>`
-    };
+  };
 
-    transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-            console.error('Error sending email:', err);
-        } else {
-            console.log('Verification email sent:', info.response);
-        }
-    });
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending email:', err);
+    } else {
+      console.log('Verification email sent:', info.response);
+    }
+  });
 }
 
 /** Report related mail */
 const sendReportUndertakenEmail = (email, issueNumber) => {
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: `Your Report is Being Reviewed (Issue No. ${issueNumber})`,
-        html: `
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Your Report is Being Reviewed (Issue No. ${issueNumber})`,
+    html: `
          <div style="font-family: Arial, sans-serif;">
          <h2>Your Report is Being Reviewed</h2>
          <p>Hello,</p>
@@ -516,15 +1092,15 @@ const sendReportUndertakenEmail = (email, issueNumber) => {
          <p>Thank you for helping us maintain the quality of our platform.</p>
         </div>
         `,
-    };
+  };
 
-    transporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-            console.error('Error sending report undertaken email:', err);
-        } else {
-            console.log('Report undertaken email sent:', info.response);
-        }
-    });
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Error sending report undertaken email:', err);
+    } else {
+      console.log('Report undertaken email sent:', info.response);
+    }
+  });
 };
 
 // Send Mail (Optional)
@@ -742,7 +1318,7 @@ const sendResolvedMailToVictim = async (email, details, reportType, resolution) 
   const resolvedDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
        <h3 style="color: #32CD32;">Reported Content (Resolved):</h3>
-       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId: details.podcastId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #32CD32; background-color: #F0FFF0; border-radius: 8px;">
@@ -825,7 +1401,7 @@ const sendResolvedMailToConvict = async (email, details, reportType) => {
   const resolvedDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #FFA500; background-color: #FFF8DC; border-radius: 8px;">
        <h3 style="color: #FFA500;">Your Content Was Reported:</h3>
-       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId: details.podcastId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #FFA500; background-color: #FFF8DC; border-radius: 8px;">
@@ -1007,7 +1583,7 @@ const sendDismissedOrIgnoreMailToConvict = async (email, details, reportType) =>
   const dismissedDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #90EE90; background-color: #F0FFF0; border-radius: 8px;">
        <h3 style="color: #228B22;">Content Report Dismissed:</h3>
-       <p><strong>Content ID:</strong> ${details.articleId? details.articleId: details.podcastId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #90EE90; background-color: #F0FFF0; border-radius: 8px;">
@@ -1194,11 +1770,11 @@ const sendWarningMailToConvict = async (email, details, reportType, reason, stri
   });
 };
 
-const  sendRemoveContentMailToConvict = async (email, details, reportType, reason) => {
+const sendRemoveContentMailToConvict = async (email, details, reportType, reason) => {
   const warningDetails = reportType === 'content' ?
     `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
        <h3 style="color: #FF6347;">Violated Content:</h3>
-       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId: details.podcastId}</p>
+       <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
        <p><strong>Description:</strong> ${details.content}</p>
      </div>` :
     `<div style="padding: 15px; border: 2px solid #FF6347; background-color: #FFF5F5; border-radius: 8px;">
@@ -1567,7 +2143,7 @@ const sendBlockConvictMail = async (email, details, reportType, reason) => {
   const reportedItem = reportType === 'content'
     ? `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
          <h3 style="color: #DC143C;">Violated Content:</h3>
-         <p><strong>Content ID:</strong> ${details.articleId ? details.articleId: details.podcastId}</p>
+         <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
          <p><strong>Description:</strong> ${details.content}</p>
        </div>`
     : `<div style="padding: 15px; border: 2px solid #DC143C; background-color: #FFF5F5; border-radius: 8px;">
@@ -1696,7 +2272,7 @@ const sendBannedUserMail = async (email, details, reportType, reason) => {
   const reportedItem = reportType === 'content'
     ? `<div style="padding: 15px; border: 2px solid #8B0000; background-color: #FFF0F0; border-radius: 8px;">
          <h3 style="color: #8B0000;">Violated Content:</h3>
-         <p><strong>Content ID:</strong> ${details.articleId? details.articleId: details.podcastId}</p>
+         <p><strong>Content ID:</strong> ${details.articleId ? details.articleId : details.podcastId}</p>
          <p><strong>Description:</strong> ${details.content}</p>
        </div>`
     : `<div style="padding: 15px; border: 2px solid #8B0000; background-color: #FFF0F0; border-radius: 8px;">
@@ -1905,32 +2481,32 @@ const sendUnblockUserMail = async (email, username) => {
 
 
 module.exports = {
-    sendVerificationEmail,
-    verifyEmail,
-    Sendverifymail,
-    resendVerificationEmail,
-    sendArticleFeedbackEmail,
-    sendArticlePublishedEmail,
-    sendArticleDiscardEmail,
-    sendMailArticleDiscardByAdmin,
-    sendMailOnEditRequestApproval,
-    sendReportUndertakenEmail,
-    sendInitialReportMailtoConvict,
-    sendInitialReportMailtoVictim,
-    sendResolvedMailToVictim,
-    sendResolvedMailToConvict,
-    sendWarningMailToVictimOnReportDismissOrIgnore,
-    sendDismissedOrIgnoreMailToConvict,
-    sendWarningMailToConvict,
-    sendRemoveContentMailToConvict,
-    sendBlockConvictMail,
-    sendBannedUserMail,
-    sendRestoreContentMailToUser,
-    sendUnblockUserMail,
-    sendRestoreRequestReceivedMail,
-    sendRestoreRequestDisapprovedMail,
-    sendPodcastPublishedEmail,
-    sendPodcastDiscardEmail
+  sendVerificationEmail,
+  verifyEmail,
+  Sendverifymail,
+  resendVerificationEmail,
+  sendArticleFeedbackEmail,
+  sendArticlePublishedEmail,
+  sendArticleDiscardEmail,
+  sendMailArticleDiscardByAdmin,
+  sendMailOnEditRequestApproval,
+  sendReportUndertakenEmail,
+  sendInitialReportMailtoConvict,
+  sendInitialReportMailtoVictim,
+  sendResolvedMailToVictim,
+  sendResolvedMailToConvict,
+  sendWarningMailToVictimOnReportDismissOrIgnore,
+  sendDismissedOrIgnoreMailToConvict,
+  sendWarningMailToConvict,
+  sendRemoveContentMailToConvict,
+  sendBlockConvictMail,
+  sendBannedUserMail,
+  sendRestoreContentMailToUser,
+  sendUnblockUserMail,
+  sendRestoreRequestReceivedMail,
+  sendRestoreRequestDisapprovedMail,
+  sendPodcastPublishedEmail,
+  sendPodcastDiscardEmail
 };
 
 
