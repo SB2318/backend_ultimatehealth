@@ -468,7 +468,7 @@ module.exports.getMonthlyBreakDownByYear = expressAsyncHandler(
       return res.status(400).json({ error: "Invalid year format" });
     }
 
-    if (![1, 2, 3].includes(Number(cType))) {
+    if (![1, 2, 3, 4].includes(Number(cType))) {
       return res.status(400).json({ error: "Invalid contribution type" });
     }
 
