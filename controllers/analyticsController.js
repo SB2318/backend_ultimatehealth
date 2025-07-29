@@ -477,7 +477,7 @@ module.exports.getMonthlyBreakDownByYear = expressAsyncHandler(
       const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
       const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
 
-      let contributions = await AdminAggregate.aggregate([
+      let rawContributions = await AdminAggregate.aggregate([
         {
           $match: {
             date: {
@@ -491,7 +491,7 @@ module.exports.getMonthlyBreakDownByYear = expressAsyncHandler(
         {
           // Group by month
           $group: {
-            _id: "$month",
+            _id: { $month: "$date" },
             count: { $sum: 1 }
           }
         },
@@ -513,16 +513,16 @@ module.exports.getMonthlyBreakDownByYear = expressAsyncHandler(
 
       ]);
 
+      const dataMap = new Map(rawContributions.map(item => [item.label, item.value]));
+      const contributions = Array.from({ length: 12 }, (_, i) => {
+        const month = i + 1;
+        return {
+          label: month,
+          value: dataMap.get(month) || 0,
+        };
+      });
 
-
-      if (contributions.length === 0) {
-
-        contributions = Array.from({ length: 12 }, (_, i) => ({
-          label: i + 1,
-          value: 0,
-        }));
-
-      }
+      
 
       return res.status(200).json(contributions);
 
@@ -599,7 +599,6 @@ module.exports.getDailyBreakdownByMonth = expressAsyncHandler(
           value: dataMap.get(day) || 0,
         };
       });
-
 
       return res.status(200).json(contributions);
 
