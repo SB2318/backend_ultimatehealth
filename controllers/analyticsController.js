@@ -548,7 +548,7 @@ module.exports.getDailyBreakdownByMonth = expressAsyncHandler(
     if (isNaN(Number(year)) || year.length !== 4) {
       return res.status(400).json({ error: "Invalid year format" });
     }
-    if (![1, 2, 3,4].includes(Number(cType))) {
+    if (![1, 2, 3, 4].includes(Number(cType))) {
       return res.status(400).json({ error: "Invalid contribution type" });
 
     }
@@ -559,7 +559,7 @@ module.exports.getDailyBreakdownByMonth = expressAsyncHandler(
       const nextMonth = Number(month) + 1;
       const endDate = new Date(`${year}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`);
 
-      let contributions = await AdminAggregate.aggregate([
+      const rawContributions = await AdminAggregate.aggregate([
         {
           $match: {
             date: {
@@ -589,13 +589,17 @@ module.exports.getDailyBreakdownByMonth = expressAsyncHandler(
 
       ]);
 
-      if (contributions.length === 0) {
-        const daysInMonth = new Date(year, Number(month), 0).getDate();
-        contributions = Array.from({ length: daysInMonth }, (_, i) => ({
-          label: i + 1,
-          value: 0,
-        }));
-      }
+      const daysInMonth = new Date(year, Number(month), 0).getDate();
+      const dataMap = new Map(rawContributions.map(item => [item.label, item.value]));
+
+      const contributions = Array.from({ length: daysInMonth }, (_, i) => {
+        const day = i + 1;
+        return {
+          label: day,
+          value: dataMap.get(day) || 0,
+        };
+      });
+
 
       return res.status(200).json(contributions);
 
