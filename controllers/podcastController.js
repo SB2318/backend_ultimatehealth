@@ -313,8 +313,8 @@ const createPodcast = expressAsyncHandler(
     async (req, res) => {
         const { title, description, tags, article_id, audio_url, cover_image, duration } = req.body;
 
-        if (!title || !description || !tags || !article_id || !audio_url || !duration || !cover_image) {
-            return res.status(400).json({ message: 'All fields are required: title, description, tags, article_id, audio_url, duration, cover_image' });
+        if (!title || !description || !tags || !audio_url || !duration || !cover_image) {
+            return res.status(400).json({ message: 'All fields are required: title, description, tags, audio_url, duration, cover_image' });
         }
 
         try {
