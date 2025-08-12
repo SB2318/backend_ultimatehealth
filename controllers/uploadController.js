@@ -31,7 +31,51 @@ const allowedAudioTypes = [
     'audio/aac',
     'audio/flac',
     'audio/mp4',
-    'audio/webm'
+    'audio/webm',
+    'audio/x-aac',
+    'audio/x-midi',
+    'audio/mpeg',
+    'audio/mp3',
+    'audio/mp4',
+    'audio/x-m4a',
+    'audio/aac',
+    'audio/x-aac',
+    'audio/ogg',
+    'audio/opus',
+    'audio/wav',
+    'audio/x-wav',
+    'audio/webm',
+    'audio/flac',
+    'audio/x-flac',
+    'audio/amr',
+    'audio/3gpp',
+    'audio/3gpp2',
+    'audio/basic',
+    'audio/vnd.wave',
+    'audio/vnd.rn-realaudio',
+    'audio/vnd.dts',
+    'audio/vnd.dts.hd',
+    'audio/vnd.digital-winds',
+    'audio/vnd.lucent.voice',
+    'audio/vnd.ms-playready.media.pya',
+    'audio/vnd.nuera.ecelp4800',
+    'audio/vnd.nuera.ecelp7470',
+    'audio/vnd.nuera.ecelp9600',
+    'audio/vnd.sealedmedia.softseal.mpeg',
+    'audio/x-ms-wma',
+    'audio/x-ms-wax',
+    'audio/x-pn-realaudio',
+    'audio/x-pn-realaudio-plugin',
+    'audio/x-realaudio',
+    'audio/x-adpcm',
+    'audio/x-aiff',
+    'audio/x-au',
+    'audio/x-gsm',
+    'audio/x-matroska',
+    'audio/x-mpegurl',
+    'audio/x-scpls',
+    'audio/x-sd2',
+    'audio/x-vorbis+ogg'
 ];
 
 // Max file size in bytes (~150 MB)
@@ -46,7 +90,7 @@ const uploadFile = async (req, res) => {
     if (!file) {
         return res.status(400).json({ message: 'No file uploaded.' });
     }
-    //console.log("Here comessss", file);
+    console.log("Here comessss", file.mimetype, file.size);
 
     try {
         // Handle Image file upload
