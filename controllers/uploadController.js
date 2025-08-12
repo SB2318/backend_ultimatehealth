@@ -23,6 +23,20 @@ const s3Client = new S3Client({
 
 //const pb = new Pocketbase(process.env.DATASORCE_URL);
 
+const allowedAudioTypes = [
+    'audio/mpeg',
+    'audio/wav',
+    'audio/x-wav',
+    'audio/ogg',
+    'audio/aac',
+    'audio/flac',
+    'audio/mp4',
+    'audio/webm'
+];
+
+// Max file size in bytes (~150 MB)
+const MAX_FILE_SIZE = 150 * 1024 * 1024;
+
 
 // upload file
 const uploadFile = async (req, res) => {
@@ -113,20 +127,23 @@ const uploadFile = async (req, res) => {
 
             res.status(200).send({ message: 'Text or HTML uploaded successfully', key: `${file.originalname}` });
         }
-        else if (file.mimetype === 'audio/mpeg' || file.mimetype === 'audio/wav' ||
-            file.mimetype === 'audio/x-wav') {
+        else if (allowedAudioTypes.includes(file.mimetype)) {
+
+            if (file.size > MAX_FILE_SIZE) {
+                return res.status(400).json({ error: "File exceeds 150 MB limit" });
+            }
             // Handle audio file upload
             const params = {
                 Bucket: 'ultimate-health-new',
                 Key: `${file.originalname}`, // Keep original filename and extension
                 Body: fs.createReadStream(file.path),
-                ContentType: file.mimetype 
+                ContentType: file.mimetype
             };
 
             const command = new PutObjectCommand(params);
             //await s3Client.send(command);
             // handle large file size 
-             const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
+            const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
             fs.unlink(file.path, (err) => {
                 if (err) console.error('Unlink error', err);
@@ -144,7 +161,7 @@ const uploadFile = async (req, res) => {
             });
             */
 
-            res.status(200).send({ message: 'Audio file uploaded successfully', key: `${file.originalname}`, uploadUrl});
+            res.status(200).send({ message: 'Audio file uploaded successfully', key: `${file.originalname}`, uploadUrl });
         } else {
             // Handle other file types (e.g., PDF, CSV, etc.), as of now not needed
             return res.status(400).json({ message: 'Unsupported file type.' });
