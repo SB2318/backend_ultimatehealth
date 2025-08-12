@@ -5,6 +5,7 @@ const axios = require('axios');
 const sharp = require('sharp');
 const path = require('path');
 const os = require('os');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { FormData } = require('formdata-node')
 const { fileFromPath } = require('formdata-node/file-from-path')
 const expressAsyncHandler = require('express-async-handler');
@@ -112,17 +113,20 @@ const uploadFile = async (req, res) => {
 
             res.status(200).send({ message: 'Text or HTML uploaded successfully', key: `${file.originalname}` });
         }
-        else if (file.mimetype === 'audio/mpeg') {
-            // Handle MP3 file upload
+        else if (file.mimetype === 'audio/mpeg' || file.mimetype === 'audio/wav' ||
+            file.mimetype === 'audio/x-wav') {
+            // Handle audio file upload
             const params = {
                 Bucket: 'ultimate-health-new',
                 Key: `${file.originalname}`, // Keep original filename and extension
                 Body: fs.createReadStream(file.path),
-                ContentType: 'audio/mpeg',
+                ContentType: file.mimetype 
             };
 
             const command = new PutObjectCommand(params);
-            await s3Client.send(command);
+            //await s3Client.send(command);
+            // handle large file size 
+             const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
             fs.unlink(file.path, (err) => {
                 if (err) console.error('Unlink error', err);
@@ -140,7 +144,7 @@ const uploadFile = async (req, res) => {
             });
             */
 
-            res.status(200).send({ message: 'MP3 file uploaded successfully', key: `${file.originalname}` });
+            res.status(200).send({ message: 'Audio file uploaded successfully', key: `${file.originalname}`, uploadUrl});
         } else {
             // Handle other file types (e.g., PDF, CSV, etc.), as of now not needed
             return res.status(400).json({ message: 'Unsupported file type.' });
