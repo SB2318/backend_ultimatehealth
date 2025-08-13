@@ -31,7 +31,10 @@ const {
     deletePodcast,
     deletePlaylist,
     filterPodcast,
-    updatePlaylistwithPodcast
+    updatePlaylistwithPodcast,
+    getUserPendingPodcasts,
+    getUserPublishedPodcasts,
+    getDiscardedPodcasts
 } = require('../controllers/podcastController');
 
 router.get('/podcast/profile', authenticateToken, getPodcastProfile);
@@ -59,6 +62,12 @@ router.put('/podcast/update-playlist', authenticateToken, updatePlaylist);
 
 router.delete('/podcast/delete', authenticateToken, deletePodcast);
 router.delete('/podcast/delete-playlist', authenticateToken, deletePlaylist);
+
+// workspace
+
+router.get('/podcast/discarded', authenticateToken, getDiscardedPodcasts);
+router.get('/podcast/user-pending', authenticateToken, getUserPendingPodcasts);
+router.get('/podcast/user-published', authenticateToken, getUserPublishedPodcasts);
 
 
 module.exports = router;

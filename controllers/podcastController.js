@@ -923,6 +923,58 @@ const deletePlaylist = expressAsyncHandler(
     }
 )
 
+const getUserPendingPodcasts = expressAsyncHandler(
+    async (req, res) => {
+        try {
+            const userId = req.userId;
+            const pendingPodcasts = await Podcast.find({
+                user_id: userId,
+                status: {
+                    $in: ['review-pending', 'in-progress'],
+                }
+            }).populate('tags').sort({ updated_at: -1 });
+
+            res.status(200).json(pendingPodcasts);
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
+
+const getUserPublishedPodcasts = expressAsyncHandler(
+    async (req, res) => {
+        try {
+            const userId = req.userId;
+            const publishedPodcasts = await Podcast.find({
+                user_id: userId,
+                status: 'published'
+            }).populate('tags').sort({ updated_at: -1 });
+
+            res.status(200).json(publishedPodcasts);
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
+
+const getDiscardedPodcasts = expressAsyncHandler(
+    async (req, res) => {
+        try {
+            const userId = req.userId;
+            const discardedPodcasts = await Podcast.find({
+                user_id: userId,
+                status: 'discarded'
+            }).populate('tags').sort({ updated_at: -1 });
+
+            res.status(200).json(discardedPodcasts);
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({ message: err.message });
+        }
+    }
+)
 
 module.exports = {
     getPodcastProfile,
@@ -954,5 +1006,8 @@ module.exports = {
     // Delete
     deletePodcast,
     deletePlaylist,
-    updatePlaylistwithPodcast
+    updatePlaylistwithPodcast,
+    getUserPendingPodcasts,
+    getUserPublishedPodcasts,
+    getDiscardedPodcasts
 }
