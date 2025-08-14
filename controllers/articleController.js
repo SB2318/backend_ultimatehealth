@@ -755,7 +755,7 @@ module.exports.getAllImprovementsForUser = expressAsyncHandler(
       return res.status(400).json({ message: 'User ID is required.' });
     }
     try {
-      const articles = await EditRequest.find({
+      let articles = await EditRequest.find({
         user_id: userId,
 
       }).populate({
