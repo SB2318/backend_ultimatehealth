@@ -78,6 +78,9 @@ module.exports.submitEditRequest = expressAsyncHandler(
 module.exports.getAllImprovementsForReview = expressAsyncHandler(
     async (req, res) => {
         try {
+            const {page = 1, limit = 10} = req.query;
+            const skip = (Number(page) - 1) * parseInt(limit);
+
             const articles = await EditRequest.find({ status: statusEnum.statusEnum.UNASSIGNED }).populate({
                 path: 'article',
                 populate: [
@@ -93,7 +96,10 @@ module.exports.getAllImprovementsForReview = expressAsyncHandler(
                         }
                     }
                 ]
-            }).exec();
+            })
+            .skip(skip)
+            .limit(Number(limit))
+            .exec();
 
             articles = articles.filter(r => r.article?.authorId !== null);
             res.status(200).json(articles);
@@ -109,6 +115,10 @@ module.exports.getAllImprovementsForReview = expressAsyncHandler(
 module.exports.getAllInProgressImprovementsForAdmin = expressAsyncHandler(
     async (req, res) => {
         const reviewer_id = req.userId;
+
+        const {page = 1, limit = 10} = req.query;
+        const skip = (Number(page) - 1) * parseInt(limit);
+
         if (!reviewer_id) {
             return res.status(400).json({ message: 'Reviewer ID is required.' });
         }
@@ -132,9 +142,12 @@ module.exports.getAllInProgressImprovementsForAdmin = expressAsyncHandler(
                         }
                     }
                 ]
-            }).exec();
+            })
+            .skip(skip)
+            .limit(Number(limit))
+            .exec();
 
-            articles.filter(r => r.article?.authorId !== null);
+            articles = articles.filter(r => r.article?.authorId !== null);
 
             res.status(200).json(articles);
         } catch (err) {
@@ -147,6 +160,10 @@ module.exports.getAllInProgressImprovementsForAdmin = expressAsyncHandler(
 module.exports.getAllCompletedImprovementsForAdmin = expressAsyncHandler(
     async (req, res) => {
         const reviewer_id = req.userId;
+
+        const {page = 1, limit = 10} = req.query;
+        const skip = (Number(page) - 1) * parseInt(limit);
+
         if (!reviewer_id) {
             return res.status(400).json({ message: 'Reviewer ID is required.' });
         }
@@ -161,7 +178,11 @@ module.exports.getAllCompletedImprovementsForAdmin = expressAsyncHandler(
                 populate: {
                     path: 'tags',
                 },
-            }).exec();
+            })
+            .skip(skip)
+            .sort({ last_updated: -1 })
+            .limit(Number(limit))
+            .exec();
 
             res.status(200).json(articles);
         } catch (err) {

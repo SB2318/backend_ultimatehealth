@@ -68,16 +68,17 @@ module.exports.createArticle = expressAsyncHandler(
 // Get all articles (published)
 module.exports.getAllArticles = expressAsyncHandler(
   async (req, res) => {
-    try {
-      const { allow_podcast } = req.query;
 
-      const query = { 
-        status: statusEnum.statusEnum.PUBLISHED, 
+    const { page = 1, limit = 10 } = req.query;
+    try {
+
+      const query = {
+        status: statusEnum.statusEnum.PUBLISHED,
         is_removed: false 
       };
-      if (allow_podcast === 'true') {
-        query.allow_for_podcast = true;
-      }
+
+      const skip = (Number(page) - 1) * parseInt(limit);
+      
       const articles = await Article.find(query)
         .populate('tags')
         //.populate('mentionedUsers', 'user_handle user_name Profile_image')
@@ -106,6 +107,9 @@ module.exports.getAllArticles = expressAsyncHandler(
             isBannedUser: false
           }
         })
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({ lastUpdated: -1 })
         .exec();
 
       //console.log("Author", articles);
@@ -135,12 +139,13 @@ module.exports.getAllArticles = expressAsyncHandler(
 // Get all articles for user
 module.exports.getAllArticlesForUser = expressAsyncHandler(
   async (req, res) => {
+    const { page = 1, limit = 10 } = req.query;
     try {
 
-      // console.log("User Id", req.userId);
+      const skip = (Number(page) - 1) * parseInt(limit);
+     
       const articles = await Article.find({ authorId: req.userId, is_removed: false })
         .populate('tags')
-        //.populate('mentionedUsers', 'user_handle user_name Profile_image')
         .populate({
           path: 'mentionedUsers',
           select: 'user_handle user_name Profile_image',
@@ -149,7 +154,6 @@ module.exports.getAllArticlesForUser = expressAsyncHandler(
             isBannedUser: false
           }
         })
-        //.populate('likedUsers', 'Profile_image')
         .populate({
           path: 'likedUsers',
           select: 'Profile_image user_name user_handle',
@@ -158,9 +162,12 @@ module.exports.getAllArticlesForUser = expressAsyncHandler(
             isBannedUser: false
           }
         })
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({ lastUpdated: -1 })
         .exec();
 
-      articles.forEach(article => {
+       articles.forEach(article => {
         if (article.mentionedUsers) {
           article.mentionedUsers = article.mentionedUsers.filter(user => user !== null);
         }
@@ -751,10 +758,13 @@ module.exports.repostArticle = expressAsyncHandler(
 module.exports.getAllImprovementsForUser = expressAsyncHandler(
   async (req, res) => {
     const userId = req.userId;
+    const {page = 1, limit = 10} = req.query;
     if (!userId) {
       return res.status(400).json({ message: 'User ID is required.' });
     }
     try {
+
+      const skip = (Number(page) - 1) * parseInt(limit);
       let articles = await EditRequest.find({
         user_id: userId,
 
@@ -766,7 +776,11 @@ module.exports.getAllImprovementsForUser = expressAsyncHandler(
         match: {
           is_removed: false
         }
-      }).exec();
+      })
+      .skip(skip)
+      .limit(Number(limit))
+      .sort({ last_updated: -1 })
+      .exec();
 
       if (articles) {
         articles = articles.filter(a => a.article !== null);

@@ -508,4 +508,8 @@ module.exports.articleSubmitNotificationsToAdmin =
     }
 
 
-
+// Task left
+// Notification URL set up (done)
+// Podcast notification with notification url (done)
+// Connection between general post and user follower post (pagination with content uploads)
+// Auth middleware change for admin and user (done)

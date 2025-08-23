@@ -40,8 +40,8 @@ module.exports.getAllNotifications = expressAsyncHandler(
     async (req, res) => {
 
         const userId = req.userId;
-        const {role} = req.query;
-        console.log("User Id", userId);
+        const {role, page= 1, limit= 10} = req.query;
+        //console.log("User Id", userId);
 
         if (!userId) {
             res.status(400).json({ message: "User ID is required" });
@@ -50,7 +50,14 @@ module.exports.getAllNotifications = expressAsyncHandler(
 
         try {
 
-            const notifications = await Notification.find({ userId: userId, role: role ? Number(role) : 2 }).sort({ timestamp: -1 });
+            const skip = (Number(page) - 1) * parseInt(limit);
+            
+            const notifications = 
+                await Notification.find({ userId: userId, role: role ? Number(role) : 2 })
+                .sort({ timestamp: -1 })
+                .skip(skip)
+                .limit(Number(limit));
+
             res.status(200).json(notifications);
 
         } catch (err) {

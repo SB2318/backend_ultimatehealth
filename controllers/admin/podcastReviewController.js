@@ -12,12 +12,17 @@ const { deleteFileFn } = require('../uploadController');
 // Available podcast review
 const availablePodcastsForReview = expressAsyncHandler(
     async (req, res) => {
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (Number(page) - 1) * parseInt(limit);
+
         try {
             const podcasts = await Podcast.find({
                 status: statusEnum.statusEnum.REVIEW_PENDING
             }).populate('tags')
                 .populate('user_id', 'user_name user_handle Profile_image')
-                .sort({ updated_at: -1 });
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
 
             res.status(200).json(podcasts);
         } catch (err) {
@@ -30,6 +35,9 @@ const availablePodcastsForReview = expressAsyncHandler(
 const getAllPodcastsOfModerator = expressAsyncHandler(
     async (req, res) => {
 
+        const {page = 1, limit = 10} = req.query;
+        const skip = (Number(page) - 1) * parseInt(limit);
+
         try {
 
             const podcasts = await Podcast.find({
@@ -37,7 +45,9 @@ const getAllPodcastsOfModerator = expressAsyncHandler(
                 admin_id: req.userId
             }).populate('tags')
                 .populate('user_id', 'user_name user_handle Profile_image')
-                .sort({ updated_at: -1 });
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
 
             res.status(200).json(podcasts);
 
@@ -51,13 +61,19 @@ const getAllPodcastsOfModerator = expressAsyncHandler(
 const getAllCompletedPodcastsOfModerator = expressAsyncHandler(
 
     async (req, res) => {
+        const {page = 1, limit = 10} = req.query;
+        const skip = (Number(page) - 1) * parseInt(limit);
+
         try {
             const podcasts = await Podcast.find({
                 status: statusEnum.statusEnum.PUBLISHED,
                 admin_id: req.userId
             }).populate('tags')
                 .populate('user_id', 'user_name user_handle Profile_image')
-                .sort({ updated_at: -1 });
+                .skip(skip)
+                .limit(Number(limit))
+                .sort({ updated_at: -1 })
+                .exec();
 
             res.status(200).json(podcasts);
 

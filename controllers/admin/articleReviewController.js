@@ -18,6 +18,9 @@ const { deleteArticleRecordFromPocketbase } = require('../../utils/pocketbaseUti
 module.exports.getAllArticleForReview = expressAsyncHandler(
     async (req, res) => {
         try {
+            const { page = 1, limit = 10 } = req.query;
+            const skip = (Number(page) - 1) * parseInt(limit);
+
             const articles = await Article.find({
                 status: statusEnum.statusEnum.UNASSIGNED,
                 is_removed: false
@@ -30,9 +33,12 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
                         isBlockUser: false,
                         isBannedUser: false
                     }
-                }).
-                exec();
-            articles.filter(r => r.article?.authorId !== null);
+                })
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
+
+            articles = articles.filter(r => r.article?.authorId !== null);
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -44,6 +50,10 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
 module.exports.getAllInProgressArticles = expressAsyncHandler(
     async (req, res) => {
         const { reviewer_id } = req.params;
+
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (Number(page) - 1) * parseInt(limit);
+
         if (!reviewer_id) {
             return res.status(400).json({ message: 'Reviewer ID is required.' });
         }
@@ -62,9 +72,12 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
                         isBlockUser: false,
                         isBannedUser: false
                     }
-                }).
-                exec();
-            articles.filter(r => r.article?.authorId !== null);
+                })
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
+
+            articles = articles.filter(r => r.article?.authorId !== null);
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);
@@ -76,6 +89,10 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
 module.exports.getAllReviewCompletedArticles = expressAsyncHandler(
     async (req, res) => {
         const { reviewer_id } = req.params;
+
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (Number(page) - 1) * parseInt(limit);
+
         if (!reviewer_id) {
             return res.status(400).json({ message: 'Reviewer ID is required.' });
         }
@@ -86,7 +103,13 @@ module.exports.getAllReviewCompletedArticles = expressAsyncHandler(
                 status: {
                     $in: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
                 }
-            }).populate('tags').exec();
+            })
+            .populate('tags')
+            .sort({ lastUpdated: -1 })
+            .skip(skip)
+            .limit(Number(limit))
+            .exec();
+            
             res.status(200).json(articles);
         } catch (err) {
             console.log(err);

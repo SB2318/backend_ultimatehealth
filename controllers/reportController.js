@@ -249,6 +249,9 @@ module.exports.submitReport = expressAsyncHandler(
 module.exports.getAllPendingReports = expressAsyncHandler(
   async (req, res) => {
 
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (Number(page) - 1) * parseInt(limit);
+
     try {
 
       const pendingReports = await ReportAction.find(
@@ -280,6 +283,8 @@ module.exports.getAllPendingReports = expressAsyncHandler(
           path: "commentId",
           select: "content"
         })
+        .skip(skip)
+        .limit(Number(limit))
         .lean()
         .exec();
 
@@ -296,8 +301,9 @@ module.exports.getAllPendingReports = expressAsyncHandler(
 module.exports.getAllReportsForModerator = expressAsyncHandler(
   async (req, res) => {
 
-    const { isCompleted } = req.query;
+    const { isCompleted , page = 1, limit = 10 } = req.query;
     try {
+      const skip = (Number(page) - 1) * parseInt(limit);
 
       if (isCompleted) {
 
@@ -337,6 +343,8 @@ module.exports.getAllReportsForModerator = expressAsyncHandler(
             path: "commentId",
             select: "content"
           })
+          .skip(skip)
+          .limit(Number(limit))
           .lean()
           .exec();
 
@@ -381,6 +389,8 @@ module.exports.getAllReportsForModerator = expressAsyncHandler(
           path: "commentId",
           select: "content"
         })
+        .skip(skip)
+        .limit(Number(limit))
         .lean()
         .exec();
 

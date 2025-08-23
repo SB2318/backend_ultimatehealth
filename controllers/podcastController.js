@@ -171,11 +171,18 @@ const getPodcastsByPlaylistId = expressAsyncHandler(
 const getAllPublishedPodcasts = expressAsyncHandler(
     async (req, res) => {
         try {
+
+            const { page = 1, limit = 10 } = req.query;
+            const skip = (Number(page) - 1) * parseInt(limit);
+
             const allPodcasts = await Podcast.find({
                 status: statusEnum.statusEnum.PUBLISHED
             }).populate('tags')
                 .populate('user_id', 'user_name user_handle Profile_image')
-                .sort({ updated_at: -1 });
+                .sort({ updated_at: -1 })
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
 
             res.status(200).json(allPodcasts);
         } catch (err) {
@@ -225,17 +232,17 @@ const getPodcastById = expressAsyncHandler(
 
 const searchPodcast = expressAsyncHandler(
     async (req, res) => {
-        const { q } = req.query;
+        const { q, page = 1, limit = 10 } = req.query;
         if (!q) {
-            return res.status(400).json({ message: 'Search query is required' })
+            return res.status(400).json({ message: 'Search query is required' });
         }
         try {
+            const skip = (Number(page) - 1) * parseInt(limit);
+            
             const regex = new RegExp(q, 'i');
             // Find all article title matches with the rejex
             const matchingArticles = await Article.find({ title: regex }).select('_id title');
             const articleIds = matchingArticles.map(a => a._id);
-
-
 
             const matchPodcasts = await Podcast.
                 find(
@@ -255,9 +262,9 @@ const searchPodcast = expressAsyncHandler(
                 .sort({
                     updated_at: -1
                 })
-                .lean()
-                .exec();
-
+                .skip(skip)
+                .limit(Number(limit))
+                .lean();
 
             return res.status(200).json(matchPodcasts);
 
@@ -927,12 +934,18 @@ const getUserPendingPodcasts = expressAsyncHandler(
     async (req, res) => {
         try {
             const userId = req.userId;
+            const { page = 1, limit = 10 } = req.query;
+            const skip = (Number(page) - 1) * parseInt(limit);
+
             const pendingPodcasts = await Podcast.find({
                 user_id: userId,
                 status: {
                     $in: ['review-pending', 'in-progress'],
                 }
-            }).populate('tags').sort({ updated_at: -1 });
+            }).populate('tags')
+            .skip(skip)
+            .limit(Number(limit))
+            .exec();
 
             res.status(200).json(pendingPodcasts);
         } catch (err) {
@@ -946,10 +959,16 @@ const getUserPublishedPodcasts = expressAsyncHandler(
     async (req, res) => {
         try {
             const userId = req.userId;
+            const { page = 1, limit = 10 } = req.query;
+            const skip = (Number(page) - 1) * parseInt(limit);
+
             const publishedPodcasts = await Podcast.find({
                 user_id: userId,
                 status: 'published'
-            }).populate('tags').sort({ updated_at: -1 });
+            }).populate('tags').sort({ updated_at: -1 })
+            .skip(skip)
+            .limit(Number(limit))
+            .exec();
 
             res.status(200).json(publishedPodcasts);
         } catch (err) {
@@ -963,10 +982,16 @@ const getDiscardedPodcasts = expressAsyncHandler(
     async (req, res) => {
         try {
             const userId = req.userId;
+            const { page = 1, limit = 10 } = req.query;
+            const skip = (Number(page) - 1) * parseInt(limit);
+
             const discardedPodcasts = await Podcast.find({
                 user_id: userId,
                 status: 'discarded'
-            }).populate('tags').sort({ updated_at: -1 });
+            }).populate('tags').sort({ updated_at: -1 })
+            .skip(skip)
+            .limit(Number(limit))
+            .exec();
 
             res.status(200).json(discardedPodcasts);
         } catch (err) {
