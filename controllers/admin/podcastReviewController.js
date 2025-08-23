@@ -6,7 +6,7 @@ const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
 const AdminAggregate = require('../../models/events/adminContributionEvent');
 const { sendPodcastPublishedEmail, sendPodcastDiscardEmail } = require('../emailservice');
-const { sendPostNotification } = require('../notifications/notificationHelper');
+const { sendPostNotification, podcastReviewNotificationsToUser } = require('../notifications/notificationHelper');
 const { deleteFileFn } = require('../uploadController');
 
 // Available podcast review
@@ -135,10 +135,18 @@ const approvePodcast = expressAsyncHandler(
             // Increase user contribution
             await updateUserContribution(podcast.user_id._id);
 
-            await sendPostNotification(podcast._id, {
-                title: "Congratulations🎉! Your podcast has published",
-                body: podcast.title,
-            }, podcast.user_id._id, 2);
+            await sendPostNotification(
+                podcast.user_id._id,
+                null,
+                null,
+                podcast._id,
+                null,
+                `${podcast.user_id.user_name} shared a new update`,
+                `A fresh podcast just went live, don't miss it: ${podcast.title}`,
+                "Congratulations🎉! Your podcast has been published",
+                podcast.title
+            );
+
 
             // send mail
             sendPodcastPublishedEmail(podcast.user_id.email, "", podcast.title);
@@ -201,10 +209,13 @@ const discardPodcast = expressAsyncHandler(
 
             // send mail
 
-            await sendPostNotification(podcast._id, {
-                title: "Podcast discarded",
-                body: "Your podcast with title " + podcast.title + " has been discarded by admin",
-            }, podcast.user_id._id, 2);
+            await podcastReviewNotificationsToUser(
+                podcast.user_id._id,
+                podcast._id,
+                "Podcast discarded",
+                "Your podcast with title " + podcast.title + " has been discarded by admin"
+            );
+
 
             sendPodcastDiscardEmail(podcast.user_id.email, podcast.status, podcast.title, discardReason);
             return res.status(200).json({ message: "Podcast discarded successfully" });
@@ -271,10 +282,13 @@ async function unassignPodcast() {
 
             await podcast.save();
 
-            await sendPostNotification(podcast._id, {
-                title: "Moderator Unassigned",
-                body: "The moderator has unassigned themselves from your podcast titled \"" + podcast.title + "\".",
-            }, podcast.user_id, 2);
+             await podcastReviewNotificationsToUser(
+                podcast.user_id._id,
+                podcast._id,
+                "Moderator Unassigned",
+                "Your podcast with title " + podcast.title + " has been unassigned by system"
+            );
+
 
         });
 
@@ -325,10 +339,13 @@ async function discardPodcastFn() {
 
             if (podcast.user_id?.email && podcast.title) {
 
-                await sendPostNotification(podcast._id, {
-                    title: "Podcast discarded",
-                    body: "Your podcast with title " + podcast.title + " has been discarded by system",
-                }, podcast.user_id._id, 2);
+               await podcastReviewNotificationsToUser(
+                    podcast.user_id._id,
+                    podcast._id,
+                    "Podcast discarded",
+                    "Your podcast with title " + podcast.title + " has been discarded by system"
+                );
+
             }
 
         });

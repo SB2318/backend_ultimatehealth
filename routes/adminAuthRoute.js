@@ -8,7 +8,7 @@ const {
     Sendverifymail,
     resendVerificationEmail,
   } = require("../controllers/emailservice");
-const authenticateToken = require("../middleware/authentcatetoken");
+const authenticateToken = require("../middleware/adminAuthenticateToken");
 
 // Register New User
 router.post("/admin/register",  register);

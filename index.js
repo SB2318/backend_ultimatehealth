@@ -117,20 +117,32 @@ io.on('connection', (socket) => {
         // console.log(type, "received");
         if (data.type === 'openPost') {
             console.log('open post notification');
-            sendPostNotification(data.postId, data.message, data.authorId,1);
+            sendPostNotification(data.userId, data.articleId, 
+                data.articleRecordId, data.podcastId, 
+                data.requestId, data.title, data.message, data.authorTitle, data.authorMessage);
         }
         else if (data.type === 'likePost') {
             console.log('like post notification');
-            sendPostLikeNotification(data.authorId, data.message);
+            sendPostLikeNotification(data.userId, data.articleId, data.podcastId, data.articleRecordId, data.title, data.message);
         }
         else if (data.type === 'commentPost') {
             console.log('comment post notification');
-            sendCommentNotification(data.authorId, data.postId, data.message);
+            sendCommentNotification(
+                data.articleId,
+                data.podcastId,
+                data.commentId,
+                null,
+                data.articleRecordId,
+                data.userId,
+                data.adminId,
+                data.title,
+                data.message
+            );
         }
         else if (data.type === 'commentLikePost') {
             console.log('comment like post notification');
-            //sendCommentLikeNotification(data.userId, data.postId, data.message);
-            sendCommentLikeNotification(data.userId, data.postId, data.message);
+            sendCommentLikeNotification(data.userId, data.articleId,
+                data.podcastId, data.articleRecordId, data.commentId, data.title, data.message);
         }
         else if (data.type === 'userFollow') {
             console.log('user follow notification');
@@ -138,7 +150,19 @@ io.on('connection', (socket) => {
         }
         else if (data.type === "repost") {
             console.log("repost notification");
-            repostNotification(data.userId, data.authorId, data.postId, data.message, data.authorMessage);
+
+            repostNotification(
+                data.userId,
+                data.authorId,
+                data.postId,
+                data.articleRecordId,
+                data.message.title,
+                data.message.message,
+                data.authorMessage.title,
+                data.authorMessage.message
+            );
+
+            // repostNotification(data.userId, data.authorId, data.postId, data.message, data.authorMessage);
         }
         // io.to(receiverInfo.socketId).emit("notification", {sender, message, title});
     })
@@ -247,17 +271,32 @@ io.on('connection', (socket) => {
                         podcastId: podcastId
                     });
 
-                    if (articleId) {
-                        sendCommentNotification(parentComment.userId, articleId, {
-                            title: `${user.user_handle} replied to your comment`,
-                            body: content
-                        });
+                    if (article && articleId) {
+
+                        sendCommentNotification(
+                            null,
+                            podcastId,
+                            parentComment._id,
+                            null,
+                            article.pb_recordId,
+                            parentComment.userId,
+                            null,
+                            `${user.user_handle} replied to your comment`,
+                            content
+                        );
                     }
                     else if (podcastId) {
-                        sendCommentNotification(parentComment.userId, podcastId, {
-                            title: `${user.user_handle} replied to your comment`,
-                            body: content
-                        });
+                        sendCommentNotification(
+                            null,
+                            podcastId,
+                            parentComment._id,
+                            null,
+                            null,
+                            parentComment.userId,
+                            null,
+                            `${user.user_handle} replied to your comment`,
+                            content
+                        );
                     }
 
                 } else {
@@ -276,23 +315,47 @@ io.on('connection', (socket) => {
 
                     /** Send Mention Notification */
                     if (mentionedUsers && Array.isArray(mentionedUsers) && mentionedUsers.length > 0) {
-                        mentionNotification(mentionedUsers, articleId, {
-                            title: `${user.user_handle} mentioned you in a comment`,
-                            body: content
-                        });
+
+
+                        mentionNotification(
+                            mentionedUsers,
+                            articleId,
+                            podcastId,
+                            null,
+                            null,
+                            populatedComment._id,
+                            `${user.user_handle} mentioned you in a comment`,
+                            content
+                        );
                     }
                     //  console.log("Mentioned Users", mentionedUsers);
 
-                    if (articleId) {
-                        sendCommentNotification(userId, articleId, {
-                            title: `${user.user_handle} commented on your post`,
-                            body: content
-                        });
-                    } else if (podcastId) {
-                        sendCommentNotification(userId, podcastId, {
-                            title: `${user.user_handle} commented on your post`,
-                            body: content
-                        });
+                    if (article && articleId) {
+
+                        sendCommentNotification(
+                            article._id,
+                            null,
+                            populatedComment._id,
+                            null,
+                            article.pb_recordId,
+                            article.authorId,
+                            null,
+                            `${user.user_handle} commented on your post`,
+                            content
+                        );
+
+                    } else if (podcast && podcastId) {
+                        sendCommentNotification(
+                            null,
+                            podcastId,
+                            populatedComment._id,
+                            null,
+                            null,
+                            podcast.user_id,
+                            null,
+                            `${user.user_handle} commented on your podcast`,
+                            content
+                        );
                     }
                 }
 
@@ -533,17 +596,26 @@ io.on('connection', (socket) => {
 
                     if (articleId) {
 
-                        sendCommentLikeNotification(populatedComment.userId, articleId, {
-                            title: `${user.user_handle} liked your comment`,
-                            body: `${article.title}`
-
-                        });
+                        sendCommentLikeNotification(
+                            populatedComment.userId,
+                            articleId,
+                            null,
+                            article.pb_recordId,
+                            populatedComment._id,
+                            `${user.user_handle} liked your comment`,
+                            `${populatedComment.content}`
+                        );
                     } else if (podcastId) {
-                        sendCommentLikeNotification(populatedComment.userId, podcastId, {
-                            title: `${user.user_handle} liked your comment`,
-                            body: `${podcast.title}`
 
-                        });
+                        sendCommentLikeNotification(
+                            populatedComment.userId,
+                            null,
+                            podcastId,
+                            null,
+                            populatedComment._id,
+                            `${user.user_handle} liked your comment`,
+                            `${populatedComment.content}`
+                        );
                     }
 
                 }
@@ -625,19 +697,19 @@ io.on('connection', (socket) => {
                         })
                         .populate('replies')
                         .sort({ createdAt: -1 })
-                        .exec(); 
+                        .exec();
                 }
 
 
-              if(comments){
-                comments = comments.filter(comment => comment.userId !== null);
-                socket.emit("fetch-comment-processing", false);
-                socket.emit('fetch-comments', {
-                    articleId,
-                    podcastId,
-                    comments: comments
-                });
-              }
+                if (comments) {
+                    comments = comments.filter(comment => comment.userId !== null);
+                    socket.emit("fetch-comment-processing", false);
+                    socket.emit('fetch-comments', {
+                        articleId,
+                        podcastId,
+                        comments: comments
+                    });
+                }
 
             } catch (err) {
                 console.error('Error fetching comments:', err);
@@ -708,10 +780,13 @@ io.on('connection', (socket) => {
                         await article.save();
 
                         socket.emit('new-feedback', comment);
-                        articleReviewNotificationsToUser(article.authorId._id, article._id, {
-                            title: "New feedback received on your Article : " + article.title,
-                            body: feedback
-                        }, 2);
+                        // userId, articleId, articleRecordId, title, message
+                        articleReviewNotificationsToUser(article.authorId._id, article._id,
+                            article.pb_recordId,
+                            null,
+                            "New feedback on your article: ",
+                            comment.content,
+                        );
                         // send mail
                         sendArticleFeedbackEmail(article.authorId.email, feedback, article.title);
 
@@ -732,10 +807,18 @@ io.on('connection', (socket) => {
                         await article.save();
 
                         socket.emit('new-feedback', comment);
-                        sendCommentNotification(article.reviewer_id, article._id, {
-                            title: "New Additional Note from Author",
-                            body: `An author has added a new note to the article titled ${article.title}.`
-                        });
+                        sendCommentNotification(
+                            article._id,
+                            null,
+                            comment._id,
+                            null,
+                            article.pb_recordId,
+                            null,
+                            article.reviewer_id,
+                            `New Additional Note from Author`,
+                            `An author has added a new note to the article titled ${article.title}.`
+                        );
+                       
 
                         socket.emit('new-feedback', comment);
                     }
@@ -779,10 +862,15 @@ io.on('connection', (socket) => {
                         await editRequest.save();
 
                         socket.emit('new-feedback', comment);
-                        articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id, {
-                            title: "New feedback received on your Article : " + editRequest.article.title,
-                            body: feedback
-                        }, 2);
+
+                        // userId, articleId, articleRecordId, title, message
+                        articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id,
+                            editRequest.pb_recordId,
+                            editRequest._id,
+                            "New feedback on your improvement: ",
+                            comment.content,
+                        );
+
                         // send mail
                         sendArticleFeedbackEmail(editRequest.user_id.email, feedback, editRequest.article.title);
 
@@ -803,10 +891,18 @@ io.on('connection', (socket) => {
                         await editRequest.save();
 
                         socket.emit('new-feedback', comment);
-                        sendCommentNotification(editRequest.reviewer_id, editRequest.article._id, {
-                            title: "New Additional Note from Author",
-                            body: `An author has added a new note to the article titled ${editRequest.article.title}.`
-                        });
+
+                         sendCommentNotification(
+                            editRequest.article._id,
+                            null,
+                            comment._id,
+                            editRequest._id,
+                            editRequest.pb_recordId,
+                            null,
+                            editRequest.reviewer_id,
+                            `New Additional Note from Author`,
+                            `An author has added a new note to the article titled ${editRequest.article.title}.`
+                        );
 
                         socket.emit('new-feedback', comment);
                     }

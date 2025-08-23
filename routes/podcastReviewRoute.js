@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/authentcatetoken');
+const adminAuthenticateToken = require("../middleware/adminAuthenticateToken");
 
 const {
     availablePodcastsForReview,
@@ -11,11 +12,11 @@ const {
     discardPodcast
 } = require('../controllers/admin/podcastReviewController');
 
-router.get('/podcast-admin/available', authenticateToken, availablePodcastsForReview);
-router.get('/podcast-admin/all', authenticateToken, getAllPodcastsOfModerator);
-router.get('/podcast-admin/completed', authenticateToken, getAllCompletedPodcastsOfModerator);
-router.post('/podcast-admin/pick', authenticateToken, pickPodcast);
-router.post('/podcast-admin/approve', authenticateToken, approvePodcast);
-router.post('/podcast-admin/discard', authenticateToken, discardPodcast);
+router.get('/podcast-admin/available', adminAuthenticateToken, availablePodcastsForReview);
+router.get('/podcast-admin/all', adminAuthenticateToken, getAllPodcastsOfModerator);
+router.get('/podcast-admin/completed', adminAuthenticateToken, getAllCompletedPodcastsOfModerator);
+router.post('/podcast-admin/pick', adminAuthenticateToken, pickPodcast);
+router.post('/podcast-admin/approve', adminAuthenticateToken, approvePodcast);
+router.post('/podcast-admin/discard', adminAuthenticateToken, discardPodcast);
 
 module.exports = router;

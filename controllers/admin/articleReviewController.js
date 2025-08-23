@@ -2,13 +2,13 @@ const expressAsyncHandler = require('express-async-handler');
 const Article = require('../../models/Articles');
 const admin = require('../../models/admin/adminModel');
 const User = require('../../models/UserModel');
-const { articleReviewNotificationsToUser, sendPostNotification } = require('../notifications/notificationHelper');
+const { articleReviewNotificationsToUser, sendPostNotification, articleSubmitNotificationsToAdmin } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
 const WriteAggregate = require("../../models/events/writeEventSchema");
 const { sendArticleFeedbackEmail, sendArticlePublishedEmail, sendArticleDiscardEmail, sendMailArticleDiscardByAdmin } = require('../emailservice');
 const cron = require('node-cron');
 const statusEnum = require('../../utils/StatusEnum');
-const {deleteFileFn} = require('../uploadController');
+const { deleteFileFn } = require('../uploadController');
 const AdminAggregate = require('../../models/events/adminContributionEvent');
 
 const { deleteArticleRecordFromPocketbase } = require('../../utils/pocketbaseUtil');
@@ -144,11 +144,13 @@ module.exports.assignModerator = expressAsyncHandler(
             article.lastUpdated = new Date();
 
             await article.save();
-            // send Notification
-            articleReviewNotificationsToUser(article.authorId, article._id, {
-                title: `Congrats!Your Article : ${article.title} is Under Review`,
-                body: "Our team has started reviewing your article. Stay tuned!"
-            }, 2);
+
+            articleReviewNotificationsToUser(article.authorId, article._id, article.pb_recordId, null,
+                `Congrats!Your Article : ${article.title} is Under Review`,
+                "Our team has started reviewing your article. Stay tuned!"
+            );
+
+
 
             res.status(200).json({ message: "Article status updated" });
 
@@ -206,10 +208,11 @@ module.exports.submitReview = expressAsyncHandler(
 
             await article.save();
 
-            articleReviewNotificationsToUser(article.authorId._id, article._id, {
-                title: "New feedback received on your Article : " + article.title,
-                body: feedback
-            }, 2);
+            articleReviewNotificationsToUser(article.authorId._id, article._id, article.pb_recordId, null,
+                "New feedback received on your Article : ",
+                feedback
+            );
+
             // send mail
             sendArticleFeedbackEmail(article.authorId.email, feedback, article.title);
 
@@ -275,10 +278,12 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
             // notify reviewer
             if (article.reviewer_id) {
 
-                articleReviewNotificationsToUser(article.reviewer_id, article._id, {
-                    title: ` New changes from author on : ${article.title} `,
-                    body: "Please reach out"
-                }, 1);
+                articleSubmitNotificationsToAdmin(
+                    article.reviewer_id, article._id, article.pb_recordId, null,
+                    `New changes from author on : ${article.title}`,
+                    "Please review the changes made by the author."
+                );
+
             }
 
             res.status(200).json({ message: "Article submitted" });
@@ -349,13 +354,17 @@ module.exports.publishArticle = expressAsyncHandler(
 
             // send mail to user
             sendArticlePublishedEmail(article.authorId.email, "", article.title);
-
+            
+            articleReviewNotificationsToUser(
+                article.authorId._id,
+                article._id,
+                article.pb_recordId,
+                null,
+                `Congrats! Your Article : ${article.title} is Live now!`,
+                "Keep contributing! We encourage you to keep sharing valuable content with us."
+            );
             // send notification
-            articleReviewNotificationsToUser(article.authorId._id, article._id, {
-                title: ` Your Article : ${article.title} is Live now!`,
-                body: "Keep contributing!  We encourage you to keep sharing valuable content with us."
-            }, 2);
-
+         
             res.status(200).json({ message: "Article Published" });
 
         } catch (err) {
@@ -404,11 +413,6 @@ module.exports.discardChanges = expressAsyncHandler(
             await article.save();
             if (user) {
 
-                await sendPostNotification(article._id, {
-                    title: "Article discarded",
-                    body: "Your article with title " + article.title + " has been discarded by admin",
-                }, article.authorId, 1);
-
                 sendMailArticleDiscardByAdmin(user.email, article.title, discardReason);
             }
 
@@ -449,10 +453,10 @@ module.exports.unassignModerator = expressAsyncHandler(
 
             await article.save();
 
-            await sendPostNotification(article._id, {
-                title: "Moderator Unassigned",
-                body: "The moderator has unassigned themselves from your article titled \"" + article.title + "\".",
-            }, article.authorId, 1);
+            await articleReviewNotificationsToUser(
+                article.authorId, article._id, article.pb_recordId, null,
+                article.title, "Your article has been unassigned from moderation."
+            );
 
             res.status(200).json({ message: "Article unassigned" });
 
@@ -519,10 +523,11 @@ async function unassignArticle() {
 
             await article.save();
 
-            await sendPostNotification(article._id, {
-                title: "Moderator Unassigned",
-                body: "The moderator has unassigned themselves from your article titled \"" + article.title + "\".",
-            }, article.authorId, 1);
+            await articleReviewNotificationsToUser(
+                article.authorId, article._id, article.pb_recordId, null,
+                article.title, "Your article has been unassigned from moderation."
+            );
+          
 
         });
 
@@ -572,10 +577,12 @@ async function discardArticle() {
 
             if (article.authorId?.email && article.title) {
 
-                await sendPostNotification(article._id, {
-                    title: "Article discarded",
-                    body: "Your article with title " + article.title + " has been discarded by system",
-                }, article.authorId._id, 1);
+                await articleReviewNotificationsToUser(
+                    article.authorId._id, article._id, article.pb_recordId, null,
+                    "Article discarded",
+                    "Your article with title " + article.title + " has been discarded by system"
+                );
+                
                 sendArticleDiscardEmail(article.authorId.email, previousStatus, article.title, "");
             }
 

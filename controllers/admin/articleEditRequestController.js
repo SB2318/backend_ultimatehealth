@@ -3,7 +3,7 @@ const Article = require('../../models/Articles');
 const EditRequest = require('../../models/admin/articleEditRequestModel');
 const admin = require('../../models/admin/adminModel');
 const User = require('../../models/UserModel');
-const { articleReviewNotificationsToUser } = require('../notifications/notificationHelper');
+const { articleReviewNotificationsToUser, articleSubmitNotificationsToAdmin } = require('../notifications/notificationHelper');
 const Comment = require('../../models/commentSchema');
 const WriteAggregate = require("../../models/events/writeEventSchema");
 const { sendMailOnEditRequestApproval, sendMailArticleDiscardByAdmin, sendArticleFeedbackEmail, sendArticlePublishedEmail } = require('../emailservice');
@@ -152,7 +152,7 @@ module.exports.getAllCompletedImprovementsForAdmin = expressAsyncHandler(
         }
         try {
             const articles = await EditRequest.find({
-                reviewer_id: reviewer_id, 
+                reviewer_id: reviewer_id,
                 status: {
                     $in: [statusEnum.statusEnum.PUBLISHED]
                 }
@@ -219,10 +219,13 @@ module.exports.pickImprovementRequest = expressAsyncHandler(
             // send Notification
             if (editRequest.article._id && editRequest.article.title) {
 
-                articleReviewNotificationsToUser(editRequest.article.authorId, editRequest.article._id, {
-                    title: `Congrats! Your Improvement Request has been accepted`,
-                    body: `Article : ${editRequest.article.title}`
-                }, 1);
+                articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id,
+                    editRequest.pb_recordId,
+                    editRequest._id,
+                    'New feedback on your improvement: ',
+                    `Congrats! Your Improvement Request has been accepted`,
+                );
+
 
                 // Send email
                 sendMailOnEditRequestApproval(user.email, editRequest.article.title);
@@ -285,10 +288,13 @@ module.exports.submitReviewOnImprovement = expressAsyncHandler(
                 await editRequest.save();
 
 
-                articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id, {
-                    title: "New feedback received on your Article : " + editRequest.article.title,
-                    body: feedback
-                }, 2);
+                articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id,
+                    editRequest.pb_recordId,
+                    editRequest._id,
+                    "New feedback on your improvement: ",
+                    feedback,
+                );
+
                 // send mail
                 sendArticleFeedbackEmail(editRequest.user_id.email, feedback, editRequest.article.title);
 
@@ -342,10 +348,14 @@ module.exports.submitImprovement = expressAsyncHandler(
 
             if (editRequest.reviewer_id && editRequest.article._id && editRequest.article.title) {
 
-                articleReviewNotificationsToUser(editRequest.reviewer_id, editRequest.article._id, {
-                    title: ` New changes from author on : ${editRequest.article.title} `,
-                    body: "Please reach out"
-                }, 1);
+
+                articleSubmitNotificationsToAdmin(editRequest.reviewer_id, editRequest.article._id,
+                    editRequest.pb_recordId,
+                    editRequest._id,
+                    ` New changes from author on : ${editRequest.article.title} `,
+                    "Please reach out"
+                );
+
 
             }
 
@@ -527,11 +537,13 @@ module.exports.publishImprovement = expressAsyncHandler(
             // send mail to user
             sendArticlePublishedEmail(contributor.email, "", article.title);
 
-            // send notification
-            articleReviewNotificationsToUser(contributor._id, article._id, {
-                title: ` Your Improvements on article : ${article.title} is Live now!`,
-                body: "Keep contributing! We encourage you to keep sharing valuable content with us."
-            }, 2);
+              articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id,
+                    editRequest.pb_recordId,
+                    editRequest._id,
+                    ` Your Improvements on article : ${article.title} is Live now!`,
+                    "We encourage you to keep sharing valuable content with us.",
+                );
+           
 
             res.status(200).json({ message: "Article Published" });
 

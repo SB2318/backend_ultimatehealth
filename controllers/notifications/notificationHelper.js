@@ -12,57 +12,23 @@ const Admin = require('../../models/admin/adminModel');
  * @param {*} message 
  */
 
-/*
- Notification Cases:
-  (I) POST Creation (Notify to all followers, with author_name) 
-     Extra Data: (screen: article view page, article id)
-  (II) Post Like (Only to author, with user_handle) (Extra Data: HomeScreen)
-  (III) Post Comment (Only to Author , with comment message) (Extra Data: Comment Screen, article id)
-  (IV) Comment Like (Only to Comment-Author, with post id) (Extra Data: Comment Screen, article id)
-  (V) User Follow
-
-  // Later 
-  (I) POST Published
-  (II) POST Updation
-  (III) POST Deletion
-  (IV) Comment Reply
-  (V) Comment Mention
-*/
-const sendPushNotification = (deviceToken, message, data, id, role) => {
-    // Ensure all values in data are strings
-    const formattedData = {
-        action: String(data.action),
-        postId: String(data.data.postId),
-        authorId: String(data.data.authorId),
-    };
+const sendPushNotification = (deviceToken, message) => {
 
     const payload = {
         notification: {
             title: message.title,
             body: message.body,
         },
-        data: formattedData,
     };
 
     // Send the push notification to a specific device token using send()
     admin.messaging()
         .send({
-            token: deviceToken,  // This is the device token you're targeting
+            token: deviceToken,
             notification: payload.notification,
-            data: payload.data,
         })
         .then(async (response) => {
             console.log("Successfully sent message:", response);
-            // Create Notification table, whenever a notification send, it will also store in our database
-            const notification = new Notification({
-                title: message.title,
-                message: message.body,
-                userId: id,
-                role: Number(role)
-            });
-
-            console.log("Notification", notification);
-            await notification.save();
         })
         .catch((error) => {
             console.log("Error sending message:", error);
@@ -73,35 +39,77 @@ const sendPushNotification = (deviceToken, message, data, id, role) => {
 /**
  * 
  * @param {*} postId  // article id
- * @param {*} message // title: "@author posted", // body: "title of the article"
+ * @param {*} message // title: "@author posted",
  * @param {*} authorId  // author id
  */
-// Open NotificationScreen -> ArticleViewScreen
-// Upcoming task -> Post type (1-> Article, 2-> Podcast , 3-> Comment)
-module.exports.sendPostNotification = async (postId, message, authorId, postType=1) => {
 
-    try {
-        const user = await User.findById(authorId).populate('followers').exec();
 
-        if (user) {
-            user.followers.forEach(u => {
-                if (u.fcmToken) {
-                    sendPushNotification(u.fcmToken, message, {
-                        action: 'openPost',
-                        data: {
-                            postId: postId,
-                            authorId: authorId,
-                            postType: postType
-                        },
-                        
-                    }, u._id, 2);
+module.exports.sendPostNotification =
+    async (userId, articleId, articleRecordId, podcastId, requestId, title, message, authorTitle, authorMessage) => {
+
+        try {
+            const user = await User.findById(userId).populate('followers').exec();
+            // (userId, articleId, articleRecordId, type, title, message, read, timestamp)
+
+            if (user) {
+                user.followers.forEach(async u => {
+                    if (u.fcmToken) {
+
+                        const notification = new Notification({
+                            userId: u._id,
+                            adminId: null,
+                            articleId: articleId,
+                            podcastId: podcastId,
+                            articleRecordId: articleRecordId,
+                            revisonId: requestId,
+                            commentId: null,
+                            type: podcastId ? 'podcast' : requestId ? 'editRequest' : 'article',
+                            title: title,
+                            message: message,
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                        await notification.save();
+
+                        sendPushNotification(user.fcmToken, {
+                            title: title,
+                            body: message
+                        });
+                    }
+                });
+
+                if (user.fcmToken) {
+                    const notification = new Notification({
+                        userId: user._id,
+                        adminId: null,
+                        articleId: articleId,
+                        podcastId: podcastId,
+                        articleRecordId: articleRecordId,
+                        revisonId: requestId,
+                        commentId: null,
+                        type: podcastId ? 'podcast' : requestId ? 'editRequest' : 'article',
+                        title: authorTitle,
+                        message: authorMessage,
+                        read: false,
+                        timestamp: Date.now()
+                    });
+                    await notification.save();
+
+                    sendPushNotification(user.fcmToken, {
+                        title: authorTitle,
+                        body: authorMessage
+                    });
                 }
-            });
+            }
+
+
+        } catch (err) {
+            console.log(err);
         }
-    } catch (err) {
-        console.log(err);
     }
-}
+
+
+
 
 /**
  * 
@@ -110,32 +118,45 @@ module.exports.sendPostNotification = async (postId, message, authorId, postType
  *                     // title: "@username like your post"
  */
 // Open NotificationScreen -> HomeScreen
-module.exports.sendPostLikeNotification = async (authorId, message) => {
-    try {
-        const user = await User.findById(authorId);
+module.exports.sendPostLikeNotification =
+    async (userId, articleId, podcastId, articleRecordId, title, message) => {
+        try {
+            const user = await User.findById(userId);
+            // (userId, articleId, articleRecordId, type, title, message, read, timestamp)
 
-       // console.log(user);
-        if (user && user.fcmToken) {
+            // console.log(user);
+            if (user && user.fcmToken) {
 
-            console.log("Push Notification sending");
-            sendPushNotification(user.fcmToken, message, {
-                action: 'likePost',
-                data: {
-                    postId: null,
-                    authorId: null
-                },
+                //console.log("Push Notification sending");
+                const notification = new Notification({
+                    userId: user._id,
+                    adminId: null,
+                    articleId: articleId,
+                    podcastId: podcastId,
+                    articleRecordId: articleRecordId,
+                    revisonId: null,
+                    commentId: null,
+                    type: podcastId ? 'podcastLike' : 'articleLike',
+                    title: title,
+                    message: message,
+                    read: false,
+                    timestamp: Date.now()
+                });
+                await notification.save();
+
+                sendPushNotification(user.fcmToken, {
+                    title: title,
+                    body: message
+                });
                
-            }, user._id, 2)
-
-
+            }
+            else {
+                console.log("No FCM token found");
+            }
+        } catch (err) {
+            console.log(err);
         }
-        else {
-            console.log("No FCM token found");
-        }
-    } catch (err) {
-        console.log(err);
     }
-}
 
 // CommentScreen
 /**
@@ -145,35 +166,48 @@ module.exports.sendPostLikeNotification = async (authorId, message) => {
  * @param {*} message  // title & body : title :"@username commented on your Post"
  *                      // body: "Your comment content here"
  */
-module.exports.sendCommentNotification = async (authorId, postId, message, isAdmin = false) => {
+module.exports.sendCommentNotification =
+    async (articleId, podcastId, commentId, requestId, articleRecordId, userId, adminId, title, message) => {
 
-    try {
+        try {
 
-        let user;
-        let role = 0;
+            if (!userId && !adminId) return;
 
-        if(isAdmin){
+            let user;
 
-            user = await Admin.findById(authorId);
-            role =1 ;
-        }else{
-            user = await User.findById(authorId);
-            role = 2;
+            if (adminId) {
+                user = await Admin.findById(adminId);
+            } else {
+                user = await User.findById(userId);
+            }
+
+            if (user && user.fcmToken) {
+
+                const notification = new Notification({
+                    userId: userId ? user._id : null,
+                    adminId: adminId ? user._id : null,
+                    articleId: articleId,
+                    podcastId: podcastId,
+                    articleRecordId: articleRecordId,
+                    revisonId: requestId,
+                    commentId: commentId,
+                    type: podcastId ? 'podcastComment' : requestId ? 'editRequestComment' : 'articleComment',
+                    title: title,
+                    message: message,
+                    read: false,
+                    timestamp: Date.now()
+                });
+                await notification.save();
+
+                sendPushNotification(user.fcmToken, {
+                    title: title,
+                    body: message
+                });
+            }
+        } catch (err) {
+            console.error(err);
         }
-
-        if (user && user.fcmToken) {
-            sendPushNotification(user.fcmToken, message, {
-                action: 'commentPost',
-                data: {
-                    postId: postId,
-                    authorId: null,
-                }
-            }, user._id, role)
-        }
-    } catch (err) {
-        console.error(err);
     }
-}
 
 /**
  * 
@@ -182,26 +216,43 @@ module.exports.sendCommentNotification = async (authorId, postId, message, isAdm
  * @param {*} message // title :"@username like your comment"
  */
 
-module.exports.sendCommentLikeNotification = async (userId, postId, message) => {
+// Use case
+// When a user likes a podcast comment
+// When a user likes an article comment
 
-    try {
-        const user = await User.findById(userId);
+module.exports.sendCommentLikeNotification =
+    async (userId, articleId, podcastId, articleRecordId, commentId, title, message) => {
 
-        if (user && user.fcmToken) {
+        try {
+            const user = await User.findById(userId);
 
-            sendPushNotification(user.fcmToken, message, {
-                action: 'commentLikePost',
-                data: {
-                    postId: null,
-                    authorId: null
-                }
-            }, user._id, 2)
+            if (user && user.fcmToken) {
+
+                const notification = new Notification({
+                    userId: user._id,
+                    articleId: articleId,
+                    podcastId: podcastId,
+                    articleRecordId: articleRecordId,
+                    revisonId: null,
+                    commentId: commentId,
+                    type: 'commentLike',
+                    title: title,
+                    message: message,
+                    read: false,
+                    timestamp: Date.now()
+                });
+                await notification.save();
+
+                sendPushNotification(user.fcmToken, {
+                    title: title,
+                    body: message
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            //sendPushNotification()
         }
-    } catch (err) {
-        console.error(err);
-        //sendPushNotification()
     }
-}
 
 /**
  * 
@@ -212,14 +263,24 @@ module.exports.userFollowNotification = async (userId, message) => {
 
     try {
         const user = await User.findById(userId);
+        // (userId, type, title, message, read, timestamp)
         if (user && user.fcmToken) {
-            sendPushNotification(user.fcmToken, message, {
-                action: 'userFollow',
-                data: {
-                    postId: null,
-                    authorId: null
-                }
-            }, user._id, 2);
+
+            const notification = new Notification({
+                userId: user._id,
+                articleId: null,
+                podcastId: null,
+                articleRecordId: null,
+                revisonId: null,
+                commentId: null,
+                type: 'userFollow',
+                title: message.title,
+                message: message.body,
+                read: false,
+                timestamp: Date.now()
+            });
+            await notification.save();
+            sendPushNotification(user.fcmToken, message);
         }
     } catch (err) {
         console.error(err);
@@ -227,93 +288,224 @@ module.exports.userFollowNotification = async (userId, message) => {
 }
 
 // Repost Notification
+// Use Case
+// User repost an article, notify to their followers
+// Notify to author of the article
 
-module.exports.repostNotification = async (userId, authorId, postId, message, authorMessage) => {
+module.exports.repostNotification =
+    async (userId, authorId, articleId, articleRecordId, title, message, authorTitle, authorMessage) => {
 
-   try{
+        try {
 
-    // Notify to all followers
-    const user = await User.findById(userId).populate('followers').exec();
+            // Notify to all followers
+            const user = await User.findById(userId).populate('followers').exec();
 
-    if (user) {
-        user.followers.forEach(u => {
-            if (u.fcmToken) {
-                sendPushNotification(u.fcmToken, message, {
-                    action: 'notifyFollowersOnRepost',
-                    data: {
-                        postId: postId,
-                        authorId: authorId
-                    },
-                    
-                }, u._id, 2);
+            if (user) {
+                user.followers.forEach(async u => {
+                    if (u.fcmToken) {
+
+                        const notification = new Notification({
+                            userId: u._id,
+                            articleId: articleId,
+                            podcastId: null,
+                            articleRecordId: articleRecordId,
+                            revisonId: null,
+                            commentId: null,
+                            type: 'articleRepost',
+                            title: title,
+                            message: message,
+                            read: false,
+                            timestamp: Date.now()
+                        });
+                        await notification.save();
+                        sendPushNotification(u.fcmToken, {
+                            title: title,
+                            body: message
+                        });
+                    }
+                });
             }
-        });
+            // Notify to author
+            const author = await User.findById(authorId);
+
+            if (author && author.fcmToken) {
+
+                const notification = new Notification({
+                    userId: author._id,
+                    articleId: articleId,
+                    podcastId: null,
+                    articleRecordId: articleRecordId,
+                    revisonId: null,
+                    commentId: null,
+                    type: 'articleRepost',
+                    title: authorTitle,
+                    message: authorMessage,
+                    read: false,
+                    timestamp: Date.now()
+                });
+                await notification.save();
+                sendPushNotification(author.fcmToken, {
+                    title: authorTitle,
+                    body: authorMessage
+                });
+            }
+
+        } catch (err) {
+
+            console.error(err);
+        }
     }
-    // Notify to author
-    const author = await User.findById(authorId);
-
-    if(author && author.fcmToken){
-        sendPushNotification(author.fcmToken, authorMessage, {
-            action: 'notifyAuthorOnRepost',
-            data: {
-                postId: postId,
-                authorId: authorId
-            },
-            
-        }, author._id, 2);
-    }
-
-   }catch(err){
-
-    console.error(err);
-   }
-}
 
 // Mention Notification
+// Use Case
+// User mentioned for article comment
+// User mentioned for podcast comment
 
-module.exports.mentionNotification = async (mentionedUsers, postId, message) =>{
-    try{
-        mentionedUsers.forEach( async userId => {
+module.exports.mentionNotification =
+    async (mentionedUsers, articleId, podcastId, requestId, articleRecordId, commentId, title, message) => {
 
-        const user = await User.findById(userId);
+        try {
+            mentionedUsers.forEach(async userId => {
+                const user = await User.findById(userId);
+                if (user && user.fcmToken) {
 
-        if (user && user.fcmToken) {
+                    const notification = new Notification({
+                        userId: user._id,
+                        articleId: articleId,
+                        podcastId: podcastId,
+                        articleRecordId: articleRecordId,
+                        revisonId: requestId,
+                        commentId: commentId,
+                        type: podcastId ? 'podcastCommentMention' : 'articleCommentMention',
+                        title: title,
+                        message: message,
+                        read: false,
+                        timestamp: Date.now()
+                    });
+                    await notification.save();
 
-            sendPushNotification(user.fcmToken, message, {
-                action: 'commentMentionPost',
-                data: {
-                    postId: postId,
-                    authorId: null
+                    sendPushNotification(user.fcmToken, {
+                        title: title,
+                        body: message
+                    });
                 }
-            }, user._id, 2)
+
+            });
+        } catch (err) {
+            console.error(err);
+
         }
-            
-        });
-    }catch(err){
-        console.error(err);
-
     }
-}
 
-
-module.exports.articleReviewNotificationsToUser = async (userId, postId, message, role) => {
+// Use Case
+// When admin submit feedback on article
+// When admin submit feedback on an improvement request
+module.exports.articleReviewNotificationsToUser = async (userId, articleId, articleRecordId, requestId, title, message) => {
 
     try {
         const user = await User.findById(userId);
+        // Create notification object
+        // (userId, articleId, articleRecordId, type, title, message, read, timestamp)
+
 
         if (user && user.fcmToken) {
 
-            sendPushNotification(user.fcmToken, message, {
-                action: 'articleReview',
-                data: {
-                    postId: postId,
-                    authorId: user._id
-                }
-            }, user._id, role)
+            const notification = new Notification({
+                userId: user._id,
+                articleId: articleId,
+                articleRecordId: articleRecordId,
+                revisonId: requestId,
+                type: requestId ? 'articleRevisionReview' : 'articleReview',
+                title: title,
+                message: message,
+                read: false,
+                timestamp: Date.now()
+            });
+            await notification.save();
+
+            sendPushNotification(user.fcmToken, {
+                title: title,
+                body: message
+            });
         }
     } catch (err) {
         console.error(err);
         //sendPushNotification()
     }
 }
+
+// Use case
+// When user submit a podcast for review
+// when admin take any action on podcast
+module.exports.podcastReviewNotificationsToUser = async (userId, podcastId, title, message) => {
+
+    try {
+        const user = await User.findById(userId);
+        // Create notification object
+        // (userId, articleId, articleRecordId, type, title, message, read, timestamp)
+
+        if (user && user.fcmToken) {
+
+            const notification = new Notification({
+                userId: user._id,
+                articleId: null,
+                articleRecordId: null,
+                revisonId: null,
+                podcastId: podcastId,
+                type: 'podcastReview',
+                title: title,
+                message: message,
+                read: false,
+                timestamp: Date.now()
+            });
+            await notification.save();
+
+            sendPushNotification(user.fcmToken, {
+                title: title,
+                body: message
+            });
+        }
+    } catch (err) {
+        console.error(err);
+        //sendPushNotification()
+    }
+}
+
+// Use Case
+// When user submit article for review
+// When user submit improvement for review
+module.exports.articleSubmitNotificationsToAdmin =
+    async (adminId, articleId, articleRecordId, requestId, title, message) => {
+
+        try {
+            const admin = await Admin.findById(adminId);
+            // Create notification object
+            // (userId, articleId, articleRecordId, type, title, message, read, timestamp)
+            if (admin && admin.fcmToken) {
+
+                const notification = new Notification({
+                    adminId: admin._id,
+                    articleId: articleId,
+                    articleRecordId: articleRecordId,
+                    revisonId: requestId,
+                    type: requestId ? 'revisionSubmitToAdmin' : 'articleSubmitToAdmin',
+                    title: title,
+                    message: message,
+                    read: false,
+                    timestamp: Date.now()
+                });
+                await notification.save();
+
+                sendPushNotification(admin.fcmToken, {
+                    title: title,
+                    body: message
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            //sendPushNotification()
+        }
+    }
+
+
 
