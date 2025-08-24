@@ -69,16 +69,18 @@ module.exports.createArticle = expressAsyncHandler(
 module.exports.getAllArticles = expressAsyncHandler(
   async (req, res) => {
 
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 50 } = req.query;
     try {
 
       const query = {
         status: statusEnum.statusEnum.PUBLISHED,
-        is_removed: false 
+        is_removed: false
       };
 
+
+
       const skip = (Number(page) - 1) * parseInt(limit);
-      
+
       const articles = await Article.find(query)
         .populate('tags')
         //.populate('mentionedUsers', 'user_handle user_name Profile_image')
@@ -126,7 +128,13 @@ module.exports.getAllArticles = expressAsyncHandler(
         }
       }
 
-      res.status(200).json({ articles });
+      if (Number(page) === 1) {
+        const totalArticles = await Article.countDocuments(query);
+        const totalPages = Math.ceil(totalArticles / Number(limit));
+        res.status(200).json({ articles, totalPages });
+      } else {
+        res.status(200).json({ articles : articles });
+      }
     } catch (error) {
       res
         .status(500)
@@ -139,12 +147,39 @@ module.exports.getAllArticles = expressAsyncHandler(
 // Get all articles for user
 module.exports.getAllArticlesForUser = expressAsyncHandler(
   async (req, res) => {
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, status = 1, visit = 1 } = req.query;
     try {
 
       const skip = (Number(page) - 1) * parseInt(limit);
-     
-      const articles = await Article.find({ authorId: req.userId, is_removed: false })
+
+      const query = { authorId: req.userId, is_removed: false };
+      let articleQuery = query;
+      if (Number(status) === 1) {
+        articleQuery = {
+          ...query,
+          status: statusEnum.statusEnum.PUBLISHED
+        }
+      }
+      else if (Number(status) === 2) {
+        articleQuery = {
+          ...query,
+          status: {
+            $in: [
+              statusEnum.statusEnum.AWAITING_USER,
+              statusEnum.statusEnum.REVIEW_PENDING,
+              statusEnum.statusEnum.IN_PROGRESS,
+              statusEnum.statusEnum.UNASSIGNED
+            ]
+          },
+        }
+      }
+      else if (Number(status) === 3) {
+        articleQuery = {
+          ...query,
+          status: statusEnum.statusEnum.DISCARDED
+        }
+      }
+      const articles = await Article.find(articleQuery)
         .populate('tags')
         .populate({
           path: 'mentionedUsers',
@@ -167,7 +202,7 @@ module.exports.getAllArticlesForUser = expressAsyncHandler(
         .sort({ lastUpdated: -1 })
         .exec();
 
-       articles.forEach(article => {
+      articles.forEach(article => {
         if (article.mentionedUsers) {
           article.mentionedUsers = article.mentionedUsers.filter(user => user !== null);
         }
@@ -179,11 +214,133 @@ module.exports.getAllArticlesForUser = expressAsyncHandler(
 
       });
 
-      res.status(200).json({ articles });
+      if (Number(page) === 1) {
+        const totalArticles = await Article.countDocuments(articleQuery);
+        const totalPages = Math.ceil(totalArticles / Number(limit));
+
+        if (Number(visit) === 1) {
+          const publishedCount = await Article.countDocuments({
+            authorId: req.userId,
+            status: statusEnum.statusEnum.PUBLISHED,
+            is_removed: false,
+          });
+
+          const progressCount = await Article.countDocuments({
+            authorId: req.userId,
+            status: {
+              $in: [
+                statusEnum.statusEnum.AWAITING_USER,
+                statusEnum.statusEnum.REVIEW_PENDING,
+                statusEnum.statusEnum.IN_PROGRESS,
+                statusEnum.statusEnum.UNASSIGNED,
+              ],
+            },
+            is_removed: false,
+          });
+
+          const discardCount = await Article.countDocuments({
+            authorId: req.userId,
+            status: statusEnum.statusEnum.DISCARDED,
+            is_removed: false,
+          });
+          res.status(200).json({ articles, totalPages, publishedCount, progressCount, discardCount });
+          return;
+        }
+        res.status(200).json({ articles, totalPages });
+      
+       } else {
+        res.status(200).json({ articles: articles });
+      }
+
     } catch (error) {
       res
         .status(500)
         .json({ error: "Error fetching articles", details: error.message });
+    }
+  }
+)
+
+// Get all improvements for user
+module.exports.getAllImprovementsForUser = expressAsyncHandler(
+  async (req, res) => {
+    const userId = req.userId;
+    const { page = 1, limit = 10, status = 1, visit = 1 } = req.query;
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required.' });
+    }
+    try {
+
+      const skip = (Number(page) - 1) * parseInt(limit);
+      let query = {user_id: userId};
+      let articleQuery = query;
+
+      if(Number(status) === 1){
+        articleQuery = {
+          ...query,
+          status: statusEnum.statusEnum.PUBLISHED
+        }
+      }
+
+      if(Number(status) === 2){
+        articleQuery = {
+          ...query,
+          status: {
+            $in: [
+              statusEnum.statusEnum.AWAITING_USER,
+              statusEnum.statusEnum.REVIEW_PENDING,
+              statusEnum.statusEnum.IN_PROGRESS,
+              statusEnum.statusEnum.UNASSIGNED
+            ]
+          }
+        }
+      }
+
+      if(Number(status) === 3){
+        articleQuery = {
+          ...query,
+          status: statusEnum.statusEnum.DISCARDED
+        };
+      }
+
+      let articles = await EditRequest.find(articleQuery).populate({
+        path: 'article',
+        populate: {
+          path: 'tags',
+        },
+        match: {
+          is_removed: false
+        }
+      })
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({ last_updated: -1 })
+        .exec();
+
+      if (articles) {
+        articles = articles.filter(a => a.article !== null);
+      }
+
+      if (Number(page) === 1) {
+        const totalArticles = await EditRequest.countDocuments(articleQuery);
+        const totalPages = Math.ceil(totalArticles / Number(limit));
+
+        if (Number(visit) === 1) {
+          const publishedCount = await EditRequest.countDocuments(articleQuery);
+
+          const progressCount = await EditRequest.countDocuments(articleQuery);
+
+          const discardCount = await EditRequest.countDocuments(articleQuery);
+          res.status(200).json({ articles, totalPages, publishedCount, progressCount, discardCount });
+          return;
+        }
+        res.status(200).json({ articles, totalPages });
+      
+       } else {
+        res.status(200).json({ articles: articles});
+      }
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: err.message });
     }
   }
 )
@@ -755,43 +912,7 @@ module.exports.repostArticle = expressAsyncHandler(
   }
 )
 
-module.exports.getAllImprovementsForUser = expressAsyncHandler(
-  async (req, res) => {
-    const userId = req.userId;
-    const {page = 1, limit = 10} = req.query;
-    if (!userId) {
-      return res.status(400).json({ message: 'User ID is required.' });
-    }
-    try {
 
-      const skip = (Number(page) - 1) * parseInt(limit);
-      let articles = await EditRequest.find({
-        user_id: userId,
-
-      }).populate({
-        path: 'article',
-        populate: {
-          path: 'tags',
-        },
-        match: {
-          is_removed: false
-        }
-      })
-      .skip(skip)
-      .limit(Number(limit))
-      .sort({ last_updated: -1 })
-      .exec();
-
-      if (articles) {
-        articles = articles.filter(a => a.article !== null);
-      }
-      res.status(200).json(articles);
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ message: err.message });
-    }
-  }
-)
 
 module.exports.getImprovementById = expressAsyncHandler(
 

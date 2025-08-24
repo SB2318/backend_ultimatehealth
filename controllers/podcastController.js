@@ -184,7 +184,15 @@ const getAllPublishedPodcasts = expressAsyncHandler(
                 .limit(Number(limit))
                 .exec();
 
-            res.status(200).json(allPodcasts);
+            if (Number(page) === 1) {
+                const totalPodcasts = await Podcast.countDocuments({
+                    status: statusEnum.statusEnum.PUBLISHED
+                });
+                const totalPages = Math.ceil(totalPodcasts / Number(limit));
+                res.status(200).json({ allPodcasts, totalPages });
+                return;
+            }
+            res.status(200).json({ allPodcasts });
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: "Internal server error" });
@@ -238,7 +246,7 @@ const searchPodcast = expressAsyncHandler(
         }
         try {
             const skip = (Number(page) - 1) * parseInt(limit);
-            
+
             const regex = new RegExp(q, 'i');
             // Find all article title matches with the rejex
             const matchingArticles = await Article.find({ title: regex }).select('_id title');
@@ -266,7 +274,20 @@ const searchPodcast = expressAsyncHandler(
                 .limit(Number(limit))
                 .lean();
 
-            return res.status(200).json(matchPodcasts);
+            if (Number(page) === 1) {
+                const totalPodcasts = await Podcast.countDocuments({
+                    $or: [
+                        { article_id: { $in: articleIds } },
+                        { title: regex },
+                        { description: regex },
+
+                    ]
+                });
+                const totalPages = Math.ceil(totalPodcasts / Number(limit));
+                res.status(200).json({ matchPodcasts, totalPages });
+                return;
+            }
+            return res.status(200).json({matchPodcasts});
 
         } catch (err) {
             console.log(err);
@@ -943,11 +964,23 @@ const getUserPendingPodcasts = expressAsyncHandler(
                     $in: ['review-pending', 'in-progress'],
                 }
             }).populate('tags')
-            .skip(skip)
-            .limit(Number(limit))
-            .exec();
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
 
-            res.status(200).json(pendingPodcasts);
+            if (Number(page) === 1) {
+                const totalPodcasts = await Podcast.countDocuments({
+                    user_id: userId,
+                    status: {
+                        $in: ['review-pending', 'in-progress'],
+                    }
+                });
+                const totalPages = Math.ceil(totalPodcasts / Number(limit));
+                res.status(200).json({ pendingPodcasts, totalPages });
+                return;
+            }
+
+            res.status(200).json({ pendingPodcasts });
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });
@@ -966,11 +999,21 @@ const getUserPublishedPodcasts = expressAsyncHandler(
                 user_id: userId,
                 status: 'published'
             }).populate('tags').sort({ updated_at: -1 })
-            .skip(skip)
-            .limit(Number(limit))
-            .exec();
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
 
-            res.status(200).json(publishedPodcasts);
+            if (Number(page) === 1) {
+                const totalPodcasts = await Podcast.countDocuments({
+                    user_id: userId,
+                    status: 'published'
+                });
+                const totalPages = Math.ceil(totalPodcasts / Number(limit));
+                res.status(200).json({ publishedPodcasts, totalPages });
+                return;
+            }
+
+            res.status(200).json({ publishedPodcasts });
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });
@@ -989,11 +1032,21 @@ const getDiscardedPodcasts = expressAsyncHandler(
                 user_id: userId,
                 status: 'discarded'
             }).populate('tags').sort({ updated_at: -1 })
-            .skip(skip)
-            .limit(Number(limit))
-            .exec();
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
 
-            res.status(200).json(discardedPodcasts);
+            if (Number(page) === 1) {
+                const totalPodcasts = await Podcast.countDocuments({
+                    user_id: userId,
+                    status: 'discarded'
+                });
+                const totalPages = Math.ceil(totalPodcasts / Number(limit));
+                res.status(200).json({ discardedPodcasts, totalPages });
+                return;
+            }
+
+            res.status(200).json({ discardedPodcasts });
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });

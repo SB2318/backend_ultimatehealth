@@ -40,7 +40,7 @@ module.exports.getAllNotifications = expressAsyncHandler(
     async (req, res) => {
 
         const userId = req.userId;
-        const {role, page= 1, limit= 10} = req.query;
+        const { role, page = 1, limit = 10 } = req.query;
 
         if (!userId) {
             res.status(400).json({ message: "User ID is required" });
@@ -48,29 +48,46 @@ module.exports.getAllNotifications = expressAsyncHandler(
         }
         try {
 
-        let q;
-        if(Number(role) === 2){
-            q={ userId: userId }
-        }else{
-            q={ adminId: userId }
-        }
-        
-        const skip = (Number(page) - 1) * parseInt(limit);
-        const limitNum = parseInt(limit);
+            let q;
+            if (Number(role) === 2) {
+                q = { userId: userId }
+            } else {
+                q = { adminId: userId }
+            }
 
-        const notifications = await Notification.find(q)
-            .populate('userId', 'user_name user_handle email')
-            .populate('adminId', 'user_name user_handle email')
-            .populate('articleId')
-            .populate('podcastId')
-            .populate('commentId')
-            .populate('revisonId')
-            .skip(skip)
-            .limit(limitNum)
-            .sort({ timestamp: -1 })
-            .lean();
+            const skip = (Number(page) - 1) * parseInt(limit);
+            const limitNum = parseInt(limit);
 
-            res.status(200).json(notifications);
+            const notifications = await Notification.find(q)
+                .populate('userId', 'user_name user_handle email')
+                .populate('adminId', 'user_name user_handle email')
+                .populate({
+                    path: 'articleId',
+                    populate: {
+                        path: 'mentionedUsers',
+                    }
+                })
+                .populate({
+                    path: 'podcastId',
+                    populate: {
+                        path: 'mentionedUsers',
+                    }
+                })
+                .populate('commentId')
+                .populate('revisonId')
+                .skip(skip)
+                .limit(limitNum)
+                .sort({ timestamp: -1 })
+                .lean();
+
+            if(Number(page) === 1){
+              const totalNotifications = await Notification.countDocuments(q);
+              const totalPages = Math.ceil(totalNotifications / Number(limit));
+              res.status(200).json({notifications, totalPages});
+              return;
+            }
+
+            res.status(200).json({notifications});
 
         } catch (err) {
             console.log(err);
@@ -84,7 +101,7 @@ module.exports.markNotifications = expressAsyncHandler(
     async (req, res) => {
 
         const userId = req.userId;
-        const {role} = req.body;
+        const { role } = req.body;
         if (!userId) {
             res.status(400).json({ message: "User ID is required" });
             return;
@@ -92,10 +109,10 @@ module.exports.markNotifications = expressAsyncHandler(
 
         try {
             let q;
-            if(Number(role) === 2){
-                q={ userId: userId }
-            }else{
-                q={ adminId: userId }
+            if (Number(role) === 2) {
+                q = { userId: userId }
+            } else {
+                q = { adminId: userId }
             }
             await Notification.updateMany(
                 q,
@@ -114,7 +131,7 @@ module.exports.getUnreadNotificationCount = expressAsyncHandler(
 
     async (req, res) => {
         const userId = req.userId;
-        const {role} = req.query;
+        const { role } = req.query;
         if (!userId) {
             res.status(400).json({ message: "User ID is required" });
             return;
@@ -123,15 +140,15 @@ module.exports.getUnreadNotificationCount = expressAsyncHandler(
         try {
 
             let q;
-            if(Number(role) === 2){
-                q={ userId: userId }
-            }else{
-                q={ adminId: userId }
+            if (Number(role) === 2) {
+                q = { userId: userId }
+            } else {
+                q = { adminId: userId }
             }
 
-            const unreadCount = await Notification.countDocuments({ 
+            const unreadCount = await Notification.countDocuments({
                 ...q,
-                read: false 
+                read: false
             });
             res.status(200).json({ unreadCount });
         } catch (err) {
@@ -146,7 +163,7 @@ module.exports.deleteNotificationById = expressAsyncHandler(
     async (req, res) => {
         const notificationId = req.params.id;
         const userId = req.userId;
-     
+
         if (!notificationId || !userId) {
             res.status(400).json({ message: "Notification id or User id are required" });
             return;

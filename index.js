@@ -27,7 +27,16 @@ const articleEditRoute = require('./routes/articleEditRequestRoute');
 const adminRoute = require('./routes/adminRoute');
 const podcastRoute = require('./routes/podcastRoute');
 const podcastAdminRoute = require('./routes/podcastReviewRoute');
-const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification, repostNotification, mentionNotification, userFollowNotification } = require('./controllers/notifications/notificationHelper');
+const { 
+sendPostNotification, 
+sendPostLikeNotification, 
+sendCommentNotification, 
+sendCommentLikeNotification, 
+repostNotification, 
+mentionNotification, 
+userFollowNotification,
+articleSubmitNotificationsToAdmin
+} = require('./controllers/notifications/notificationHelper');
 
 const app = express();
 dotenv.config();
@@ -807,19 +816,16 @@ io.on('connection', (socket) => {
                         await article.save();
 
                         socket.emit('new-feedback', comment);
-                        sendCommentNotification(
+                       
+                       
+                        articleSubmitNotificationsToAdmin(
+                            article.reviewer_id,
                             article._id,
-                            null,
-                            comment._id,
-                            null,
                             article.pb_recordId,
                             null,
-                            article.reviewer_id,
-                            `New Additional Note from Author`,
+                             `New Additional Note from Author`,
                             `An author has added a new note to the article titled ${article.title}.`
                         );
-                       
-
                         socket.emit('new-feedback', comment);
                     }
                 } else if (requestId) {
@@ -892,16 +898,13 @@ io.on('connection', (socket) => {
 
                         socket.emit('new-feedback', comment);
 
-                         sendCommentNotification(
-                            editRequest.article._id,
-                            null,
-                            comment._id,
-                            editRequest._id,
-                            editRequest.pb_recordId,
-                            null,
-                            editRequest.reviewer_id,
-                            `New Additional Note from Author`,
-                            `An author has added a new note to the article titled ${editRequest.article.title}.`
+                        articleSubmitNotificationsToAdmin(
+                         editRequest.reviewer_id,
+                         editRequest.article._id,
+                         editRequest.pb_recordId,
+                         editRequest._id,
+                         `New Additional Note from Author`,
+                        `An author has added a new note to the article titled ${editRequest.article.title}.`
                         );
 
                         socket.emit('new-feedback', comment);

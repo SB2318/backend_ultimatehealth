@@ -39,7 +39,16 @@ module.exports.getAllArticleForReview = expressAsyncHandler(
                 .exec();
 
             articles = articles.filter(r => r.article?.authorId !== null);
-            res.status(200).json(articles);
+            if (Number(page) === 1) {
+                const totalArticles = await Article.countDocuments({
+                    status: statusEnum.statusEnum.UNASSIGNED,
+                    is_removed: false
+                });
+                const totalPages = Math.ceil(totalArticles / Number(limit));
+                res.status(200).json({ articles, totalPages });
+                return;
+            }
+            res.status(200).json({ articles });
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });
@@ -78,7 +87,20 @@ module.exports.getAllInProgressArticles = expressAsyncHandler(
                 .exec();
 
             articles = articles.filter(r => r.article?.authorId !== null);
-            res.status(200).json(articles);
+
+            if (Number(page) === 1) {
+                const totalArticles = await Article.countDocuments({
+                    reviewer_id: reviewer_id,
+                    is_removed: false,
+                    status: {
+                        $in: [statusEnum.statusEnum.IN_PROGRESS, statusEnum.statusEnum.AWAITING_USER, statusEnum.statusEnum.REVIEW_PENDING]
+                    }
+                });
+                const totalPages = Math.ceil(totalArticles / Number(limit));
+                res.status(200).json({ articles, totalPages });
+                return;
+            }
+            res.status(200).json({ articles });
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });
@@ -104,13 +126,27 @@ module.exports.getAllReviewCompletedArticles = expressAsyncHandler(
                     $in: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
                 }
             })
-            .populate('tags')
-            .sort({ lastUpdated: -1 })
-            .skip(skip)
-            .limit(Number(limit))
-            .exec();
-            
-            res.status(200).json(articles);
+                .populate('tags')
+                .sort({ lastUpdated: -1 })
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
+
+            if (Number(page) === 1) {
+                
+                const totalArticles = await Article.countDocuments({
+                    reviewer_id: reviewer_id,
+                    is_removed: false,
+                    status: {
+                        $in: [statusEnum.statusEnum.PUBLISHED, statusEnum.statusEnum.DISCARDED]
+                    }
+                });
+                const totalPages = Math.ceil(totalArticles / Number(limit));
+                res.status(200).json({ articles, totalPages });
+                return;
+            }
+
+            res.status(200).json({articles});
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });
@@ -377,7 +413,7 @@ module.exports.publishArticle = expressAsyncHandler(
 
             // send mail to user
             sendArticlePublishedEmail(article.authorId.email, "", article.title);
-            
+
             articleReviewNotificationsToUser(
                 article.authorId._id,
                 article._id,
@@ -387,7 +423,7 @@ module.exports.publishArticle = expressAsyncHandler(
                 "Keep contributing! We encourage you to keep sharing valuable content with us."
             );
             // send notification
-         
+
             res.status(200).json({ message: "Article Published" });
 
         } catch (err) {
@@ -550,7 +586,7 @@ async function unassignArticle() {
                 article.authorId, article._id, article.pb_recordId, null,
                 article.title, "Your article has been unassigned from moderation."
             );
-          
+
 
         });
 
@@ -605,7 +641,7 @@ async function discardArticle() {
                     "Article discarded",
                     "Your article with title " + article.title + " has been discarded by system"
                 );
-                
+
                 sendArticleDiscardEmail(article.authorId.email, previousStatus, article.title, "");
             }
 

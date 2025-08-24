@@ -78,7 +78,7 @@ module.exports.submitEditRequest = expressAsyncHandler(
 module.exports.getAllImprovementsForReview = expressAsyncHandler(
     async (req, res) => {
         try {
-            const {page = 1, limit = 10} = req.query;
+            const { page = 1, limit = 10 } = req.query;
             const skip = (Number(page) - 1) * parseInt(limit);
 
             const articles = await EditRequest.find({ status: statusEnum.statusEnum.UNASSIGNED }).populate({
@@ -97,12 +97,21 @@ module.exports.getAllImprovementsForReview = expressAsyncHandler(
                     }
                 ]
             })
-            .skip(skip)
-            .limit(Number(limit))
-            .exec();
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
 
             articles = articles.filter(r => r.article?.authorId !== null);
-            res.status(200).json(articles);
+
+            if (Number(page) === 1) {
+                const totalImprovements = await EditRequest.countDocuments({
+                    status: statusEnum.statusEnum.UNASSIGNED
+                });
+                const totalPages = Math.ceil(totalImprovements / Number(limit));
+                res.status(200).json({ articles, totalPages });
+                return;
+            }
+            res.status(200).json({ articles });
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });
@@ -116,7 +125,7 @@ module.exports.getAllInProgressImprovementsForAdmin = expressAsyncHandler(
     async (req, res) => {
         const reviewer_id = req.userId;
 
-        const {page = 1, limit = 10} = req.query;
+        const { page = 1, limit = 10 } = req.query;
         const skip = (Number(page) - 1) * parseInt(limit);
 
         if (!reviewer_id) {
@@ -143,13 +152,24 @@ module.exports.getAllInProgressImprovementsForAdmin = expressAsyncHandler(
                     }
                 ]
             })
-            .skip(skip)
-            .limit(Number(limit))
-            .exec();
+                .skip(skip)
+                .limit(Number(limit))
+                .exec();
 
             articles = articles.filter(r => r.article?.authorId !== null);
 
-            res.status(200).json(articles);
+            if (Number(page) === 1) {
+                const totalImprovements = await EditRequest.countDocuments({
+                    reviewer_id: reviewer_id, status: {
+                        $in: [statusEnum.statusEnum.IN_PROGRESS, statusEnum.statusEnum.AWAITING_USER, statusEnum.statusEnum.REVIEW_PENDING]
+                    }
+                });
+                const totalPages = Math.ceil(totalImprovements / Number(limit));
+                res.status(200).json({ articles, totalPages });
+                return;
+            }
+
+            res.status(200).json({ articles });
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });
@@ -161,7 +181,7 @@ module.exports.getAllCompletedImprovementsForAdmin = expressAsyncHandler(
     async (req, res) => {
         const reviewer_id = req.userId;
 
-        const {page = 1, limit = 10} = req.query;
+        const { page = 1, limit = 10 } = req.query;
         const skip = (Number(page) - 1) * parseInt(limit);
 
         if (!reviewer_id) {
@@ -179,12 +199,24 @@ module.exports.getAllCompletedImprovementsForAdmin = expressAsyncHandler(
                     path: 'tags',
                 },
             })
-            .skip(skip)
-            .sort({ last_updated: -1 })
-            .limit(Number(limit))
-            .exec();
+                .skip(skip)
+                .sort({ last_updated: -1 })
+                .limit(Number(limit))
+                .exec();
 
-            res.status(200).json(articles);
+            if (Number(page) === 1) {
+                const totalImprovements = await EditRequest.countDocuments({
+                    reviewer_id: reviewer_id,
+                    status: {
+                        $in: [statusEnum.statusEnum.PUBLISHED]
+                    }
+                });
+                const totalPages = Math.ceil(totalImprovements / Number(limit));
+                res.status(200).json({ articles, totalPages });
+                return;
+            }
+
+            res.status(200).json({articles});
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: err.message });
@@ -558,13 +590,13 @@ module.exports.publishImprovement = expressAsyncHandler(
             // send mail to user
             sendArticlePublishedEmail(contributor.email, "", article.title);
 
-              articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id,
-                    editRequest.pb_recordId,
-                    editRequest._id,
-                    ` Your Improvements on article : ${article.title} is Live now!`,
-                    "We encourage you to keep sharing valuable content with us.",
-                );
-           
+            articleReviewNotificationsToUser(editRequest.user_id._id, editRequest.article._id,
+                editRequest.pb_recordId,
+                editRequest._id,
+                ` Your Improvements on article : ${article.title} is Live now!`,
+                "We encourage you to keep sharing valuable content with us.",
+            );
+
 
             res.status(200).json({ message: "Article Published" });
 
