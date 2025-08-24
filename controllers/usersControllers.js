@@ -458,16 +458,16 @@ module.exports.login = expressAsyncHandler(
 
       // Generate JWT Access Token
       const accessToken = jwt.sign(
-        { userId: user._id, email: user.email },
+        { userId: user._id, email: user.email, role: 'user' },
         process.env.JWT_SECRET,
         { expiresIn: "15m" } // Short-lived access token
       );
 
       // Generate Refresh Token
       const refreshToken = jwt.sign(
-        { userId: user._id, email: user.email },
+        { userId: user._id, email: user.email, role:'user' },
         process.env.JWT_SECRET,
-        { expiresIn: "7d" } // Longer-lived refresh token
+        { expiresIn: "7d" } 
       );
       console.log("Generated Token:", accessToken);
       console.log("Generated Refresh Token", refreshToken);
@@ -548,14 +548,14 @@ module.exports.refreshToken = expressAsyncHandler(
 
       // Generate a new access token
       const newAccessToken = jwt.sign(
-        { userId: user._id, email: user.email },
+        { userId: user._id, email: user.email, role:'user' },
         process.env.JWT_SECRET,
         { expiresIn: "15m" }
       );
 
       // Optionally, generate a new refresh token
       const newRefreshToken = jwt.sign(
-        { userId: user._id, email: user.email },
+        { userId: user._id, email: user.email, role:'user' },
         process.env.JWT_SECRET,
         { expiresIn: "7d" }
       );

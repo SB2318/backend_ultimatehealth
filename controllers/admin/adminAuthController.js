@@ -144,14 +144,14 @@ module.exports.login = expressAsyncHandler(
 
       // Generate JWT Access Token
       const accessToken = jwt.sign(
-        { userId: user._id, email: user.email },
+        { userId: user._id, email: user.email, role:'admin' },
         process.env.JWT_SECRET,
         { expiresIn: "15m" } // Short-lived access token
       );
 
       // Generate Refresh Token
       const refreshToken = jwt.sign(
-        { userId: user._id, email: user.email },
+        { userId: user._id, email: user.email , role:'admin'},
         process.env.JWT_SECRET,
         { expiresIn: "7d" } // Longer-lived refresh token
       );

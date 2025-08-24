@@ -41,22 +41,34 @@ module.exports.getAllNotifications = expressAsyncHandler(
 
         const userId = req.userId;
         const {role, page= 1, limit= 10} = req.query;
-        //console.log("User Id", userId);
 
         if (!userId) {
             res.status(400).json({ message: "User ID is required" });
             return;
         }
-
         try {
 
-            const skip = (Number(page) - 1) * parseInt(limit);
-            
-            const notifications = 
-                await Notification.find({ userId: userId, role: role ? Number(role) : 2 })
-                .sort({ timestamp: -1 })
-                .skip(skip)
-                .limit(Number(limit));
+        let q;
+        if(Number(role) === 2){
+            q={ userId: userId }
+        }else{
+            q={ adminId: userId }
+        }
+        
+        const skip = (Number(page) - 1) * parseInt(limit);
+        const limitNum = parseInt(limit);
+
+        const notifications = await Notification.find(q)
+            .populate('userId', 'user_name user_handle email')
+            .populate('adminId', 'user_name user_handle email')
+            .populate('articleId')
+            .populate('podcastId')
+            .populate('commentId')
+            .populate('revisonId')
+            .skip(skip)
+            .limit(limitNum)
+            .sort({ timestamp: -1 })
+            .lean();
 
             res.status(200).json(notifications);
 
@@ -66,6 +78,7 @@ module.exports.getAllNotifications = expressAsyncHandler(
         }
     }
 )
+
 // MARK ALL NOTICATIONS AS READ FOR USER
 module.exports.markNotifications = expressAsyncHandler(
     async (req, res) => {
@@ -78,8 +91,14 @@ module.exports.markNotifications = expressAsyncHandler(
         }
 
         try {
+            let q;
+            if(Number(role) === 2){
+                q={ userId: userId }
+            }else{
+                q={ adminId: userId }
+            }
             await Notification.updateMany(
-                { userId: userId, role: role ? Number(role) : 2 },
+                q,
                 { $set: { read: true } }
             );
             res.status(200).json({ message: "Notifications marked as read" });
@@ -103,9 +122,15 @@ module.exports.getUnreadNotificationCount = expressAsyncHandler(
 
         try {
 
+            let q;
+            if(Number(role) === 2){
+                q={ userId: userId }
+            }else{
+                q={ adminId: userId }
+            }
+
             const unreadCount = await Notification.countDocuments({ 
-                userId: userId, 
-                role: role ? Number(role) : 2,
+                ...q,
                 read: false 
             });
             res.status(200).json({ unreadCount });
@@ -116,7 +141,6 @@ module.exports.getUnreadNotificationCount = expressAsyncHandler(
     }
 )
 
-// DELETE NOTIFICATION BY ID
 module.exports.deleteNotificationById = expressAsyncHandler(
 
     async (req, res) => {
@@ -134,10 +158,6 @@ module.exports.deleteNotificationById = expressAsyncHandler(
 
             if (!notification) {
                 res.status(404).json({ message: "Notification not found" });
-                return;
-            }
-            if (!notification.userId.equals(new mongoose.Types.ObjectId(userId))) {
-                res.status(403).json({ message: " Request forbidden" });
                 return;
             }
 
@@ -158,11 +178,11 @@ const deleteOldNotifications = async () => {
     try {
 
         const onedayago = new Date();
-        onedayago.setDate(onedayago.getDate() - 1);
+        onedayago.setDate(onedayago.getDate() - 15);
 
         await Notification.deleteMany({
             read: true,  // Only delete read notifications
-            timestamp: { $lt: onedayago }  // Only delete those older than 1 day
+            timestamp: { $lt: onedayago }  // Only delete those older than 15 days
         });
 
     } catch (err) {
