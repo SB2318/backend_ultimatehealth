@@ -27,7 +27,7 @@ const articleEditRoute = require('./routes/articleEditRequestRoute');
 const adminRoute = require('./routes/adminRoute');
 const podcastRoute = require('./routes/podcastRoute');
 const podcastAdminRoute = require('./routes/podcastReviewRoute');
-const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification, repostNotification, mentionNotification } = require('./controllers/notifications/notificationHelper');
+const { sendPostNotification, sendPostLikeNotification, sendCommentNotification, sendCommentLikeNotification, repostNotification, mentionNotification, userFollowNotification } = require('./controllers/notifications/notificationHelper');
 
 const app = express();
 dotenv.config();
@@ -146,7 +146,7 @@ io.on('connection', (socket) => {
         }
         else if (data.type === 'userFollow') {
             console.log('user follow notification');
-            sendUserFollowNotification(data.userId, data.message);
+            userFollowNotification(data.userId, data.message);
         }
         else if (data.type === "repost") {
             console.log("repost notification");
