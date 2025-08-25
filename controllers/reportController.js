@@ -288,7 +288,16 @@ module.exports.getAllPendingReports = expressAsyncHandler(
         .lean()
         .exec();
 
-      return res.status(200).json(pendingReports);
+      if (Number(page) === 1) {
+        const totalReports = await ReportAction.countDocuments({
+          action_taken: reportActionEnum.PENDING,
+          admin_id: null
+        });
+        const totalPages = Math.ceil(totalReports / Number(limit));
+        return res.status(200).json({ pendingReports, totalPages });
+      }
+
+      return res.status(200).json({ pendingReports });
 
     } catch (err) {
       console.error(err);
@@ -301,24 +310,26 @@ module.exports.getAllPendingReports = expressAsyncHandler(
 module.exports.getAllReportsForModerator = expressAsyncHandler(
   async (req, res) => {
 
-    const { isCompleted , page = 1, limit = 10 } = req.query;
+    const { isCompleted, page = 1, limit = 10 } = req.query;
     try {
       const skip = (Number(page) - 1) * parseInt(limit);
 
       if (isCompleted) {
 
-        const pendingReports = await ReportAction.find(
-          {
-            admin_id: req.userId,
-            action_taken: {
-              $in: [reportActionEnum.RESOLVED,
+        const q = {
+          admin_id: req.userId,
+          action_taken: {
+            $in: [
+              reportActionEnum.RESOLVED,
               reportActionEnum.DISMISSED,
               reportActionEnum.IGNORE,
               reportActionEnum.WARN_CONVICT,
               reportActionEnum.REMOVE_CONTENT,
-              reportActionEnum.BLOCK_CONVICT]
-            }
-          })
+              reportActionEnum.BLOCK_CONVICT
+            ]
+          }
+        };
+        const reports = await ReportAction.find(q)
           .populate({
             path: 'reportedBy',
             select: 'user_name',
@@ -348,11 +359,17 @@ module.exports.getAllReportsForModerator = expressAsyncHandler(
           .lean()
           .exec();
 
-        return res.status(200).json(pendingReports);
+        if (Number(page) === 1) {
+          const totalReports = await ReportAction.countDocuments(q);
+          const totalPages = Math.ceil(totalReports / Number(limit));
+          return res.status(200).json({ reports, totalPages });
+        }
+
+        return res.status(200).json({ reports });
 
       }
-      const pendingReports = await ReportAction.find(
-        {
+      else {
+        const q = {
           admin_id: req.userId,
           action_taken: {
             $nin: [
@@ -364,37 +381,45 @@ module.exports.getAllReportsForModerator = expressAsyncHandler(
               reportActionEnum.BLOCK_CONVICT
             ]
           }
-        })
-        .populate({
-          path: 'reportedBy',
-          select: 'user_name',
-        })
-        .populate({
-          path: 'convictId',
-          select: 'user_name',
-        })
-        .populate({
-          path: 'reasonId',
-          select: 'reason',
-        }).
-        populate({
-          path: "articleId",
-          select: "title status pb_recordId authorId"
-        }).
-        populate({
-          path: "podcastId",
-          select: "title status user_id"
-        }).
-        populate({
-          path: "commentId",
-          select: "content"
-        })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean()
-        .exec();
+        };
+        const reports = await ReportAction.find(q)
+          .populate({
+            path: 'reportedBy',
+            select: 'user_name',
+          })
+          .populate({
+            path: 'convictId',
+            select: 'user_name',
+          })
+          .populate({
+            path: 'reasonId',
+            select: 'reason',
+          })
+          .populate({
+            path: "articleId",
+            select: "title status pb_recordId authorId"
+          })
+          .populate({
+            path: "podcastId",
+            select: "title status user_id"
+          }).
+          populate({
+            path: "commentId",
+            select: "content"
+          })
+          .skip(skip)
+          .limit(Number(limit))
+          .lean()
+          .exec();
 
-      return res.status(200).json(pendingReports);
+        if (Number(page) === 1) {
+          const totalReports = await ReportAction.countDocuments(q);
+          const totalPages = Math.ceil(totalReports / Number(limit));
+          return res.status(200).json({ reports, totalPages });
+        }
+
+        return res.status(200).json({ reports });
+      }
 
     } catch (err) {
       console.error(err);
@@ -981,19 +1006,3 @@ cron.schedule('0 0 * * *', async () => {
   await unBlockUser();
 });
 
-
-
-
-
-
-
-
-
-
-// Task Left:
-
-// Admin action effect on user both frontend and backend (MOST Important part)
-
-// Overall test
-
-// Mail request to restore article content

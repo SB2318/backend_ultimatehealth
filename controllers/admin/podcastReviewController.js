@@ -24,7 +24,15 @@ const availablePodcastsForReview = expressAsyncHandler(
                 .limit(Number(limit))
                 .exec();
 
-            res.status(200).json(podcasts);
+            if (Number(page) === 1) {
+              const totalPodcasts = await Podcast.countDocuments({
+                status: statusEnum.statusEnum.REVIEW_PENDING
+              });
+              const totalPages = Math.ceil(totalPodcasts / Number(limit));
+              res.status(200).json({ podcasts, totalPages });
+              return;
+            }
+            res.status(200).json({podcasts});
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: "Internal server error" });
@@ -49,8 +57,17 @@ const getAllPodcastsOfModerator = expressAsyncHandler(
                 .limit(Number(limit))
                 .exec();
 
-            res.status(200).json(podcasts);
+            if (Number(page) === 1) {
+              const totalPodcasts = await Podcast.countDocuments({
+                status: statusEnum.statusEnum.IN_PROGRESS,
+                admin_id: req.userId
+              });
+              const totalPages = Math.ceil(totalPodcasts / Number(limit));
+              res.status(200).json({ podcasts, totalPages });
+              return;
+            }
 
+            res.status(200).json({ podcasts });
         } catch (err) {
             console.log(err);
             res.status(500).json({ message: "Internal server error" });
@@ -74,8 +91,18 @@ const getAllCompletedPodcastsOfModerator = expressAsyncHandler(
                 .limit(Number(limit))
                 .sort({ updated_at: -1 })
                 .exec();
+            
+            if (Number(page) === 1) {
+              const totalPodcasts = await Podcast.countDocuments({
+                status: statusEnum.statusEnum.PUBLISHED,
+                admin_id: req.userId
+              });
+              const totalPages = Math.ceil(totalPodcasts / Number(limit));
+              res.status(200).json({ podcasts, totalPages });
+              return;
+            }
 
-            res.status(200).json(podcasts);
+            res.status(200).json({ podcasts });
 
         } catch (err) {
             console.log(err);
