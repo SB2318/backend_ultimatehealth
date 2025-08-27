@@ -34,6 +34,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-async-handler": "^1.2.0",
+    "express-openapi-validator": "^5.5.8",
     "firebase-admin": "^13.0.2",
     "form-data": "^4.0.2",
     "formdata-node": "^6.0.3",
@@ -49,6 +50,8 @@
     "pocketbase": "^0.26.0",
     "sharp": "^0.33.5",
     "socket.io": "^4.2.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "validator": "^13.12.0"
   }
 }

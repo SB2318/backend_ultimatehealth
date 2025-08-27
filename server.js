@@ -20,7 +20,9 @@ const specializationRoutes = require("./routes/SpecializationsRoutes");
 const articleRoutes = require("./routes/articleRoutes");
 const analyticsRoute = require('./routes/analyticsRoute');
 const uploadRoute = require('./routes/uploadRoute');
-const { handleSocketEvents } = require('./controllers/commentController');
+require('./controllers/commentController');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 
 //////////////////////////////////////////
 const Article = require('./models/Articles');
@@ -56,11 +58,15 @@ app.use("/api", articleRoutes);
 app.use("/api", uploadRoute);
 app.use("/api/analytics", analyticsRoute);
 
+// Swagger
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Test route (can be removed later)
 app.get("/hello", (req, res) => {
     console.log("Hello World");
     res.send('Hello World');
 });
+
 
 // Initialize Socket.io
 
@@ -358,7 +364,8 @@ io.on('connection', (socket) => {
 
 // Start server
 server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+   // console.log(`Server is running on port ${PORT}`);
+    console.log(`Docs: http://localhost:${PORT}/docs`);
 });
 
 // Export the app for testing or other purposes

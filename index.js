@@ -37,6 +37,8 @@ mentionNotification,
 userFollowNotification,
 articleSubmitNotificationsToAdmin
 } = require('./controllers/notifications/notificationHelper');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 
 const app = express();
 dotenv.config();
@@ -66,6 +68,9 @@ app.use("/api", articleEditRoute);
 app.use("/api", podcastRoute);
 app.use("/api", podcastAdminRoute);
 
+// Swagger
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Test route (can be removed later)
 app.get("/hello", (req, res) => {
     console.log("Hello World");
@@ -73,8 +78,10 @@ app.get("/hello", (req, res) => {
 });
 
 
+
 const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
+     console.log(`Docs: http://localhost:${port}/docs`);
 })
 
 let io = require('socket.io')(server);
