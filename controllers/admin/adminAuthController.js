@@ -90,7 +90,7 @@ module.exports.register = expressAsyncHandler(
         const validationErrors = Object.values(error.errors).map(
           (val) => val.message
         );
-        return res.status(400).json({ errors: validationErrors });
+        return res.status(400).json({ error: validationErrors });
       }
 
       // Handle duplicate email/user handle error
