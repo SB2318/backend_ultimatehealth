@@ -17,7 +17,7 @@ const authenticateToken = require("../middleware/adminAuthenticateToken");
  *     description: Creates a new admin user, hashes password, and generates a verification token.
  *                 After initial registration, you will receive an email with a verification link. 
  *                 You must verify your account before full access is granted.
- *     tags: [Admin, Authentication]
+ *     tags: [Admin]
  *     requestBody:
  *       required: true
  *       content:
@@ -98,7 +98,7 @@ router.post("/admin/register", register);
  *       Authenticates an admin user using email, password, and FCM token.  
  *       An admin cannot stay logged in on more than one device.  
  *       With every new login, the previous session automatically expires.
- *     tags: [Admin, Authentication]
+ *     tags: [Admin]
  *     requestBody:
  *       required: true
  *       content:
@@ -198,7 +198,7 @@ router.post("/admin/login", login);
  *   post:
  *     summary: Logout admin
  *     description: Logs out the currently authenticated user by blacklisting the refresh token and clearing cookies.
- *     tags: [Admin, Authentication]
+ *     tags: [Admin]
  *     security:
  *      - bearerAuth: []
  *     responses:
@@ -236,7 +236,7 @@ router.post("/admin/logout", authenticateToken, logout);
  *       This process ensures that the email is valid, registered, and belongs to a real user. It helps confirm the authenticity of the account.
  *       A successful verification returns a confirmation HTML page.
  *     tags:
- *       [Admin,Authentication]
+ *       [Admin]
  *     parameters:
  *       - in: query
  *         name: token
@@ -306,7 +306,7 @@ router.get("/admin/verifyEmail", verifyEmail);
  *       - Implements a cooldown mechanism to prevent multiple verification emails from being sent within a short time window (1 hour). This helps avoid spamming the user's inbox and reduces unnecessary email traffic.
  *       - During this 1 hour, you cannot request a new verification email.
  *
- *     tags: [Admin, Authentication]
+ *     tags: [Admin]
  *   
  *     requestBody:
  *       required: true
@@ -379,7 +379,7 @@ router.post("/admin/verifyEmail", Sendverifymail);
  *       
  *       **Cooldown Rule:** Once a verification email is sent, you must wait 1 hour before requesting another one.
  *     
- *     tags: [Admin, Authentication]
+ *     tags: [Admin]
  *       
  *     requestBody:
  *       required: true
@@ -443,7 +443,7 @@ router.post("/admin/resend-verification-mail", resendVerificationEmail);
  *       - Requires a valid JWT access token in the Authorization header.
  *       - The user's email must be verified to access this route.
  *       - Returns user details if authenticated and verified.
- *     tags: [Admin, Authentication]
+ *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -498,7 +498,7 @@ router.get('/admin/getprofile', authenticateToken, getprofile);
  *       - The new password must be at least 6 characters long.
  *       - The new password must not be the same as the current one.
  *       - Returns an error if the email is not associated with any admin.
- *     tags: [Admin, Authentication]
+ *     tags: [Admin]
  *     requestBody:
  *       required: true
  *       content:
@@ -575,7 +575,7 @@ router.post('/admin/update-password', updateAdminPassword);
  *       - Requires a valid JWT token in the Authorization header.
  *       - All fields are optional except for the new password, which must be different from the current one.
  *       - If the new password matches the old one, the request will be rejected.
- *     tags: [Admin, Authentication]
+ *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
  *     requestBody:

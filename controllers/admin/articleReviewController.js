@@ -220,6 +220,7 @@ module.exports.assignModerator = expressAsyncHandler(
     }
 )
 
+
 // submitReview
 module.exports.submitReview = expressAsyncHandler(
 
@@ -354,7 +355,6 @@ module.exports.submitSuggestedChanges = expressAsyncHandler(
         }
     }
 )
-
 
 // publish article
 module.exports.publishArticle = expressAsyncHandler(

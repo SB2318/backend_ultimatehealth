@@ -105,7 +105,7 @@ module.exports.getTotalLikeAndViewReceivedByUser = expressAsyncHandler(
 
 
     } catch (err) {
-
+      console.log("Total Likes error", err);
     }
   }
 )

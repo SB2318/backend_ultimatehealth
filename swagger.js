@@ -12,6 +12,13 @@ const options = {
     },
     servers: [{ url: `http://localhost:${port}/api` }],
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
       schemas: {
 
         /***************Admin  ******************/
@@ -631,9 +638,9 @@ const options = {
             _id: { type: "string", example: "64ea2f9c4a3f9c6b8b1d2346" },
             userId: { $ref: "#/components/schemas/User", nullable: true, description: "User associated with the notification" },
             adminId: { $ref: "#/components/schemas/Admin", nullable: true, description: "Admin associated with the notification" },
-            articleId: { $ref: "#/components/schemas/Article", nullable: true, description:"Article related to the notification" },
-            revisionId: { $ref: "#/components/schemas/EditRequest", nullable: true, description:"EditRequest related to the notification" },
-            podcastId: { $ref: "#/components/schemas/Podcast", nullable: true, description:"Podcast related to the notification" },
+            articleId: { $ref: "#/components/schemas/Article", nullable: true, description: "Article related to the notification" },
+            revisionId: { $ref: "#/components/schemas/EditRequest", nullable: true, description: "EditRequest related to the notification" },
+            podcastId: { $ref: "#/components/schemas/Podcast", nullable: true, description: "Podcast related to the notification" },
             commentId: { $ref: "#/components/schemas/Comment", nullable: true, description: "Comment related to the notification" },
             articleRecordId: { type: "string", nullable: true },
             type: {
