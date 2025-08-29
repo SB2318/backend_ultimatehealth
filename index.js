@@ -45,7 +45,7 @@ dotenv.config();
 db.dbConnect();
 
 const port = process.env.PORT | 8080;
-
+const url = process.env.BASE_URL;
 app.use(express.static('public'));
 
 app.use(cookieParser()); // Parse cookies
@@ -81,7 +81,7 @@ app.get("/hello", (req, res) => {
 
 const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-     console.log(`Docs: http://localhost:${port}/docs`);
+     console.log(`Docs: ${url}:${port}/docs`);
 })
 
 let io = require('socket.io')(server);

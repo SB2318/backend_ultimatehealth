@@ -1,6 +1,7 @@
 
 const swaggerJsdoc = require('swagger-jsdoc');
 const port = process.env.PORT | 8080;
+const url = process.env.BASE_URL;
 
 
 const options = {
@@ -10,7 +11,7 @@ const options = {
       title: 'API Documentation- UltimateHealth',
       version: '1.0.0',
     },
-    servers: [{ url: `http://localhost:${port}/api` }],
+    servers: [{ url: `${url}:${port}/api` }],
     components: {
       securitySchemes: {
         bearerAuth: {
