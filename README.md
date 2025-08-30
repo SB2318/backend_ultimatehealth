@@ -9,7 +9,11 @@ The repository is  the core engine powering the UltimateHealth platform. This ba
 ## 🚀 Features
 
 - 
-  ### Article CRUD with edit request workflows
+  ### Article CRUD with edit request workflows 
+
+  Managing content at scale requires a clear and controlled workflow to ensure quality, accuracy, and accountability. 
+  This system outlines how articles are created, reviewed, and improved over time using a structured CRUD (Create, Read, Update, Delete) approach — enriched by an edit request mechanism, inspired by proven         practices at platforms like **GeeksforGeeks**.
+
     (a) Submit Article for Review Process
         To maintain content quality, all newly created articles must go through a structured review process before publication.
 
@@ -24,17 +28,16 @@ The repository is  the core engine powering the UltimateHealth platform. This ba
 
   
    
-- ✅
-  ### Podcast CRUD And Review Workflows
+- ### Podcast CRUD And Review Workflows
     (a) Submit Podcast audio for Review Process
         To maintain content quality, all newly created podcasts must go through a structured review process before publication.
 
-- ✅
-  ### Report Management System for Content
+- ### Report Management System for Content
    A robust reporting system helps maintain the integrity of a content platform by tracking violations, abusive behavior, and misuse of features.
   
 - ✅ JWT-protected routes  
-- ✅ Admin analytics (monthly/yearly contributions)  
+- ### Admin analytics (monthly/yearly contributions) 
+
 - ✅ User Analytics (Read/write activity tracking) 
 - ✅ Swagger UI for API documentation  
   
